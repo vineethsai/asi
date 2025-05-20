@@ -1,15 +1,30 @@
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Minus } from "lucide-react";
-import ComponentFramework from "@/components/components/ComponentFramework";
+import ComponentFramework, { ComponentFrameworkHandle } from "@/components/components/ComponentFramework";
 
 const Components = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Reference to the ComponentFramework component
+  const componentFrameworkRef = useRef<ComponentFrameworkHandle>(null);
+  
+  const handleExpandAll = () => {
+    if (componentFrameworkRef.current) {
+      componentFrameworkRef.current.expandAll();
+    }
+  };
+  
+  const handleCollapseAll = () => {
+    if (componentFrameworkRef.current) {
+      componentFrameworkRef.current.collapseAll();
+    }
+  };
   
   return (
     <>
@@ -36,11 +51,11 @@ const Components = () => {
         </div>
         
         <div className="mb-8 flex justify-center gap-4">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleExpandAll}>
             <Plus className="mr-1 h-4 w-4" />
             Expand All
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleCollapseAll}>
             <Minus className="mr-1 h-4 w-4" />
             Collapse All
           </Button>
@@ -50,7 +65,10 @@ const Components = () => {
         </div>
         
         <div className="mt-8">
-          <ComponentFramework searchQuery={searchQuery} />
+          <ComponentFramework 
+            ref={componentFrameworkRef}
+            searchQuery={searchQuery} 
+          />
         </div>
       </main>
       <Footer />
