@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "homepage": "https://vineethsai.github.io/asi/",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
