@@ -37,42 +37,42 @@ const ComponentNode = ({
   }
   
   return (
-    <div className="mb-1">
+    <div className="mb-3">
       <div 
         className={cn(
-          "border rounded-md p-3 transition-colors", 
+          "border rounded-md p-4 transition-colors shadow-sm hover:shadow-md", 
           node.color,
-          depth > 0 ? "ml-6" : ""
+          depth > 0 ? "ml-8" : ""
         )}
       >
         <div className="flex items-start">
           {hasChildren && (
             <button 
               onClick={() => toggleNode(node.id)} 
-              className="mr-2 mt-1"
+              className="mr-3 mt-1 p-1 hover:bg-background/80 rounded-md"
             >
               {isExpanded ? 
-                <ChevronDown className="h-4 w-4" /> : 
-                <ChevronRight className="h-4 w-4" />
+                <ChevronDown className="h-5 w-5" /> : 
+                <ChevronRight className="h-5 w-5" />
               }
             </button>
           )}
           <div className="flex-1">
-            <div className="flex justify-between">
-              <h3 className="font-medium">{node.title}</h3>
-              <Link to={`/components/${node.id}`} className="text-muted-foreground hover:text-foreground">
-                <ExternalLink className="h-4 w-4" />
+            <div className="flex justify-between items-center">
+              <h3 className="font-medium text-lg">{node.title}</h3>
+              <Link to={`/components/${node.id}`} className="text-muted-foreground hover:text-foreground p-1 hover:bg-background/80 rounded-md">
+                <ExternalLink className="h-5 w-5" />
               </Link>
             </div>
             {node.description && (
-              <p className="text-sm text-muted-foreground mt-1">{node.description}</p>
+              <p className="text-muted-foreground mt-2">{node.description}</p>
             )}
             {node.threatCategories && node.threatCategories.length > 0 && (
-              <div className="mt-2">
-                <span className="text-xs text-muted-foreground">Threats: </span>
-                <div className="flex flex-wrap gap-1 mt-1">
+              <div className="mt-3">
+                <span className="text-sm text-muted-foreground font-medium">Threats: </span>
+                <div className="flex flex-wrap gap-2 mt-2">
                   {node.threatCategories.map((threat, i) => (
-                    <span key={i} className="text-xs bg-threat/10 text-threat px-2 py-0.5 rounded-full">
+                    <span key={i} className="text-xs bg-threat/10 text-threat px-3 py-1 rounded-full font-medium">
                       {threat}
                     </span>
                   ))}
@@ -84,7 +84,7 @@ const ComponentNode = ({
       </div>
       
       {hasChildren && isExpanded && (
-        <div className="mt-1 border-l-2 border-muted pl-2">
+        <div className="mt-3 border-l-2 border-muted pl-3">
           {node.children?.map(child => (
             <ComponentNode 
               key={child.id} 

@@ -1,3 +1,4 @@
+
 import { useState, forwardRef, useImperativeHandle } from "react";
 import { frameworkData } from "./frameworkData";
 import ComponentNode from "./ComponentNode";
@@ -51,7 +52,7 @@ const ComponentFramework = forwardRef<ComponentFrameworkHandle, { searchQuery?: 
     }));
     
     return (
-      <div>
+      <div className="w-full">
         <div className="space-y-4">
           {frameworkData.map(node => (
             <ComponentNode 

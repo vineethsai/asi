@@ -29,15 +29,15 @@ const Components = () => {
   return (
     <>
       <Header />
-      <main className="container py-12">
-        <div className="mb-8 max-w-3xl mx-auto text-center">
+      <main className="container mx-auto py-12 px-4 max-w-6xl">
+        <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold mb-4">Agentic AI Components</h1>
           <p className="text-muted-foreground">
             Explore the essential components of agentic AI systems and their security implications
           </p>
         </div>
         
-        <div className="mb-8 max-w-2xl mx-auto">
+        <div className="mb-8 mx-auto max-w-2xl">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
@@ -64,7 +64,7 @@ const Components = () => {
           </Link>
         </div>
         
-        <div className="mt-8">
+        <div className="mt-8 w-full">
           <ComponentFramework 
             ref={componentFrameworkRef}
             searchQuery={searchQuery} 
