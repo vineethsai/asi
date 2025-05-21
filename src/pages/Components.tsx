@@ -1,30 +1,15 @@
-
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Minus } from "lucide-react";
-import ComponentFramework, { ComponentFrameworkHandle } from "@/components/components/ComponentFramework";
+import { Card, CardContent } from "@/components/ui/card";
+import { frameworkData } from "@/components/components/frameworkData";
 
 const Components = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  
-  // Reference to the ComponentFramework component
-  const componentFrameworkRef = useRef<ComponentFrameworkHandle>(null);
-  
-  const handleExpandAll = () => {
-    if (componentFrameworkRef.current) {
-      componentFrameworkRef.current.expandAll();
-    }
-  };
-  
-  const handleCollapseAll = () => {
-    if (componentFrameworkRef.current) {
-      componentFrameworkRef.current.collapseAll();
-    }
-  };
   
   return (
     <>
@@ -50,25 +35,30 @@ const Components = () => {
           </div>
         </div>
         
-        <div className="mb-10 flex justify-center gap-4">
-          <Button variant="outline" size="lg" onClick={handleExpandAll}>
-            <Plus className="mr-2 h-5 w-5" />
-            Expand All
-          </Button>
-          <Button variant="outline" size="lg" onClick={handleCollapseAll}>
-            <Minus className="mr-2 h-5 w-5" />
-            Collapse All
-          </Button>
-          <Link to="/assessment">
-            <Button size="lg">Start Assessment</Button>
-          </Link>
-        </div>
-        
-        <div className="w-full bg-background/50 rounded-xl p-6 shadow-sm">
-          <ComponentFramework 
-            ref={componentFrameworkRef}
-            searchQuery={searchQuery} 
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-12">
+          {frameworkData.filter(c =>
+            c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (c.description && c.description.toLowerCase().includes(searchQuery.toLowerCase()))
+          ).map(component => (
+            <Card key={component.id} className="h-full border hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xl font-bold">{component.title}</h3>
+                  <Link to={`/components/${component.id}`} className="text-muted-foreground underline text-sm">Details</Link>
+                </div>
+                <p className="text-muted-foreground mb-4">{component.description}</p>
+                {component.threatCategories && component.threatCategories.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {component.threatCategories.map((threat, i) => (
+                      <span key={i} className="text-xs bg-threat/10 text-threat px-3 py-1 rounded-full font-medium">
+                        {threat}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </main>
       <Footer />

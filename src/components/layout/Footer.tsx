@@ -1,4 +1,3 @@
-
 import { Link } from 'react-router-dom';
 
 export const Footer = () => {
@@ -17,7 +16,7 @@ export const Footer = () => {
             <h4 className="font-semibold mb-3">Guide Sections</h4>
             <ul className="space-y-2">
               <li><Link to="/components" className="text-muted-foreground hover:text-foreground">Components</Link></li>
-              <li><Link to="/architecture" className="text-muted-foreground hover:text-foreground">Architecture</Link></li>
+              <li><Link to="/architectures" className="text-muted-foreground hover:text-foreground">Architecture</Link></li>
               <li><Link to="/threats" className="text-muted-foreground hover:text-foreground">Threats</Link></li>
               <li><Link to="/controls" className="text-muted-foreground hover:text-foreground">Controls</Link></li>
             </ul>

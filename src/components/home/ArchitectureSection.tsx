@@ -1,30 +1,62 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, CheckCircle, AlertTriangle, GaugeCircle, BarChart3 } from "lucide-react";
+import clsx from "clsx";
+import { architecturesData, Architecture } from "../../components/components/architecturesData";
 
 export const ArchitectureSection = () => {
-  const architectures = [
-    {
-      title: "Sequential Agent",
-      description: "Single-agent flow with linear execution",
-      image: "sequential",
-      path: "/architecture/sequential"
-    },
-    {
-      title: "Hierarchical",
-      description: "Orchestrator-based multi-agent system",
-      image: "hierarchical",
-      path: "/architecture/hierarchical"
-    },
-    {
-      title: "Collaborative Swarm",
-      description: "Peer-based multi-agent collaboration",
-      image: "collaborative",
-      path: "/architecture/collaborative"
+  // Use all architectures from architecturesData, explicitly typed
+  const architectures: Architecture[] = Object.values(architecturesData);
+
+  // Visual indicator helpers
+  const complexityIcon = (level: string) => {
+    switch (level) {
+      case "Low":
+        return <CheckCircle className="text-green-600 inline-block mr-1" size={18} />;
+      case "Medium":
+        return <GaugeCircle className="text-yellow-500 inline-block mr-1" size={18} />;
+      case "High":
+        return <AlertTriangle className="text-red-600 inline-block mr-1" size={18} />;
+      default:
+        return null;
     }
-  ];
+  };
+  const securityIcon = (level: string) => {
+    switch (level) {
+      case "Low":
+        return <AlertTriangle className="text-red-600 inline-block mr-1" size={18} />;
+      case "Medium":
+        return <GaugeCircle className="text-yellow-500 inline-block mr-1" size={18} />;
+      case "High":
+        return <CheckCircle className="text-green-600 inline-block mr-1" size={18} />;
+      default:
+        return null;
+    }
+  };
+  const performanceIcon = (level: string) => {
+    switch (level) {
+      case "High":
+        return <BarChart3 className="text-green-600 inline-block mr-1" size={18} />;
+      case "Medium":
+        return <BarChart3 className="text-yellow-500 inline-block mr-1" size={18} />;
+      case "Low":
+        return <BarChart3 className="text-red-600 inline-block mr-1" size={18} />;
+      case "Variable":
+        return <BarChart3 className="text-blue-600 inline-block mr-1" size={18} />;
+      default:
+        return null;
+    }
+  };
+
+  // Architecture meta for table (add for all 5)
+  const architectureMeta: Record<string, { complexity: string; security: string; performance: string }> = {
+    sequential: { complexity: "Low", security: "Medium", performance: "High" },
+    hierarchical: { complexity: "High", security: "High", performance: "Medium" },
+    collaborative: { complexity: "Medium", security: "Low", performance: "Variable" },
+    reactive: { complexity: "Medium", security: "Medium", performance: "High" },
+    knowledge: { complexity: "High", security: "Low", performance: "Medium" }
+  };
 
   // Simple SVG representations of the architecture patterns
   const renderArchitectureImage = (type: string) => {
@@ -83,7 +115,36 @@ export const ArchitectureSection = () => {
             </p>
           </div>
         </div>
-        
+
+        {/* Feature Comparison Table */}
+        <div className="overflow-x-auto mt-12 mb-16">
+          <table className="min-w-full border rounded-lg bg-background text-left shadow-md">
+            <thead>
+              <tr className="bg-muted">
+                <th className="px-6 py-3 font-semibold">Architecture</th>
+                <th className="px-6 py-3 font-semibold">Complexity</th>
+                <th className="px-6 py-3 font-semibold">Security Risk</th>
+                <th className="px-6 py-3 font-semibold">Performance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {architectures.map((arch, i) => (
+                <tr key={arch.id} className={clsx(i % 2 === 0 ? "bg-white dark:bg-background" : "bg-muted/50") }>
+                  <td className="px-6 py-4 font-medium">
+                    <Link to={`/architectures/${arch.id}`} className="hover:underline">
+                      {arch.name}
+                    </Link>
+                  </td>
+                  <td className="px-6 py-4">{complexityIcon(architectureMeta[arch.id]?.complexity)}{architectureMeta[arch.id]?.complexity}</td>
+                  <td className="px-6 py-4">{securityIcon(architectureMeta[arch.id]?.security)}{architectureMeta[arch.id]?.security}</td>
+                  <td className="px-6 py-4">{performanceIcon(architectureMeta[arch.id]?.performance)}{architectureMeta[arch.id]?.performance}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Architecture Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
           {architectures.map((architecture, i) => (
             <Card key={i} className="overflow-hidden hover-card-trigger">
@@ -91,9 +152,9 @@ export const ArchitectureSection = () => {
                 <div className="text-center mb-4">
                   {renderArchitectureImage(architecture.image)}
                 </div>
-                <h3 className="text-xl font-bold mb-2">{architecture.title}</h3>
+                <h3 className="text-xl font-bold mb-2">{architecture.name}</h3>
                 <p className="text-muted-foreground mb-4">{architecture.description}</p>
-                <Link to={architecture.path} className="inline-block w-full">
+                <Link to={`/architectures/${architecture.id}`} className="inline-block w-full">
                   <Button variant="outline" className="w-full">
                     Explore
                     <ArrowRight className="ml-2 h-4 w-4" />
@@ -103,9 +164,9 @@ export const ArchitectureSection = () => {
             </Card>
           ))}
         </div>
-        
+
         <div className="mt-12 text-center">
-          <Link to="/architecture">
+          <Link to="/architectures">
             <Button size="lg">
               View All Architectures
               <ArrowRight className="ml-2 h-4 w-4" />

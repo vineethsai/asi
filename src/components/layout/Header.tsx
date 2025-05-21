@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import ThemeToggle from "./ThemeToggle";
@@ -13,10 +12,9 @@ export const Header = () => {
 
   const navItems = [
     { name: "Components", path: "/components" },
-    { name: "Architecture", path: "/architecture" },
+    { name: "Architecture", path: "/architectures" },
     { name: "Threats", path: "/threats" },
-    { name: "Controls", path: "/controls" },
-    { name: "Assessment", path: "/assessment" }
+    { name: "Controls", path: "/controls" },    { name: "Assessment", path: "/assessment" }
   ];
 
   return (
