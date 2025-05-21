@@ -20,4 +20,7 @@ export default defineConfig(({ mode }) => ({
     },
   },
   base: '/asi/',
+  build: {
+    outDir: 'docs',
+  },
 }));
