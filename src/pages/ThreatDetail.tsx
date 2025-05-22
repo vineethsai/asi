@@ -95,7 +95,7 @@ export const ThreatDetail = () => {
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3 mb-2">
                     {threat.icon && <Icon name={threat.icon} color={threat.color} size={32} />}
-                    <h1 className="text-2xl font-bold" style={{ color: threat.color }}>{threat.name}</h1>
+                    <h1 className="text-2xl font-bold text-foreground">{threat.name}</h1>
                   </div>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {(threat.tags || []).map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
@@ -105,15 +105,15 @@ export const ThreatDetail = () => {
                   <p className="text-muted-foreground mt-4">{threat.description}</p>
                   {/* Analytics widgets */}
                   <div className="flex flex-wrap gap-4 mt-4">
-                    <div className="bg-white rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
+                    <div className="bg-muted rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
                       <div className="text-xs text-muted-foreground mb-1">Mitigations</div>
                       <span className="font-bold text-lg text-control">{mitigationCount}</span>
                     </div>
-                    <div className="bg-white rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
+                    <div className="bg-muted rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
                       <div className="text-xs text-muted-foreground mb-1">Affected Components</div>
                       <span className="font-bold text-lg text-primary">{componentCount}</span>
                     </div>
-                    <div className="bg-white rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
+                    <div className="bg-muted rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
                       <div className="text-xs text-muted-foreground mb-1">Tags</div>
                       <span className="font-bold text-lg text-yellow-700">{tagCount}</span>
                     </div>
@@ -131,7 +131,7 @@ export const ThreatDetail = () => {
                       <div className="flex flex-wrap gap-2 mt-1">
                         {threat.componentIds.map(id => (
                           <Link to={`/components/${id}`} key={id}>
-                            <span className="inline-block bg-secondary px-2 py-1 rounded text-xs">
+                            <span className="inline-block bg-muted px-2 py-1 rounded text-xs">
                               {id.toUpperCase()}
                             </span>
                           </Link>
@@ -142,10 +142,10 @@ export const ThreatDetail = () => {
                       <span className="font-medium">Impact Level: </span>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
                         threat.impactLevel === "high"
-                          ? "bg-red-100 text-red-700"
+                          ? "bg-destructive/10 text-destructive"
                           : threat.impactLevel === "medium"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-blue-100 text-blue-700"
+                          ? "bg-warning/10 text-warning"
+                          : "bg-primary/10 text-primary"
                       }`}>
                         {threat.impactLevel.charAt(0).toUpperCase() + threat.impactLevel.slice(1)}
                       </span>

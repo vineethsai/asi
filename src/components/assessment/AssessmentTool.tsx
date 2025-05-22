@@ -17,7 +17,7 @@ const Button: React.FC<any> = ({ children, variant = "default", ...props }) => (
 );
 
 const Card: React.FC<any> = ({ children, ...props }) => (
-  <div {...props} className={`border rounded-lg shadow-sm bg-white ${props.className || ""}`}>
+  <div {...props} className={`border rounded-lg shadow-sm bg-background ${props.className || ""}`}>
     {children}
   </div>
 );
@@ -162,12 +162,12 @@ const Badge: React.FC<any> = ({ children, variant = "default", ...props }) => (
     {...props} 
     className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full ${
       variant === "outline" 
-        ? "border border-gray-300 text-gray-700 bg-white" 
+        ? "border border-border text-foreground bg-background" 
         : variant === "destructive"
-        ? "bg-red-100 text-red-800"
+        ? "bg-destructive/10 text-destructive"
         : variant === "secondary"
-        ? "bg-gray-100 text-gray-800"
-        : "bg-blue-100 text-blue-800"
+        ? "bg-muted text-muted-foreground"
+        : "bg-primary/10 text-primary"
     } ${props.className || ""}`}
   >
     {children}
@@ -229,7 +229,7 @@ const TabsContent: React.FC<any> = ({ children, value, activeTab, ...props }) =>
 );
 
 const Alert: React.FC<any> = ({ children, ...props }) => (
-  <div {...props} className={`p-4 border rounded-lg bg-blue-50 border-blue-200 flex items-start gap-3 ${props.className || ""}`}>
+  <div {...props} className={`p-4 border rounded-lg bg-muted border-border flex items-start gap-3 ${props.className || ""}`}>
     {children}
   </div>
 );
@@ -259,7 +259,7 @@ const Tooltip: React.FC<any> = ({ children, content, ...props }) => {
       {show && (
         <div className="absolute z-50 bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap">
           {content}
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900" />
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-foreground" />
         </div>
       )}
     </div>
@@ -801,7 +801,7 @@ export const AssessmentTool = () => {
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen">
+    <div className="w-full max-w-7xl mx-auto p-6 bg-background min-h-screen">
       <Card className="w-full shadow-lg">
         <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
           <CardTitle className="text-3xl font-bold">OWASP Agentic AI Security Assessment</CardTitle>
@@ -811,9 +811,11 @@ export const AssessmentTool = () => {
         </CardHeader>
         <CardContent className="p-0">
           {/* Improved Stepper - Sticky */}
-          <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-6 py-4">
+          <div className="sticky top-0 z-20 bg-muted border-b border-border px-6 py-4">
             <div className="mb-4">
-              <Progress value={(step / MAX_STEPS) * 100} className="h-3" />
+              <div className="w-full h-3 rounded-full bg-muted">
+                <div className="h-3 rounded-full bg-primary transition-all duration-300" style={{ width: `${(step / MAX_STEPS) * 100}%` }} />
+              </div>
             </div>
             <div className="flex justify-between">
               {[
@@ -833,20 +835,20 @@ export const AssessmentTool = () => {
                     disabled={!isClickable}
                     className={`flex flex-col items-center text-center transition-all duration-200 p-2 rounded-lg ${
                       isActive 
-                        ? "text-blue-600 bg-blue-50 font-semibold" 
+                        ? "bg-primary text-primary-foreground font-semibold" 
                         : isComplete
-                        ? "text-green-600 hover:bg-green-50"
+                        ? "bg-success/20 text-success hover:bg-success/10"
                         : isClickable
-                        ? "text-gray-600 hover:bg-gray-50"
-                        : "text-gray-400 cursor-not-allowed"
+                        ? "bg-muted text-muted-foreground hover:bg-muted/80"
+                        : "bg-muted text-muted-foreground cursor-not-allowed"
                     }`}
                   >
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mb-1 ${
                       isActive 
-                        ? "bg-blue-600 text-white" 
+                        ? "bg-primary text-primary-foreground" 
                         : isComplete
-                        ? "bg-green-600 text-white"
-                        : "bg-gray-200 text-gray-600"
+                        ? "bg-success text-success-foreground"
+                        : "bg-muted text-muted-foreground"
                     }`}>
                       {isComplete ? "✓" : num}
                     </div>
@@ -873,22 +875,22 @@ export const AssessmentTool = () => {
                       key={option.id} 
                       className={`cursor-pointer transition-all duration-200 hover:scale-105 ${
                         architecture === option.id 
-                          ? "border-blue-500 ring-2 ring-blue-200 bg-blue-50 shadow-lg" 
-                          : "hover:shadow-lg hover:border-gray-300 border-gray-200"
+                          ? "border-primary ring-2 ring-primary/40 bg-primary/20 shadow-lg text-primary" 
+                          : "hover:shadow-lg hover:border-border border-border bg-muted text-foreground"
                       }`}
                       onClick={() => handleArchitectureSelect(option.id)}
                     >
                       <CardContent className="p-6 flex flex-col items-center text-center gap-4 h-full">
                         <div className={`rounded-full w-16 h-16 flex items-center justify-center border-2 transition-all ${
                           architecture === option.id 
-                            ? "border-blue-500 bg-blue-100 text-blue-600" 
-                            : "border-gray-300 bg-gray-100 text-gray-600"
+                            ? "border-primary bg-primary/10 text-primary" 
+                            : "border-border bg-muted text-muted-foreground"
                         }`}>
                           {React.cloneElement(option.icon, { className: "h-8 w-8" })}
                         </div>
                         <div className="flex-1">
-                          <h4 className="font-bold text-lg mb-2 text-gray-900">{option.name}</h4>
-                          <p className="text-sm text-gray-600 leading-relaxed">{option.description}</p>
+                          <h4 className="font-bold text-lg mb-2 text-foreground">{option.name}</h4>
+                          <p className="text-sm text-muted-foreground leading-relaxed">{option.description}</p>
                         </div>
                         {architecture === option.id && <CheckCircle className="h-6 w-6 text-blue-600" />}
                       </CardContent>
@@ -1022,47 +1024,47 @@ export const AssessmentTool = () => {
                       Security Assessment Overview
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="bg-muted">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                      <div className="text-center p-6 rounded-xl bg-white shadow-sm border">
+                      <div className="text-center p-6 rounded-xl bg-background shadow-sm border border-border">
                         <div className={`text-6xl font-bold mb-2 ${getScoreColor(calculateSecurityScore())}`}>
                           {calculateSecurityScore()}<span className="text-3xl">%</span>
                         </div>
-                        <div className="text-sm font-medium text-gray-700">Overall Security Score</div>
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div className="text-sm font-medium text-muted-foreground">Overall Security Score</div>
+                        <div className="text-xs text-muted-foreground mt-1">
                           {calculateSecurityScore() >= 80 ? "Excellent" : 
                            calculateSecurityScore() >= 60 ? "Good" :
                            calculateSecurityScore() >= 40 ? "Needs Improvement" : "Critical"}
                         </div>
                       </div>
-                      <div className="text-center p-6 rounded-xl bg-white shadow-sm border">
+                      <div className="text-center p-6 rounded-xl bg-background shadow-sm border border-border">
                         <div className="text-6xl font-bold text-red-500 mb-2">
                           {getRelevantThreats().filter(t => !t.isUserMitigated && (t.residualRiskLevel === "critical" || t.residualRiskLevel === "high")).length}
                         </div>
-                        <div className="text-sm font-medium text-gray-700">Unmitigated High/Critical Risks</div>
-                        <div className="text-xs text-gray-500 mt-1">Require immediate attention</div>
+                        <div className="text-sm font-medium text-muted-foreground">Unmitigated High/Critical Risks</div>
+                        <div className="text-xs text-muted-foreground mt-1">Require immediate attention</div>
                       </div>
-                      <div className="text-center p-6 rounded-xl bg-white shadow-sm border">
+                      <div className="text-center p-6 rounded-xl bg-background shadow-sm border border-border">
                         <div className="text-6xl font-bold text-blue-500 mb-2">
                           {getRecommendedMitigations().filter(m => m.mitigation.priority === "high").length}
                         </div>
-                        <div className="text-sm font-medium text-gray-700">High Priority Recommendations</div>
-                        <div className="text-xs text-gray-500 mt-1">Recommended for implementation</div>
+                        <div className="text-sm font-medium text-muted-foreground">High Priority Recommendations</div>
+                        <div className="text-xs text-muted-foreground mt-1">Recommended for implementation</div>
                       </div>
                     </div>
                     
-                                        <div className="bg-white p-4 rounded-lg border space-y-2 text-sm">
-                      <div><span className="font-semibold text-gray-700">Architecture:</span> {architectureOptions.find(a => a.id === architecture)?.name}</div>
-                      <div><span className="font-semibold text-gray-700">Components:</span> {selectedComponents.length > 0 ? selectedComponents.map(cId => getComponentByIdFlat(cId)?.name || cId).join(", ") : "None"}</div>
-                      <div><span className="font-semibold text-gray-700">Implemented Mitigations:</span> {selectedMitigations.length > 0 ? selectedMitigations.map(mCode => mitigationData[mCode]?.id).join(", ") : "None"}</div>
+                                        <div className="bg-muted p-4 rounded-lg border space-y-2 text-sm">
+                      <div><span className="font-semibold text-foreground">Architecture:</span> {architectureOptions.find(a => a.id === architecture)?.name}</div>
+                      <div><span className="font-semibold text-foreground">Components:</span> {selectedComponents.length > 0 ? selectedComponents.map(cId => getComponentByIdFlat(cId)?.name || cId).join(", ") : "None"}</div>
+                      <div><span className="font-semibold text-foreground">Implemented Mitigations:</span> {selectedMitigations.length > 0 ? selectedMitigations.map(mCode => mitigationData[mCode]?.id).join(", ") : "None"}</div>
                   </div>
                   </CardContent>
                 </Card>
 
                 {/* Improved Tabs with sticky header */}
                 <Tabs defaultValue="threats" className="w-full">
-                  <div className="sticky top-[140px] z-10 bg-white border-b border-gray-200 pb-0 mb-6">
-                    <TabsList className="grid w-full grid-cols-3 bg-gray-100 p-1 rounded-lg">
+                  <div className="sticky top-[140px] z-10 bg-muted border-b border-border pb-0 mb-6">
+                    <TabsList className="grid w-full grid-cols-3 bg-background p-1 rounded-lg">
                       <TabsTrigger value="threats" className="flex items-center gap-2 py-3">
                         <AlertTriangle className="h-4 w-4" />
                         Threats ({getRelevantThreats().length})
@@ -1079,7 +1081,7 @@ export const AssessmentTool = () => {
                   </div>
 
                   <TabsContent value="threats" className="space-y-4">
-                    <Alert className="border-orange-200 bg-orange-50">
+                    <Alert className="border-orange-200 bg-muted">
                       <AlertTriangle className="h-5 w-5 text-orange-600" />
                       <AlertTitle className="text-orange-800">Threat Analysis</AlertTitle>
                       <AlertDescription className="text-orange-700">
@@ -1192,7 +1194,7 @@ export const AssessmentTool = () => {
                   </TabsContent>
 
                   <TabsContent value="mitigations" className="space-y-4">
-                    <Alert className="border-blue-200 bg-blue-50">
+                    <Alert className="border-blue-200 bg-muted">
                       <Shield className="h-5 w-5 text-blue-600" />
                       <AlertTitle className="text-blue-800">Recommended Additional Mitigations</AlertTitle>
                       <AlertDescription className="text-blue-700">
@@ -1276,28 +1278,28 @@ export const AssessmentTool = () => {
                                       View Detailed Implementation Guide
                                     </AccordionTrigger>
                                     <AccordionContent>
-                                      <div className="text-xs space-y-3 bg-gray-50 p-3 rounded-lg">
+                                      <div className="text-xs space-y-3 bg-muted p-3 rounded-lg">
                                         <div>
                                           <strong className="text-purple-700">Design Phase:</strong>
-                                          <pre className="whitespace-pre-wrap text-gray-700 bg-white p-2 rounded text-xs mt-1 border">
+                                          <pre className="whitespace-pre-wrap text-foreground bg-background p-2 rounded text-xs mt-1 border border-border">
                                             {rec.mitigation.implementationDetail.design || "N/A"}
                                           </pre>
                                         </div>
                                         <div>
                                           <strong className="text-indigo-700">Build Phase:</strong>
-                                          <pre className="whitespace-pre-wrap text-gray-700 bg-white p-2 rounded text-xs mt-1 border">
+                                          <pre className="whitespace-pre-wrap text-foreground bg-background p-2 rounded text-xs mt-1 border border-border">
                                             {rec.mitigation.implementationDetail.build || "N/A"}
                                           </pre>
                                         </div>
                                         <div>
                                           <strong className="text-teal-700">Operations Phase:</strong>
-                                          <pre className="whitespace-pre-wrap text-gray-700 bg-white p-2 rounded text-xs mt-1 border">
+                                          <pre className="whitespace-pre-wrap text-foreground bg-background p-2 rounded text-xs mt-1 border border-border">
                                             {rec.mitigation.implementationDetail.operations || "N/A"}
                                           </pre>
                                         </div>
                                         <div>
                                           <strong className="text-gray-700">Tools & Frameworks:</strong>
-                                          <pre className="whitespace-pre-wrap text-gray-700 bg-white p-2 rounded text-xs mt-1 border">
+                                          <pre className="whitespace-pre-wrap text-foreground bg-background p-2 rounded text-xs mt-1 border border-border">
                                             {rec.mitigation.implementationDetail.toolsAndFrameworks || "N/A"}
                                           </pre>
                                         </div>
@@ -1311,7 +1313,7 @@ export const AssessmentTool = () => {
                         ))}
                       </Accordion>
                     ) : (
-                      <div className="text-center py-12 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="text-center py-12 bg-muted border border-green-200 rounded-lg">
                         <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-4" />
                         <h3 className="text-lg font-semibold text-green-800 mb-2">Excellent Security Posture!</h3>
                         <p className="text-sm text-green-700">
@@ -1323,7 +1325,7 @@ export const AssessmentTool = () => {
                   </TabsContent>
 
                   <TabsContent value="roadmap" className="space-y-6">
-                    <Alert className="border-purple-200 bg-purple-50">
+                    <Alert className="border-purple-200 bg-muted">
                       <Clock className="h-5 w-5 text-purple-600" />
                       <AlertTitle className="text-purple-800">Implementation Roadmap</AlertTitle>
                       <AlertDescription className="text-purple-700">
@@ -1462,9 +1464,9 @@ export const AssessmentTool = () => {
             )}
           </div>
         </CardContent>
-        <CardFooter className="flex justify-between bg-gray-50 border-t p-6">
+        <CardFooter className="flex justify-between bg-muted border-t p-6">
           {step > 1 ? (
-            <Button variant="outline" onClick={handleBack} className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleBack} className="flex items-center gap-2 border-border bg-background text-foreground hover:bg-muted">
               ← Back
             </Button>
           ) : <div />}
@@ -1485,7 +1487,7 @@ export const AssessmentTool = () => {
                 (step === 1 && !architecture) || 
                 (step === 2 && selectedComponents.length === 0)
               }
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {step === MAX_STEPS - 1 ? "🔍 Generate Assessment" : "Next →"}
             </Button>

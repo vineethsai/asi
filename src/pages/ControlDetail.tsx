@@ -150,7 +150,7 @@ export const ControlDetail = () => {
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3 mb-2">
                     {mitigation.icon && <Icon name={mitigation.icon} color={mitigation.color} size={32} />}
-                    <h1 className="text-2xl font-bold" style={{ color: mitigation.color }}>{mitigation.name}</h1>
+                    <h1 className="text-2xl font-bold text-foreground">{mitigation.name}</h1>
                     {mitigation.status && <Badge variant="outline" className="capitalize ml-2">{mitigation.status}</Badge>}
                   </div>
                   <div className="flex flex-wrap gap-2 mb-2">
@@ -161,15 +161,15 @@ export const ControlDetail = () => {
                   <p className="text-muted-foreground mt-4">{mitigation.description}</p>
                   {/* Analytics widgets */}
                   <div className="flex flex-wrap gap-4 mt-4">
-                    <div className="bg-white rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
+                    <div className="bg-muted rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
                       <div className="text-xs text-muted-foreground mb-1">Threats</div>
                       <span className="font-bold text-lg text-threat">{threatCount}</span>
                     </div>
-                    <div className="bg-white rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
+                    <div className="bg-muted rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
                       <div className="text-xs text-muted-foreground mb-1">Tags</div>
                       <span className="font-bold text-lg text-yellow-700">{tagCount}</span>
                     </div>
-                    <div className="bg-white rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
+                    <div className="bg-muted rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
                       <div className="text-xs text-muted-foreground mb-1">Phases</div>
                       <span className="font-bold text-lg text-blue-700">{phaseCount}</span>
                     </div>
@@ -180,7 +180,7 @@ export const ControlDetail = () => {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Design Phase */}
                 {mitigation.implementationDetail.design && mitigation.implementationDetail.design.trim() && (
-                  <div id="design-phase" className="border border-blue-200 rounded-lg bg-white">
+                  <div id="design-phase" className="border border-blue-200 rounded-lg bg-background">
                     <div className="p-4">
                       <h2 className="text-base font-semibold mb-2 text-blue-900">Design Phase</h2>
                       {renderSectionContent(mitigation.implementationDetail.design, "design-phase")}
@@ -189,7 +189,7 @@ export const ControlDetail = () => {
                 )}
                 {/* Build Phase */}
                 {mitigation.implementationDetail.build && mitigation.implementationDetail.build.trim() && (
-                  <div id="build-phase" className="border border-yellow-200 rounded-lg bg-white">
+                  <div id="build-phase" className="border border-yellow-200 rounded-lg bg-background">
                     <div className="p-4">
                       <h2 className="text-base font-semibold mb-2 text-yellow-900">Build Phase</h2>
                       {renderSectionContent(mitigation.implementationDetail.build, "build-phase")}
@@ -198,7 +198,7 @@ export const ControlDetail = () => {
                 )}
                 {/* Operation Phase */}
                 {mitigation.implementationDetail.operations && mitigation.implementationDetail.operations.trim() && (
-                  <div id="operation-phase" className="border border-green-200 rounded-lg bg-white">
+                  <div id="operation-phase" className="border border-green-200 rounded-lg bg-background">
                     <div className="p-4">
                       <h2 className="text-base font-semibold mb-2 text-green-900">Operation Phase</h2>
                       {renderSectionContent(mitigation.implementationDetail.operations, "operation-phase")}

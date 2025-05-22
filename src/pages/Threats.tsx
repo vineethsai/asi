@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Icon } from "@/components/ui/icon";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { Helmet } from "react-helmet";
 
 // Helper to map component IDs to names
 const componentIdToName: Record<string, string> = Object.fromEntries(
@@ -59,6 +60,15 @@ export const Threats = () => {
 
   return (
     <>
+      <Helmet>
+        <title>Threats | OWASP Securing Agentic Applications Guide</title>
+        <meta name="description" content="Explore key threats to agentic AI systems, including prompt injection, memory poisoning, and more. Learn how to secure your AI applications." />
+        <meta name="keywords" content="AI security, OWASP, agentic threats, prompt injection, memory poisoning, AI risks, LLM security, agent security" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://asi.lovable.dev/threats" />
+        <meta property="og:url" content="https://asi.lovable.dev/threats" />
+        <meta name="twitter:url" content="https://asi.lovable.dev/threats" />
+      </Helmet>
       <Header />
       <section className="py-16 bg-secondary/50">
         <div className="container px-4 md:px-6">

@@ -89,7 +89,7 @@ const Components = () => {
                               <Icon name={component.icon} color={colorMap[component.id]?.icon || '#2563eb'} size={32} />
                             </span>
                           )}
-                          <h3 className="text-xl font-bold">{component.title}</h3>
+                          <h3 className="text-xl font-bold text-foreground">{component.title}</h3>
                         </div>
                         <p className="text-muted-foreground mb-2">{component.description}</p>
                         <div className="flex flex-wrap gap-2 mb-2">

@@ -8,6 +8,7 @@ import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Icon } from "@/components/ui/icon";
+import { Helmet } from "react-helmet";
 
 const Architectures = () => {
   const architectures: Architecture[] = Object.values(architecturesData);
@@ -51,6 +52,15 @@ const Architectures = () => {
 
   return (
     <>
+      <Helmet>
+        <title>Architectures | OWASP Securing Agentic Applications Guide</title>
+        <meta name="description" content="Explore agentic AI system architectures, their security implications, and best practices for secure design." />
+        <meta name="keywords" content="AI security, OWASP, agentic architectures, security patterns, AI best practices, LLM security, agent security" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://asi.lovable.dev/architectures" />
+        <meta property="og:url" content="https://asi.lovable.dev/architectures" />
+        <meta name="twitter:url" content="https://asi.lovable.dev/architectures" />
+      </Helmet>
       <Header />
       <section className="py-16 bg-secondary/50">
         <div className="container px-4 md:px-6">
@@ -65,7 +75,7 @@ const Architectures = () => {
                       <CardContent className="p-6">
                         <div className="flex items-center gap-2 mb-2">
                           {arch.icon && <Icon name={arch.icon} color={arch.color} size={24} />}
-                          <h3 className="text-xl font-bold">{arch.name}</h3>
+                          <h3 className="text-xl font-bold text-foreground">{arch.name}</h3>
                           {arch.status && <Badge variant="outline" className="capitalize ml-2">{arch.status}</Badge>}
                         </div>
                         <p className="text-muted-foreground mb-2">{arch.description}</p>

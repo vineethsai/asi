@@ -8,6 +8,7 @@ import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Icon } from "@/components/ui/icon";
+import { Helmet } from "react-helmet";
 
 export const Controls = () => {
   const controls: Mitigation[] = Object.values(mitigationsData);
@@ -52,6 +53,15 @@ export const Controls = () => {
 
   return (
     <>
+      <Helmet>
+        <title>Controls & Mitigations | OWASP Securing Agentic Applications Guide</title>
+        <meta name="description" content="Explore security controls and mitigations for agentic AI systems. Learn how to protect your AI applications using OWASP best practices." />
+        <meta name="keywords" content="AI security, OWASP, security controls, mitigations, agentic systems, LLM security, agent security, best practices" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://asi.lovable.dev/controls" />
+        <meta property="og:url" content="https://asi.lovable.dev/controls" />
+        <meta name="twitter:url" content="https://asi.lovable.dev/controls" />
+      </Helmet>
       <Header />
       <section className="py-16 bg-secondary/50">
         <div className="container px-4 md:px-6">
@@ -76,7 +86,7 @@ export const Controls = () => {
                       <CardContent className="p-6">
                         <div className="flex items-center mb-2 gap-2">
                           {control.icon && <Icon name={control.icon} color={control.color} size={28} />}
-                          <h3 className="text-xl font-bold" style={{ color: control.color }}>{control.name}</h3>
+                          <h3 className="text-xl font-bold text-foreground" style={{ color: control.color }}>{control.name}</h3>
                           {control.status && <Badge variant="outline" className="capitalize ml-2">{control.status}</Badge>}
                         </div>
                         <div className="flex flex-wrap gap-2 mb-2">

@@ -347,7 +347,7 @@ const ComponentDetail = () => {
           </Link>
           
           <div className={cn("p-6 rounded-lg mb-8", component.color)}>
-            <h1 className="text-3xl font-bold mb-2">{component.title}</h1>
+            <h1 className="text-3xl font-bold mb-2 text-foreground">{component.title}</h1>
             <p className="text-lg text-muted-foreground">{component.description}</p>
           </div>
           
@@ -490,9 +490,9 @@ const ComponentDetail = () => {
                             </h3>
                             <span className={cn(
                               "text-xs px-2 py-0.5 rounded-full",
-                              threat.impactLevel === "high" ? "bg-red-100 text-red-700" :
-                              threat.impactLevel === "medium" ? "bg-yellow-100 text-yellow-700" :
-                              "bg-blue-100 text-blue-700"
+                              threat.impactLevel === "high" ? "bg-destructive/10 text-destructive" :
+                              threat.impactLevel === "medium" ? "bg-warning/10 text-warning" :
+                              "bg-primary/10 text-primary"
                             )}>
                               {threat.impactLevel.charAt(0).toUpperCase() + threat.impactLevel.slice(1)} Impact
                             </span>
@@ -530,24 +530,24 @@ const ComponentDetail = () => {
                     {relatedMitigations.map(mitigation => (
                       <Card key={mitigation.id} className="border-control/20">
                         <CardContent className="pt-6">
-                          <h3 className="text-lg font-medium mb-2">{mitigation.name}</h3>
+                          <h3 className="text-lg font-medium mb-2 text-foreground">{mitigation.name}</h3>
                           <p className="text-muted-foreground mb-4">
                             {mitigation.description}
                           </p>
                           
                           <div className="flex flex-wrap gap-2 mb-4">
                             {mitigation.designPhase && (
-                              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                                 Design Phase
                               </span>
                             )}
                             {mitigation.buildPhase && (
-                              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                              <span className="text-xs bg-secondary/10 text-secondary px-2 py-0.5 rounded-full">
                                 Build Phase
                               </span>
                             )}
                             {mitigation.operationPhase && (
-                              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                              <span className="text-xs bg-success/10 text-success px-2 py-0.5 rounded-full">
                                 Operation Phase
                               </span>
                             )}
