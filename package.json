@@ -6,10 +6,11 @@
   "homepage": "https://vineethsai.github.io/asi/",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && npm run postbuild",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "postbuild": "cp docs/index.html docs/404.html"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
