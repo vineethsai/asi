@@ -571,9 +571,36 @@ const ComponentDetail = () => {
                           </div>
                           <div className="bg-muted p-4 rounded-md">
                             <h4 className="text-sm font-medium mb-2">Implementation Guidance</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {mitigation.implementation}
-                            </p>
+                            {mitigation.implementationDetail ? (
+                              <div className="space-y-2">
+                                {mitigation.implementationDetail.design && (
+                                  <div>
+                                    <span className="font-semibold">Design Phase:</span>
+                                    <div className="text-sm text-muted-foreground whitespace-pre-line">{mitigation.implementationDetail.design}</div>
+                                  </div>
+                                )}
+                                {mitigation.implementationDetail.build && (
+                                  <div>
+                                    <span className="font-semibold">Build Phase:</span>
+                                    <div className="text-sm text-muted-foreground whitespace-pre-line">{mitigation.implementationDetail.build}</div>
+                                  </div>
+                                )}
+                                {mitigation.implementationDetail.operations && (
+                                  <div>
+                                    <span className="font-semibold">Operation Phase:</span>
+                                    <div className="text-sm text-muted-foreground whitespace-pre-line">{mitigation.implementationDetail.operations}</div>
+                                  </div>
+                                )}
+                                {mitigation.implementationDetail.toolsAndFrameworks && (
+                                  <div>
+                                    <span className="font-semibold">Tools & Frameworks:</span>
+                                    <div className="text-sm text-muted-foreground whitespace-pre-line">{mitigation.implementationDetail.toolsAndFrameworks}</div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">No implementation guidance available.</p>
+                            )}
                           </div>
                         </CardContent>
                       </Card>

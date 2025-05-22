@@ -116,41 +116,13 @@ export const ArchitectureSection = () => {
           </div>
         </div>
 
-        {/* Feature Comparison Table */}
-        <div className="overflow-x-auto mt-12 mb-16">
-          <table className="min-w-full border rounded-lg bg-background text-left shadow-md">
-            <thead>
-              <tr className="bg-muted">
-                <th className="px-6 py-3 font-semibold">Architecture</th>
-                <th className="px-6 py-3 font-semibold">Complexity</th>
-                <th className="px-6 py-3 font-semibold">Security Risk</th>
-                <th className="px-6 py-3 font-semibold">Performance</th>
-              </tr>
-            </thead>
-            <tbody>
-              {architectures.map((arch, i) => (
-                <tr key={arch.id} className={clsx(i % 2 === 0 ? "bg-white dark:bg-background" : "bg-muted/50") }>
-                  <td className="px-6 py-4 font-medium">
-                    <Link to={`/architectures/${arch.id}`} className="hover:underline">
-                      {arch.name}
-                    </Link>
-                  </td>
-                  <td className="px-6 py-4">{complexityIcon(architectureMeta[arch.id]?.complexity)}{architectureMeta[arch.id]?.complexity}</td>
-                  <td className="px-6 py-4">{securityIcon(architectureMeta[arch.id]?.security)}{architectureMeta[arch.id]?.security}</td>
-                  <td className="px-6 py-4">{performanceIcon(architectureMeta[arch.id]?.performance)}{architectureMeta[arch.id]?.performance}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
         {/* Architecture Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
           {architectures.map((architecture, i) => (
             <Card key={i} className="overflow-hidden hover-card-trigger">
               <CardContent className="p-6">
                 <div className="text-center mb-4">
-                  {renderArchitectureImage(architecture.image)}
+                  {renderArchitectureImage(architecture.id)}
                 </div>
                 <h3 className="text-xl font-bold mb-2">{architecture.name}</h3>
                 <p className="text-muted-foreground mb-4">{architecture.description}</p>

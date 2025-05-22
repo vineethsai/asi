@@ -115,32 +115,6 @@ export const ControlDetail = () => {
     );
   }
 
-  // Parse implementation field into sections and filter out empty ones
-  function parseSections(impl: string) {
-    const sections: Record<string, string> = {};
-    let current = "";
-    let buffer = [] as string[];
-    impl.split("\n").forEach(line => {
-      const match = line.match(/^(\s*)([A-Z ]+PHASE|TOOLS? ?&? FRAMEWORKS?|EXAMPLE DOCKER SECURITY|EXAMPLE)/);
-      if (match) {
-        if (current && buffer.length) {
-          const val = buffer.join("\n").replace(/^\s*:/, "").trim();
-          if (val) sections[current] = val;
-        }
-        current = match[2].trim();
-        buffer = [line.replace(match[0], "").replace(/^\s*:/, "").trim()];
-      } else {
-        buffer.push(line);
-      }
-    });
-    if (current && buffer.length) {
-      const val = buffer.join("\n").replace(/^\s*:/, "").trim();
-      if (val) sections[current] = val;
-    }
-    return sections;
-  }
-  const implSections = mitigation?.implementation ? parseSections(mitigation.implementation) : {};
-
   if (!mitigation) {
     return (
       <div className="container py-12 text-center">
@@ -184,47 +158,38 @@ export const ControlDetail = () => {
               {/* Grid for the rest of the cards */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Design Phase */}
-                {implSections["DESIGN PHASE"] && implSections["DESIGN PHASE"].trim() && (
+                {mitigation.implementationDetail.design && mitigation.implementationDetail.design.trim() && (
                   <div id="design-phase" className="border border-blue-200 rounded-lg bg-white">
                     <div className="p-4">
                       <h2 className="text-base font-semibold mb-2 text-blue-900">Design Phase</h2>
-                      {renderSectionContent(implSections["DESIGN PHASE"], "design-phase")}
+                      {renderSectionContent(mitigation.implementationDetail.design, "design-phase")}
                     </div>
                   </div>
                 )}
                 {/* Build Phase */}
-                {implSections["BUILD PHASE"] && implSections["BUILD PHASE"].trim() && (
+                {mitigation.implementationDetail.build && mitigation.implementationDetail.build.trim() && (
                   <div id="build-phase" className="border border-yellow-200 rounded-lg bg-white">
                     <div className="p-4">
                       <h2 className="text-base font-semibold mb-2 text-yellow-900">Build Phase</h2>
-                      {renderSectionContent(implSections["BUILD PHASE"], "build-phase")}
+                      {renderSectionContent(mitigation.implementationDetail.build, "build-phase")}
                     </div>
                   </div>
                 )}
                 {/* Operation Phase */}
-                {implSections["OPERATION PHASE"] && implSections["OPERATION PHASE"].trim() && (
+                {mitigation.implementationDetail.operations && mitigation.implementationDetail.operations.trim() && (
                   <div id="operation-phase" className="border border-green-200 rounded-lg bg-white">
                     <div className="p-4">
                       <h2 className="text-base font-semibold mb-2 text-green-900">Operation Phase</h2>
-                      {renderSectionContent(implSections["OPERATION PHASE"], "operation-phase")}
+                      {renderSectionContent(mitigation.implementationDetail.operations, "operation-phase")}
                     </div>
                   </div>
                 )}
                 {/* Tools & Frameworks */}
-                {implSections["TOOLS & FRAMEWORKS"] && implSections["TOOLS & FRAMEWORKS"].trim() && (
+                {mitigation.implementationDetail.toolsAndFrameworks && mitigation.implementationDetail.toolsAndFrameworks.trim() && (
                   <div id="tools-frameworks" className="border border-purple-200 rounded-lg bg-white">
                     <div className="p-4">
                       <h2 className="text-base font-semibold mb-2 text-purple-900">Tools & Frameworks</h2>
-                      {renderSectionContent(implSections["TOOLS & FRAMEWORKS"], "tools-frameworks")}
-                    </div>
-                  </div>
-                )}
-                {/* Example (if present) */}
-                {implSections["EXAMPLE DOCKER SECURITY"] && implSections["EXAMPLE DOCKER SECURITY"].trim() && (
-                  <div id="example-docker" className="border border-gray-300 rounded-lg bg-white">
-                    <div className="p-4">
-                      <h2 className="text-base font-semibold mb-2 text-gray-900">Example</h2>
-                      {renderSectionContent(implSections["EXAMPLE DOCKER SECURITY"], "example-docker")}
+                      {renderSectionContent(mitigation.implementationDetail.toolsAndFrameworks, "tools-frameworks")}
                     </div>
                   </div>
                 )}
