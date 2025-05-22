@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { threatsData, mitigationsData, Threat, Mitigation } from "../components/components/securityData";
 import Header from "@/components/layout/Header";
 import SidebarNav from "../components/layout/SidebarNav";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Icon } from "@/components/ui/icon";
 
 export const ThreatDetail = () => {
   const { threatId } = useParams<{ threatId: string }>();
@@ -71,6 +74,11 @@ export const ThreatDetail = () => {
     );
   }
 
+  // Analytics for mitigations/components/tags
+  const mitigationCount = threat.mitigationIds?.length || 0;
+  const componentCount = threat.componentIds?.length || 0;
+  const tagCount = (threat.tags || []).length;
+
   return (
     <>
       <Header />
@@ -82,16 +90,35 @@ export const ThreatDetail = () => {
               <Link to="/threats" className="inline-flex items-center text-muted-foreground hover:text-foreground mb-4">
                 &larr; Back to Threats
               </Link>
-              {/* Overview (full width) */}
+              {/* Overview/Metadata Card */}
               <Card className="mb-4 border border-threat/20">
                 <CardContent className="p-4">
-                  <div className="flex items-center mb-2">
-                    <span className="font-mono text-xs bg-threat/10 text-threat px-2 py-0.5 rounded mr-2">
-                      {threat.code}
-                    </span>
-                    <h1 className="text-2xl font-bold">{threat.name}</h1>
+                  <div className="flex items-center gap-3 mb-2">
+                    {threat.icon && <Icon name={threat.icon} color={threat.color} size={32} />}
+                    <h1 className="text-2xl font-bold" style={{ color: threat.color }}>{threat.name}</h1>
                   </div>
-                  <p className="text-muted-foreground mb-2">{threat.description}</p>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {(threat.tags || []).map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
+                  </div>
+                  {threat.riskScore !== undefined && <div className="flex items-center gap-2 mb-2"><span className="text-xs">Risk:</span><Progress value={threat.riskScore * 10} className="w-16" /><span className="text-xs font-bold">{threat.riskScore}</span></div>}
+                  <div className="text-xs text-muted-foreground mb-1">Version: {threat.version || "-"} | Last Updated: {threat.lastUpdated || "-"} | Updated By: {threat.updatedBy || "-"}</div>
+                  {threat.references && threat.references.length > 0 && <div className="text-xs mt-1">{threat.references.map(ref => <a key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-600 mr-2">{ref.title}</a>)}</div>}
+                  <p className="text-muted-foreground mt-4">{threat.description}</p>
+                  {/* Analytics widgets */}
+                  <div className="flex flex-wrap gap-4 mt-4">
+                    <div className="bg-white rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
+                      <div className="text-xs text-muted-foreground mb-1">Mitigations</div>
+                      <span className="font-bold text-lg text-control">{mitigationCount}</span>
+                    </div>
+                    <div className="bg-white rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
+                      <div className="text-xs text-muted-foreground mb-1">Affected Components</div>
+                      <span className="font-bold text-lg text-primary">{componentCount}</span>
+                    </div>
+                    <div className="bg-white rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
+                      <div className="text-xs text-muted-foreground mb-1">Tags</div>
+                      <span className="font-bold text-lg text-yellow-700">{tagCount}</span>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
               {/* Grid for the rest of the cards */}

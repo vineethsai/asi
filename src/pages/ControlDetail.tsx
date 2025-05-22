@@ -10,6 +10,9 @@ import { CopyToClipboard } from "react-copy-to-clipboard";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { duotoneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Icon } from "@/components/ui/icon";
 
 export const ControlDetail = () => {
   const { controlId } = useParams<{ controlId: string }>();
@@ -126,6 +129,11 @@ export const ControlDetail = () => {
     );
   }
 
+  // Analytics for threats/tags/phases
+  const threatCount = mitigation.threatIds?.length || 0;
+  const tagCount = (mitigation.tags || []).length;
+  const phaseCount = [mitigation.designPhase, mitigation.buildPhase, mitigation.operationPhase].filter(Boolean).length;
+
   return (
     <>
       <Header />
@@ -137,22 +145,36 @@ export const ControlDetail = () => {
               <Link to="/controls" className="inline-flex items-center text-muted-foreground hover:text-foreground mb-4">
                 &larr; Back to Controls
               </Link>
-              {/* Overview (full width) */}
+              {/* Overview/Metadata Card */}
               <Card className="mb-4 border border-control/20">
                 <CardContent className="p-4">
-                  <h1 className="text-2xl font-bold mb-2">{mitigation.name}</h1>
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {mitigation.designPhase && (
-                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Design Phase</span>
-                    )}
-                    {mitigation.buildPhase && (
-                      <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Build Phase</span>
-                    )}
-                    {mitigation.operationPhase && (
-                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Operation Phase</span>
-                    )}
+                  <div className="flex items-center gap-3 mb-2">
+                    {mitigation.icon && <Icon name={mitigation.icon} color={mitigation.color} size={32} />}
+                    <h1 className="text-2xl font-bold" style={{ color: mitigation.color }}>{mitigation.name}</h1>
+                    {mitigation.status && <Badge variant="outline" className="capitalize ml-2">{mitigation.status}</Badge>}
                   </div>
-                  <p className="text-muted-foreground mb-2">{mitigation.description}</p>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {(mitigation.tags || []).map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
+                  </div>
+                  {mitigation.riskScore !== undefined && <div className="flex items-center gap-2 mb-2"><span className="text-xs">Risk:</span><Progress value={mitigation.riskScore * 10} className="w-16" /><span className="text-xs font-bold">{mitigation.riskScore}</span></div>}
+                  <div className="text-xs text-muted-foreground mb-1">Version: {mitigation.version || "-"} | Last Updated: {mitigation.lastUpdated || "-"} | Updated By: {mitigation.updatedBy || "-"}</div>
+                  {mitigation.references && mitigation.references.length > 0 && <div className="text-xs mt-1">{mitigation.references.map(ref => <a key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-600 mr-2">{ref.title}</a>)}</div>}
+                  <p className="text-muted-foreground mt-4">{mitigation.description}</p>
+                  {/* Analytics widgets */}
+                  <div className="flex flex-wrap gap-4 mt-4">
+                    <div className="bg-white rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
+                      <div className="text-xs text-muted-foreground mb-1">Threats</div>
+                      <span className="font-bold text-lg text-threat">{threatCount}</span>
+                    </div>
+                    <div className="bg-white rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
+                      <div className="text-xs text-muted-foreground mb-1">Tags</div>
+                      <span className="font-bold text-lg text-yellow-700">{tagCount}</span>
+                    </div>
+                    <div className="bg-white rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
+                      <div className="text-xs text-muted-foreground mb-1">Phases</div>
+                      <span className="font-bold text-lg text-blue-700">{phaseCount}</span>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
               {/* Grid for the rest of the cards */}

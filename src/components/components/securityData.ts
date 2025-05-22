@@ -9,7 +9,8 @@ export type Threat = {
   affectedComponents?: string[];
   attackVectors?: { vector: string; example?: string; severity?: "high" | "medium" | "low" }[];
   mitigationNames?: string[];
-  mitigationIds?: string[];
+  mitigatedThreatNames?: string[];
+  mitigatedThreatIds?: string[];
   tags?: string[];
   references?: { title: string; url: string }[];
   riskScore?: number;
@@ -21,6 +22,7 @@ export type Threat = {
   color?: string;
   icon?: string;
   displayOrder?: number;
+  mitigationIds?: string[];
 };
 
 export type Mitigation = {
@@ -99,8 +101,8 @@ export const threatsData: Record<string, Threat> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#f87171",
+    icon: "tool",
     displayOrder: undefined
   },
   "t3": {
@@ -120,8 +122,8 @@ export const threatsData: Record<string, Threat> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#fbbf24",
+    icon: "privilege",
     displayOrder: undefined
   },
   "t4": {
@@ -141,8 +143,8 @@ export const threatsData: Record<string, Threat> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#38bdf8",
+    icon: "resource",
     displayOrder: undefined
   },
   "t5": {
@@ -162,8 +164,8 @@ export const threatsData: Record<string, Threat> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#f472b6",
+    icon: "hallucination",
     displayOrder: undefined
   },
   "t6": {
@@ -183,8 +185,8 @@ export const threatsData: Record<string, Threat> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#34d399",
+    icon: "intent",
     displayOrder: undefined
   },
   "t7": {
@@ -204,8 +206,8 @@ export const threatsData: Record<string, Threat> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#818cf8",
+    icon: "misalign",
     displayOrder: undefined
   },
   "t8": {
@@ -225,8 +227,8 @@ export const threatsData: Record<string, Threat> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#facc15",
+    icon: "repudiation",
     displayOrder: undefined
   },
   "t9": {
@@ -246,8 +248,8 @@ export const threatsData: Record<string, Threat> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#f472b6",
+    icon: "identity",
     displayOrder: undefined
   },
   "t10": {
@@ -267,8 +269,8 @@ export const threatsData: Record<string, Threat> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#60a5fa",
+    icon: "hitl",
     displayOrder: undefined
   },
   "t11": {
@@ -288,8 +290,8 @@ export const threatsData: Record<string, Threat> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#fb7185",
+    icon: "rce",
     displayOrder: undefined
   },
   "t12": {
@@ -309,8 +311,8 @@ export const threatsData: Record<string, Threat> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#4ade80",
+    icon: "communication",
     displayOrder: undefined
   },
   "t13": {
@@ -330,8 +332,8 @@ export const threatsData: Record<string, Threat> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#f59e42",
+    icon: "rogue",
     displayOrder: undefined
   },
   "t14": {
@@ -351,8 +353,8 @@ export const threatsData: Record<string, Threat> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#fbbf24",
+    icon: "human",
     displayOrder: undefined
   },
   "t15": {
@@ -372,8 +374,8 @@ export const threatsData: Record<string, Threat> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#a3e635",
+    icon: "manipulation",
     displayOrder: undefined
   }
 };
@@ -432,8 +434,8 @@ export const mitigationsData: Record<string, Mitigation> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#f87171",
+    icon: "sandbox",
     displayOrder: undefined
   },
   "m3": {
@@ -459,8 +461,8 @@ export const mitigationsData: Record<string, Mitigation> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#38bdf8",
+    icon: "comm",
     displayOrder: undefined
   },
   "m4": {
@@ -486,8 +488,8 @@ export const mitigationsData: Record<string, Mitigation> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#fbbf24",
+    icon: "prompt",
     displayOrder: undefined
   },
   "m5": {
@@ -513,8 +515,8 @@ export const mitigationsData: Record<string, Mitigation> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#34d399",
+    icon: "validate",
     displayOrder: undefined
   },
   "m6": {
@@ -540,8 +542,8 @@ export const mitigationsData: Record<string, Mitigation> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#818cf8",
+    icon: "monitor",
     displayOrder: undefined
   },
   "m7": {
@@ -567,8 +569,8 @@ export const mitigationsData: Record<string, Mitigation> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#facc15",
+    icon: "trust",
     displayOrder: undefined
   },
   "m8": {
@@ -594,8 +596,8 @@ export const mitigationsData: Record<string, Mitigation> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#60a5fa",
+    icon: "hitl",
     displayOrder: undefined
   },
   "m9": {
@@ -621,8 +623,8 @@ export const mitigationsData: Record<string, Mitigation> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#f59e42",
+    icon: "resource",
     displayOrder: undefined
   },
   "m10": {
@@ -648,8 +650,8 @@ export const mitigationsData: Record<string, Mitigation> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#fb7185",
+    icon: "defense",
     displayOrder: undefined
   },
   "m11": {
@@ -675,8 +677,8 @@ export const mitigationsData: Record<string, Mitigation> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#4ade80",
+    icon: "filter",
     displayOrder: undefined
   },
   "m12": {
@@ -702,8 +704,8 @@ export const mitigationsData: Record<string, Mitigation> = {
     version: undefined,
     lastUpdated: undefined,
     updatedBy: undefined,
-    color: undefined,
-    icon: undefined,
+    color: "#a3e635",
+    icon: "lifecycle",
     displayOrder: undefined
   }
 };
