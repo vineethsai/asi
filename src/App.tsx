@@ -14,6 +14,7 @@ import Controls from "./pages/Controls";
 import ControlDetail from "./pages/ControlDetail";
 import Architectures from "./pages/Architectures";
 import ArchitectureDetail from "./pages/ArchitectureDetail";
+import ScrollToTop from "@/components/layout/ScrollToTop";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +24,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <HashRouter>
+        <ScrollToTop />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/assessment" element={<Assessment />} />

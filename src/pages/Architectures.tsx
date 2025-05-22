@@ -57,39 +57,6 @@ const Architectures = () => {
           <div className="flex flex-col lg:flex-row gap-8">
             <SidebarNav type="architectures" />
             <div className="flex-1">
-              {/* Filter Controls */}
-              <div className="flex flex-wrap gap-4 mb-8 items-center">
-                <div>
-                  <span className="mr-2 text-sm">Tag:</span>
-                  <select value={tagFilter || ""} onChange={e => setTagFilter(e.target.value || null)} className="border rounded px-2 py-1">
-                    <option value="">All</option>
-                    {allTags.map(tag => <option key={tag} value={tag}>{tag}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <span className="mr-2 text-sm">Status:</span>
-                  <select value={statusFilter || ""} onChange={e => setStatusFilter(e.target.value || null)} className="border rounded px-2 py-1">
-                    <option value="">All</option>
-                    {allStatuses.map(status => <option key={status} value={status}>{status}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <span className="mr-2 text-sm">Risk:</span>
-                  <select value={riskFilter || ""} onChange={e => setRiskFilter(e.target.value ? Number(e.target.value) : null)} className="border rounded px-2 py-1">
-                    <option value="">All</option>
-                    {[...new Set(architectures.map(a => a.riskScore).filter(Boolean))].map(risk => <option key={risk} value={risk}>{risk}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <span className="mr-2 text-sm">Sort by:</span>
-                  <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="border rounded px-2 py-1">
-                    <option value="displayOrder">Order</option>
-                    <option value="risk">Risk</option>
-                    <option value="name">Name</option>
-                  </select>
-                </div>
-                <button className="ml-auto text-xs underline text-muted-foreground" onClick={() => { setTagFilter(null); setStatusFilter(null); setRiskFilter(null); setSortBy("displayOrder"); }}>Reset Filters</button>
-              </div>
               {/* Architectures Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-0">
                 {sorted.map((arch) => (
@@ -105,7 +72,6 @@ const Architectures = () => {
                         <div className="flex flex-wrap gap-2 mb-2">
                           {(arch.tags || []).map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
                         </div>
-                        {arch.riskScore !== undefined && <div className="flex items-center gap-2 mb-2"><span className="text-xs">Risk:</span><Progress value={arch.riskScore * 10} className="w-16" /><span className="text-xs font-bold">{arch.riskScore}</span></div>}
                         <div className="text-xs text-muted-foreground mb-1">Version: {arch.version || "-"} | Last Updated: {arch.lastUpdated || "-"}</div>
                         {arch.references && arch.references.length > 0 && <div className="text-xs mt-1">{arch.references.map(ref => <a key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-600 mr-2">{ref.title}</a>)}</div>}
                         <div className="text-sm mt-2">

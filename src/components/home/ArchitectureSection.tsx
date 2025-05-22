@@ -140,49 +140,6 @@ export const ArchitectureSection = () => {
             </p>
           </div>
         </div>
-        {/* Mini-summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8 mb-8">
-          <div className="p-4 bg-card rounded-lg border">
-            <div className="text-xs text-muted-foreground mb-1">Architectures by Status</div>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(statusCounts).map(([status, count]) => (
-                <Badge key={status} variant="outline" className="capitalize">{status}: {count}</Badge>
-              ))}
-            </div>
-          </div>
-          <div className="p-4 bg-card rounded-lg border">
-            <div className="text-xs text-muted-foreground mb-1">Average Risk Score</div>
-            <div className="flex items-center gap-2">
-              <Progress value={Number(avgRisk) * 10} className="w-24" />
-              <span className="font-bold">{avgRisk}</span>
-            </div>
-          </div>
-          <div className="p-4 bg-card rounded-lg border">
-            <div className="text-xs text-muted-foreground mb-1">Tags</div>
-            <div className="flex flex-wrap gap-2">
-              {allTags.map(tag => (
-                <Badge key={tag} variant="secondary">{tag}</Badge>
-              ))}
-            </div>
-          </div>
-        </div>
-        {/* Quick Filter Chips */}
-        <div className="flex flex-wrap gap-4 mb-8 items-center">
-          <div className="flex gap-2 items-center">
-            <span className="text-sm">Tag:</span>
-            {allTags.map(tag => (
-              <button key={tag} className={`px-2 py-1 rounded text-xs ${tagFilter === tag ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`} onClick={() => setTagFilter(tagFilter === tag ? null : tag)}>{tag}</button>
-            ))}
-            <button className="text-xs underline text-muted-foreground ml-2" onClick={() => setTagFilter(null)}>Clear</button>
-          </div>
-          <div className="flex gap-2 items-center">
-            <span className="text-sm">Status:</span>
-            {allStatuses.map(status => (
-              <button key={status} className={`px-2 py-1 rounded text-xs capitalize ${statusFilter === status ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`} onClick={() => setStatusFilter(statusFilter === status ? null : status)}>{status}</button>
-            ))}
-            <button className="text-xs underline text-muted-foreground ml-2" onClick={() => setStatusFilter(null)}>Clear</button>
-          </div>
-        </div>
         {/* Architecture Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
           {filtered.map((architecture, i) => (
@@ -199,7 +156,6 @@ export const ArchitectureSection = () => {
                 <div className="flex flex-wrap gap-2 mb-2">
                   {(architecture.tags || []).map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
                 </div>
-                {architecture.riskScore !== undefined && <div className="flex items-center gap-2 mb-2"><span className="text-xs">Risk:</span><Progress value={architecture.riskScore * 10} className="w-16" /><span className="text-xs font-bold">{architecture.riskScore}</span></div>}
                 <div className="text-xs text-muted-foreground mb-1">Version: {architecture.version || "-"} | Last Updated: {architecture.lastUpdated || "-"}</div>
                 <Link to={`/architectures/${architecture.id}`} className="inline-block w-full mt-2">
                   <Button variant="outline" className="w-full">

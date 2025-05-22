@@ -25,7 +25,10 @@ import {
   Lock,
   UserCog,
   UserPlus,
-  UserMinus
+  UserMinus,
+  Workflow,
+  BrainCircuit,
+  Cloud
 } from "lucide-react";
 
 // Map icon names to Lucide icons
@@ -63,6 +66,12 @@ const iconMap: Record<string, FC<{ color?: string; size?: number }>> = {
   "rogue": ({ color = "#f59e42", size = 28 }) => <UserMinus color={color} size={size} />,
   "human": ({ color = "#fbbf24", size = 28 }) => <UserCog color={color} size={size} />,
   "manipulation": ({ color = "#a3e635", size = 28 }) => <UserPlus color={color} size={size} />,
+  Brain: ({ color = "#2563eb", size = 28 }) => <Brain color={color} size={size} />,
+  Workflow: ({ color = "#22c55e", size = 28 }) => <Workflow color={color} size={size} />,
+  BrainCircuit: ({ color = "#818cf8", size = 28 }) => <BrainCircuit color={color} size={size} />,
+  Database: ({ color = "#a855f7", size = 28 }) => <Database color={color} size={size} />,
+  Tool: ({ color = "#f87171", size = 28 }) => <Zap color={color} size={size} />,
+  Cloud: ({ color = "#38bdf8", size = 28 }) => <Cloud color={color} size={size} />
 };
 
 export interface IconProps {

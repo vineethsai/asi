@@ -5,6 +5,7 @@ export type ComponentNode = {
   threatCategories?: string[]; // These will be threat titles
   controls?: string[]; // This field is not in our MD data, will be preserved if existing
   color: string;
+  icon?: string;
   children?: ComponentNode[];
 };
 
@@ -229,45 +230,41 @@ populateComponentMap(parsedComponentsData, myComponentDataMap);
 // Full component framework data (User's original structure to be updated)
 export const frameworkData: ComponentNode[] = [
   {
-    id: "kc1", // Will be updated
-    title: "Language Models", // Original: Language Models
-    description: "Foundation models and multimodal capabilities", // Original
-    threatCategories: ["Prompt Injection", "Training Data Poisoning"], // Original, will be updated
-    color: "border-primary/30 bg-primary/5 hover:bg-primary/10", // Original
+    id: "kc1",
+    title: "Language Models",
+    description: "Foundation models and multimodal capabilities",
+    threatCategories: ["Prompt Injection", "Training Data Poisoning"],
+    color: "border-primary/30 bg-primary/5 hover:bg-primary/10",
+    icon: "Brain",
     children: [
       {
-        id: "kc1-1", // Corresponds to kc1.1
-        title: "Foundation Models", // Original
-        description: "Large language models that serve as the base for agentic systems", // Original
-        threatCategories: ["Model Extraction", "Input Validation Bypass"], // Original
-        color: "border-primary/20 bg-primary/5 hover:bg-primary/10", // Original
+        id: "kc1-1",
+        title: "Foundation Models",
+        description: "Large language models that serve as the base for agentic systems",
+        threatCategories: ["Model Extraction", "Input Validation Bypass"],
+        color: "border-primary/20 bg-primary/5 hover:bg-primary/10",
         children: [
           {
-            id: "kc1-1-1", // No direct full match in my simplified parsedComponentsData for this level of detail
-            title: "Base Models", // Original
-            description: "Pre-trained models before fine-tuning", // Original
-            color: "border-primary/10 bg-transparent hover:bg-primary/5", // Original
-            // threatCategories will remain original if no specific data for kc1.1.1
+            id: "kc1-1-1",
+            title: "Base Models",
+            description: "Pre-trained models before fine-tuning",
+            color: "border-primary/10 bg-transparent hover:bg-primary/5",
           },
           {
-            id: "kc1-1-2", // No direct full match
-            title: "Fine-tuned Models", // Original
-            description: "Models adapted for specific use cases or domains", // Original
-            color: "border-primary/10 bg-transparent hover:bg-primary/5", // Original
+            id: "kc1-1-2",
+            title: "Fine-tuned Models",
+            description: "Models adapted for specific use cases or domains",
+            color: "border-primary/10 bg-transparent hover:bg-primary/5",
           }
         ]
       },
       {
-        id: "kc1-2", // Corresponds to kc1.2
-        title: "Multimodal Capabilities", // Original
-        description: "Processing of multiple types of inputs (text, images, audio)", // Original
-        threatCategories: ["Cross-Modal Attacks", "Adversarial Examples"], // Original
-        color: "border-primary/20 bg-primary/5 hover:bg-primary/10", // Original
+        id: "kc1-2",
+        title: "Multimodal Capabilities",
+        description: "Processing of multiple types of inputs (text, images, audio)",
+        threatCategories: ["Cross-Modal Attacks", "Adversarial Examples"],
+        color: "border-primary/20 bg-primary/5 hover:bg-primary/10",
       },
-      // Adding kc1.3 and kc1.4 from my data if they are not in user's structure
-      // This part needs careful thought: add new nodes or only update existing?
-      // For now, let's only update existing nodes based on user's structure.
-      // If the user wants a structure derived purely from components.md, that's a different request.
     ]
   },
   {
@@ -276,34 +273,34 @@ export const frameworkData: ComponentNode[] = [
     description: "Workflows, planning, and multi-agent collaboration",
     threatCategories: ["Intent Breaking", "Communication Poisoning"],
     color: "border-architecture/30 bg-architecture/5 hover:bg-architecture/10",
+    icon: "Workflow",
     children: [
       {
-        id: "kc2-1", // Corresponds to kc2.1
-        title: "Task Planning", // Original
-        description: "Decomposition of complex tasks into subtasks", // Original
+        id: "kc2-1",
+        title: "Task Planning",
+        description: "Decomposition of complex tasks into subtasks",
         color: "border-architecture/20 bg-architecture/5 hover:bg-architecture/10",
       },
       {
-        id: "kc2-2", // Corresponds to kc2.2
-        title: "Agent Collaboration", // Original
-        description: "Communication and coordination between multiple agents", // Original
+        id: "kc2-2",
+        title: "Agent Collaboration",
+        description: "Communication and coordination between multiple agents",
         color: "border-architecture/20 bg-architecture/5 hover:bg-architecture/10",
         children: [
           {
-            id: "kc2-2-1", // No direct full match in my simplified parsedComponentsData
-            title: "Message Passing", // Original
-            description: "Communication protocols between agents", // Original
+            id: "kc2-2-1",
+            title: "Message Passing",
+            description: "Communication protocols between agents",
             color: "border-architecture/10 bg-transparent hover:bg-architecture/5",
           },
           {
-            id: "kc2-2-2", // No direct full match
-            title: "Role Assignment", // Original
-            description: "Dynamic allocation of responsibilities among agents", // Original
+            id: "kc2-2-2",
+            title: "Role Assignment",
+            description: "Dynamic allocation of responsibilities among agents",
             color: "border-architecture/10 bg-transparent hover:bg-architecture/5",
           }
         ]
       },
-      // Add kc2.3 if necessary
     ]
   },
   {
@@ -312,21 +309,20 @@ export const frameworkData: ComponentNode[] = [
     description: "ReAct, Chain of Thought, planning paradigms",
     threatCategories: ["Reasoning Manipulation", "Goal Misalignment"],
     color: "border-control/30 bg-control/5 hover:bg-control/10",
+    icon: "BrainCircuit",
     children: [
       {
-        id: "kc3-1", // Corresponds to kc3.3 (Chain of Thought) or kc3.1 (Structured Planning)
-                      // User's title is "Chain of Thought"
-        title: "Chain of Thought", // Original
-        description: "Step-by-step reasoning to solve problems", // Original
+        id: "kc3-1",
+        title: "Chain of Thought",
+        description: "Step-by-step reasoning to solve problems",
         color: "border-control/20 bg-control/5 hover:bg-control/10",
       },
       {
-        id: "kc3-2", // Corresponds to kc3.2 (ReAct)
-        title: "ReAct Framework", // Original
-        description: "Reasoning and acting in an iterative process", // Original
+        id: "kc3-2",
+        title: "ReAct Framework",
+        description: "Reasoning and acting in an iterative process",
         color: "border-control/20 bg-control/5 hover:bg-control/10",
       },
-      // Add kc3.4 if necessary
     ]
   },
   {
@@ -334,35 +330,35 @@ export const frameworkData: ComponentNode[] = [
     title: "Memory",
     description: "Various memory types and security boundaries",
     threatCategories: ["Memory Poisoning", "Data Leakage"],
-    color: "border-primary/30 bg-primary/5 hover:bg-primary/10", // Note: User used 'border-primary', my MD used 'border-purple' for KC4
+    color: "border-primary/30 bg-primary/5 hover:bg-primary/10",
+    icon: "Database",
     children: [
       {
-        id: "kc4-1", // Corresponds to kc4.1
-        title: "Short-term Memory", // Original
-        description: "Temporary storage for current task execution", // Original
+        id: "kc4-1",
+        title: "Short-term Memory",
+        description: "Temporary storage for current task execution",
         color: "border-primary/20 bg-primary/5 hover:bg-primary/10",
       },
       {
-        id: "kc4-2", // Corresponds to kc4.2, kc4.3, kc4.4 etc. This is a grouping.
-        title: "Long-term Memory", // Original
-        description: "Persistent storage across multiple interactions", // Original
+        id: "kc4-2",
+        title: "Long-term Memory",
+        description: "Persistent storage across multiple interactions",
         color: "border-primary/20 bg-primary/5 hover:bg-primary/10",
         children: [
           {
-            id: "kc4-2-1", // No direct full match for "Vector Databases" as a sub-ID in my MD
-            title: "Vector Databases", // Original
-            description: "Storage and retrieval of embeddings", // Original
+            id: "kc4-2-1",
+            title: "Vector Databases",
+            description: "Storage and retrieval of embeddings",
             color: "border-primary/10 bg-transparent hover:bg-primary/5",
           },
           {
-            id: "kc4-2-2", // No direct full match
-            title: "Knowledge Graphs", // Original
-            description: "Structured representation of entities and relationships", // Original
+            id: "kc4-2-2",
+            title: "Knowledge Graphs",
+            description: "Structured representation of entities and relationships",
             color: "border-primary/10 bg-transparent hover:bg-primary/5",
           }
         ]
       },
-      // Add other kc4.x types if necessary
     ]
   },
   {
@@ -370,52 +366,53 @@ export const frameworkData: ComponentNode[] = [
     title: "Tool Integration",
     description: "Frameworks for extending capabilities",
     threatCategories: ["Tool Misuse", "Privilege Compromise"],
-    color: "border-threat/30 bg-threat/5 hover:bg-threat/10", // My MD used 'border-pink' for KC5
+    color: "border-threat/30 bg-threat/5 hover:bg-threat/10",
+    icon: "Tool",
     children: [
       {
-        id: "kc5-1", // Corresponds to kc5.1, kc5.2, or kc5.3. User title is "API Connections"
-        title: "API Connections", // Original
-        description: "Integration with external services via APIs", // Original
+        id: "kc5-1",
+        title: "API Connections",
+        description: "Integration with external services via APIs",
         color: "border-threat/20 bg-threat/5 hover:bg-threat/10",
       },
       {
-        id: "kc5-2", // User title is "Function Calling"
-        title: "Function Calling", // Original
-        description: "Execution of code or functions by the agent", // Original
+        id: "kc5-2",
+        title: "Function Calling",
+        description: "Execution of code or functions by the agent",
         color: "border-threat/20 bg-threat/5 hover:bg-threat/10",
       }
     ]
   },
   {
     id: "kc6",
-    title: "Environment", // My MD: "Operational Environment (Agencies)"
+    title: "Environment",
     description: "API access, code execution, database operations",
-    threatCategories: ["Resource Exhaustion", "Container Escape"], // My MD: t2, t3, t4, t10, t11, t12, t13, t15
-    color: "border-control/30 bg-control/5 hover:bg-control/10", // My MD: 'border-indigo' for KC6
+    threatCategories: ["Resource Exhaustion", "Container Escape"],
+    color: "border-control/30 bg-control/5 hover:bg-control/10",
+    icon: "Cloud",
     children: [
       {
-        id: "kc6-1", // Corresponds to kc6.1 "API Access" or kc6.2 "Code Execution" etc.
-                      // User title: "Execution Environment"
-        title: "Execution Environment", // Original
-        description: "Where code runs and computational resources", // Original
+        id: "kc6-1",
+        title: "Execution Environment",
+        description: "Where code runs and computational resources",
         color: "border-control/20 bg-control/5 hover:bg-control/10",
       },
       {
-        id: "kc6-2", // User title: "Data Access"
-        title: "Data Access", // Original
-        description: "Interfaces to databases and storage systems", // Original
+        id: "kc6-2",
+        title: "Data Access",
+        description: "Interfaces to databases and storage systems",
         color: "border-control/20 bg-control/5 hover:bg-control/10",
         children: [
           {
-            id: "kc6-2-1", // Corresponds to parts of kc6.3 "Database Execution"
-            title: "Read Operations", // Original
-            description: "Data retrieval mechanisms", // Original
+            id: "kc6-2-1",
+            title: "Read Operations",
+            description: "Data retrieval mechanisms",
             color: "border-control/10 bg-transparent hover:bg-control/5",
           },
           {
-            id: "kc6-2-2", // Corresponds to parts of kc6.3 "Database Execution"
-            title: "Write Operations", // Original
-            description: "Data modification mechanisms", // Original
+            id: "kc6-2-2",
+            title: "Write Operations",
+            description: "Data modification mechanisms",
             color: "border-control/10 bg-transparent hover:bg-control/5",
           }
         ]
@@ -430,16 +427,15 @@ function updateUserNode(userNode: ComponentNode): void {
   const myData = myComponentDataMap.get(normalizedUserNodeId);
 
   if (myData) {
-    userNode.title = myData.title || userNode.title; // Prefer myData.title if available
-    userNode.description = myData.description || userNode.description; // Prefer myData.description
-    userNode.color = myData.color || userNode.color; // Prefer myData.color
+    userNode.title = myData.title || userNode.title;
+    userNode.description = myData.description || userNode.description;
+    userNode.color = myData.color || userNode.color;
 
     if (myData.threatIds && myData.threatIds.length > 0) {
       userNode.threatCategories = myData.threatIds.map(tid => threatIdToTitleMap[tid] || tid);
     } else if (userNode.threatCategories && userNode.threatCategories.length > 0) {
-      // Keep user's original threatCategories if myData has no threatIds for this specific node
     } else {
-        userNode.threatCategories = []; // Default to empty if neither has it
+        userNode.threatCategories = [];
     }
   }
 

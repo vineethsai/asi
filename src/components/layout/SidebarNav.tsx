@@ -2,9 +2,10 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { architecturesData, Architecture } from "../components/architecturesData";
 import { threatsData, Threat, mitigationsData, Mitigation } from "../components/securityData";
+import { frameworkData } from "../components/frameworkData";
 
 interface SidebarNavProps {
-  type: "architectures" | "threats" | "controls";
+  type: "architectures" | "threats" | "controls" | "components";
   activeId?: string;
 }
 
@@ -29,6 +30,12 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ type, activeId }) => {
       id: m.id,
       label: m.name,
       path: `/controls/${m.id}`
+    }));
+  } else if (type === "components") {
+    items = frameworkData.map((c) => ({
+      id: c.id,
+      label: c.title,
+      path: `/components/${c.id}`
     }));
   }
 

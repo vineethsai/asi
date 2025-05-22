@@ -156,7 +156,6 @@ export const ControlDetail = () => {
                   <div className="flex flex-wrap gap-2 mb-2">
                     {(mitigation.tags || []).map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
                   </div>
-                  {mitigation.riskScore !== undefined && <div className="flex items-center gap-2 mb-2"><span className="text-xs">Risk:</span><Progress value={mitigation.riskScore * 10} className="w-16" /><span className="text-xs font-bold">{mitigation.riskScore}</span></div>}
                   <div className="text-xs text-muted-foreground mb-1">Version: {mitigation.version || "-"} | Last Updated: {mitigation.lastUpdated || "-"} | Updated By: {mitigation.updatedBy || "-"}</div>
                   {mitigation.references && mitigation.references.length > 0 && <div className="text-xs mt-1">{mitigation.references.map(ref => <a key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-600 mr-2">{ref.title}</a>)}</div>}
                   <p className="text-muted-foreground mt-4">{mitigation.description}</p>
