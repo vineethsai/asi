@@ -90,7 +90,7 @@ const AccordionTrigger: React.FC<any> = ({ children, isOpen, onToggle, ...props 
 
 const AccordionContent: React.FC<any> = ({ children, isOpen, ...props }) => (
   <div className={`overflow-hidden transition-all duration-200 ${isOpen ? 'max-h-screen' : 'max-h-0'}`}>
-    <div {...props} className={`p-6 pt-0 border-t bg-gray-50 ${props.className || ""}`}>
+    <div {...props} className={`p-6 pt-0 border-t bg-background ${props.className || ""}`}>
       {children}
     </div>
   </div>
@@ -759,7 +759,7 @@ export const AssessmentTool = () => {
           <Card
             className={`cursor-pointer transition-all duration-200 ${levelIndent[level] || "ml-20"} ${
               isSelected
-                ? "border-blue-500 bg-blue-50 shadow-md ring-1 ring-blue-200"
+                ? "border-primary ring-2 ring-primary/40 bg-primary/20 shadow-lg text-primary"
                 : hasSelectedChild
                 ? "border-blue-300 bg-blue-25 shadow-sm"
                 : "hover:border-gray-300 hover:shadow-sm"
@@ -778,10 +778,8 @@ export const AssessmentTool = () => {
                 {!isSelected && hasSelectedChild && <div className="w-2 h-2 bg-blue-400 rounded-full" />}
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className={`font-medium text-sm ${isSelected ? 'text-blue-900' : 'text-gray-900'}`}>
-                  {option.name}
-                </h4>
-                <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">{option.description}</p>
+                <h4 className={`font-medium text-sm ${isSelected ? 'text-primary-foreground' : 'text-foreground'}`}>{option.name}</h4>
+                <p className={`text-xs mt-0.5 line-clamp-2 ${isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>{option.description}</p>
               </div>
               {level === 0 && (
                 <div className="flex items-center">
@@ -803,9 +801,9 @@ export const AssessmentTool = () => {
   return (
     <div className="w-full max-w-7xl mx-auto p-6 bg-background min-h-screen">
       <Card className="w-full shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
-          <CardTitle className="text-3xl font-bold">OWASP Agentic AI Security Assessment</CardTitle>
-          <CardDescription className="text-blue-100 text-base">
+        <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700">
+          <CardTitle className="text-3xl font-bold text-foreground">OWASP Agentic AI Security Assessment</CardTitle>
+          <CardDescription className="text-muted-foreground text-base">
             Identify security threats and controls for your agentic AI architecture based on the OWASP Securing Agentic Applications guide.
           </CardDescription>
         </CardHeader>
@@ -864,8 +862,8 @@ export const AssessmentTool = () => {
             {step === 1 && (
               <div className="space-y-6">
                 <div className="text-center mb-8">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Select Your System's Architecture Pattern</h3>
-                  <p className="text-gray-600 max-w-2xl mx-auto">
+                  <h3 className="text-2xl font-bold text-foreground mb-2">Select Your System's Architecture Pattern</h3>
+                  <p className="text-muted-foreground max-w-2xl mx-auto">
                     Choose the architecture pattern that best describes your agentic AI system. This will help tailor the threat analysis to your specific setup.
                   </p>
                 </div>
@@ -903,8 +901,8 @@ export const AssessmentTool = () => {
             {step === 2 && (
               <div className="space-y-6">
                 <div className="text-center mb-8">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Select Key System Components</h3>
-                  <p className="text-gray-600 max-w-3xl mx-auto">
+                  <h3 className="text-2xl font-bold text-foreground mb-2">Select Key System Components</h3>
+                  <p className="text-muted-foreground max-w-3xl mx-auto">
                     Select all relevant components and sub-components that are part of your agentic system. 
                     Selecting a sub-component automatically includes its parent components.
                   </p>
@@ -918,11 +916,11 @@ export const AssessmentTool = () => {
                 </Alert>
                 <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
                   {hierarchicalComponentData.map((topLevelComponent) => (
-                    <div key={topLevelComponent.id} className="bg-white rounded-lg border border-gray-200 p-1">
-                      <div className="flex items-center gap-3 text-lg font-bold text-gray-800 mb-4 px-3 py-2 bg-gray-50 rounded-lg border-b">
+                    <div key={topLevelComponent.id} className="bg-background rounded-lg border border-border p-1">
+                      <div className="flex items-center gap-3 text-lg font-bold text-foreground mb-4 px-3 py-2 bg-muted rounded-lg border-b">
                         {getCategoryIcon(topLevelComponent.category)}
                         <span>{topLevelComponent.category}</span>
-                        <div className="ml-auto text-sm font-normal text-gray-500">
+                        <div className="ml-auto text-sm font-normal text-muted-foreground">
                           {topLevelComponent.children?.length || 0} sub-components
                         </div>
                       </div>
@@ -930,8 +928,8 @@ export const AssessmentTool = () => {
                         {/* Render the top-level component itself */}
                         <Card className="cursor-pointer transition-all duration-200">
                           <CardContent className="p-4 flex items-center gap-3">
-                            <h4 className="font-bold text-base text-gray-900">{topLevelComponent.name}</h4>
-                            <p className="text-xs text-gray-600 mt-0.5">{topLevelComponent.description}</p>
+                            <h4 className="font-bold text-base text-foreground">{topLevelComponent.name}</h4>
+                            <p className="text-xs text-muted-foreground mt-0.5">{topLevelComponent.description}</p>
                           </CardContent>
                         </Card>
                         {/* Render its children with indentation */}
@@ -946,8 +944,8 @@ export const AssessmentTool = () => {
             {step === 3 && !showResults && ( 
               <div className="space-y-6">
                 <div className="text-center mb-8">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Select Implemented Mitigations</h3>
-                  <p className="text-gray-600 max-w-3xl mx-auto">
+                  <h3 className="text-2xl font-bold text-foreground mb-2">Select Implemented Mitigations</h3>
+                  <p className="text-muted-foreground max-w-3xl mx-auto">
                     Select all security mitigations you currently have implemented in your system. 
                     This will refine the risk assessment and provide better recommendations.
                   </p>
@@ -967,7 +965,7 @@ export const AssessmentTool = () => {
                       key={mitigation.id} 
                       className={`cursor-pointer transition-all duration-200 ${
                         selectedMitigations.includes(mitigation.id as MitigationCode) 
-                          ? "border-blue-500 bg-blue-50 shadow-md ring-1 ring-blue-200" 
+                          ? "border-primary ring-2 ring-primary/40 bg-primary/20 shadow-lg text-primary" 
                           : "hover:border-gray-300 hover:shadow-sm"
                       }`}
                       onClick={() => handleMitigationToggle(mitigation.id as MitigationCode)}
@@ -980,12 +978,10 @@ export const AssessmentTool = () => {
                         }`}>
                           {selectedMitigations.includes(mitigation.id as MitigationCode) && 
                             <CheckCircle className="h-3 w-3 text-white" />}
-                          </div>
+                        </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-sm mb-1">
-                            {mitigation.name} <span className="text-xs text-gray-400 font-normal">({mitigation.id})</span>
-                          </h4>
-                          <p className="text-xs text-gray-600 mb-3 line-clamp-3">{mitigation.description}</p>
+                          <h4 className={`font-semibold text-sm mb-1 ${selectedMitigations.includes(mitigation.id as MitigationCode) ? 'text-primary-foreground' : 'text-foreground'}`}>{mitigation.name} <span className={`text-xs font-normal ml-1 ${selectedMitigations.includes(mitigation.id as MitigationCode) ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>({mitigation.id})</span></h4>
+                          <p className={`text-xs mb-3 line-clamp-3 ${selectedMitigations.includes(mitigation.id as MitigationCode) ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>{mitigation.description}</p>
                           <div className="flex gap-2 flex-wrap">
                             {mitigation.effort && (
                               <Tooltip content={`Implementation effort: ${mitigation.effort}`}>
@@ -1116,12 +1112,11 @@ export const AssessmentTool = () => {
                             </div>
                           </AccordionTrigger>
                           <AccordionContent>
-                            <div className="space-y-4 text-sm">
-                              <p className="text-gray-700 leading-relaxed">{assessment.threat.description}</p>
-                              
+                            <div className="space-y-4 text-sm text-foreground bg-background">
+                              <p className="leading-relaxed text-foreground">{assessment.threat.description}</p>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                  <p className="font-semibold mb-2 text-gray-800">Risk Assessment:</p>
+                                  <p className="font-semibold mb-2 text-foreground">Risk Assessment:</p>
                                   <div className="space-y-1">
                                     <div className="flex justify-between">
                                       <span>Initial Impact:</span>
@@ -1136,7 +1131,7 @@ export const AssessmentTool = () => {
                                     {assessment.threat.architectureRisk && architecture && (
                                       <div className="flex justify-between">
                                         <span>Architecture Risk:</span>
-                                        <Badge variant="outline">{assessment.threat.architectureRisk[architecture]?.toUpperCase() || 'N/A'}</Badge>
+                                        <Badge variant="outline" className="text-foreground">{assessment.threat.architectureRisk[architecture]?.toUpperCase() || 'N/A'}</Badge>
                                       </div>
                                     )}
                                   </div>
@@ -1144,7 +1139,7 @@ export const AssessmentTool = () => {
                                 
                                 {assessment.threat.affectedComponents && assessment.threat.affectedComponents.length > 0 && (
                                   <div>
-                                    <p className="font-semibold mb-2 text-gray-800">Affected Components:</p>
+                                    <p className="font-semibold mb-2 text-foreground">Affected Components:</p>
                                     <div className="flex gap-1 flex-wrap">
                                       {assessment.threat.affectedComponents.map(ac => (
                                         <Badge key={ac} variant="secondary" className="text-xs">{ac}</Badge>
@@ -1156,7 +1151,7 @@ export const AssessmentTool = () => {
 
                               {assessment.threat.attackVectors && assessment.threat.attackVectors.length > 0 && (
                                 <div>
-                                  <p className="font-semibold mb-2 text-gray-800">Attack Vectors:</p>
+                                  <p className="font-semibold mb-2 text-foreground">Attack Vectors:</p>
                                   <div className="flex gap-1 flex-wrap">
                                     {assessment.threat.attackVectors.map((av, index) => (
                                       <Badge key={`av-${index}`} variant="outline" className="text-xs bg-red-50 border-red-200 text-red-700">
@@ -1168,17 +1163,13 @@ export const AssessmentTool = () => {
                               )}
                               
                               <div>
-                                <p className="font-semibold mb-2 text-gray-800">Available Mitigations ({assessment.mitigations.length}):</p>
+                                <p className="font-semibold mb-2 text-foreground">Available Mitigations ({assessment.mitigations.length}):</p>
                                 <div className="flex gap-1 flex-wrap">
                                   {assessment.mitigations.map(mCode => (
                                     <Badge 
                                       key={mCode} 
                                       variant="outline" 
-                                      className={`text-xs ${
-                                        selectedMitigations.includes(mCode) 
-                                          ? 'bg-green-100 text-green-700 border-green-400' 
-                                          : 'bg-blue-50 text-blue-700 border-blue-300'
-                                      }`}
+                                      className={`text-xs ${selectedMitigations.includes(mCode) ? 'bg-green-100 text-green-700 border-green-400' : 'bg-muted text-foreground border-border'}`}
                                     >
                                       {mitigationData[mCode]?.id || mCode}
                                       {selectedMitigations.includes(mCode) ? ' ✓' : ''}

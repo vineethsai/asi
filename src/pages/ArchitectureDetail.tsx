@@ -156,18 +156,18 @@ const ArchitectureDetail = () => {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Visual Diagram */}
                 {renderDiagram() && (
-                  <Card className="border border-blue-200 bg-white">
+                  <Card className="border border-border bg-background">
                     <CardContent className="p-4">
-                      <h2 className="text-base font-semibold mb-2 text-blue-900">Visual Diagram</h2>
+                      <h2 className="text-base font-semibold mb-2 text-foreground">Visual Diagram</h2>
                       {renderDiagram()}
                     </CardContent>
                   </Card>
                 )}
                 {/* Real-world Examples */}
                 {realWorldExamples[architecture.id] && (
-                  <Card className="border border-blue-200 bg-white">
+                  <Card className="border border-border bg-background">
                     <CardContent className="p-4">
-                      <h2 className="text-base font-semibold mb-2 text-blue-900">Real-World Examples</h2>
+                      <h2 className="text-base font-semibold mb-2 text-foreground">Real-World Examples</h2>
                       <ul className="list-disc pl-6 text-muted-foreground">
                         {realWorldExamples[architecture.id].map((ex, i) => (
                           <li key={i}>{ex}</li>
@@ -177,7 +177,7 @@ const ArchitectureDetail = () => {
                   </Card>
                 )}
                 {/* Key Components */}
-                <Card className="border border-primary/20 bg-white">
+                <Card className="border border-primary/20 bg-background">
                   <CardContent className="p-4">
                     <h2 className="text-base font-semibold mb-2 text-primary">Key Components</h2>
                     <div className="space-y-4">
@@ -205,7 +205,7 @@ const ArchitectureDetail = () => {
                   </CardContent>
                 </Card>
                 {/* Associated Threats */}
-                <Card className="border border-threat/20 bg-white">
+                <Card className="border border-threat/20 bg-background">
                   <CardContent className="p-4">
                     <h2 className="text-base font-semibold mb-2 text-threat">Associated Threats</h2>
                     <ul className="space-y-4">
@@ -227,7 +227,7 @@ const ArchitectureDetail = () => {
                   </CardContent>
                 </Card>
                 {/* Mitigations */}
-                <Card className="border border-control/20 bg-white">
+                <Card className="border border-control/20 bg-background">
                   <CardContent className="p-4">
                     <h2 className="text-base font-semibold mb-2 text-control">Mitigations</h2>
                     <ul className="space-y-4">
@@ -250,9 +250,9 @@ const ArchitectureDetail = () => {
                 </Card>
                 {/* Threat-Component Matrix */}
                 {threats.length > 0 && components.length > 0 && (
-                  <Card className="border border-yellow-200 bg-white lg:col-span-2">
+                  <Card className="border border-yellow-200 bg-background lg:col-span-2">
                     <CardContent className="p-4">
-                      <h2 className="text-base font-semibold mb-2 text-yellow-900">Threat-Component Relationship Map</h2>
+                      <h2 className="text-base font-semibold mb-2 text-foreground">Threat-Component Relationship Map</h2>
                       <div className="overflow-x-auto">
                         <table className="min-w-full border text-sm">
                           <thead>
