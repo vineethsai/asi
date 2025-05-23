@@ -9,6 +9,7 @@ import SidebarNav from "../components/layout/SidebarNav";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Icon } from "@/components/ui/icon";
+import { useState } from "react";
 
 // Helper to get component description from frameworkData
 const getComponentDescription = (id: string): string => {
@@ -89,6 +90,8 @@ const ArchitectureDetail = () => {
     return search(allComponentNodes);
   }
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   if (!architecture) {
     return (
       <div className="container py-12 text-center">
@@ -131,7 +134,7 @@ const ArchitectureDetail = () => {
       <section className="py-12 bg-secondary/50 min-h-screen">
         <div className="container px-4 md:px-6">
           <div className="flex flex-col lg:flex-row gap-6">
-            <SidebarNav type="architectures" activeId={architecture.id} />
+            <SidebarNav type="architectures" activeId={architecture.id} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
             <div className="flex-1">
               <Link to="/architectures" className="inline-flex items-center text-muted-foreground hover:text-foreground mb-4">
                 &larr; Back to Architectures

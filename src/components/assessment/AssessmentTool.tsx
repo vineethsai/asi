@@ -29,15 +29,11 @@ const CardHeader: React.FC<any> = ({ children, ...props }) => (
 );
 
 const CardTitle: React.FC<any> = ({ children, ...props }) => (
-  <h3 {...props} className={`text-xl font-semibold leading-none tracking-tight ${props.className || ""}`}>
-    {children}
-  </h3>
+  <h3 {...props} className={`text-xl font-semibold leading-none tracking-tight text-foreground ${props.className || ""}`}>{children}</h3>
 );
 
 const CardDescription: React.FC<any> = ({ children, ...props }) => (
-  <p {...props} className={`text-sm text-gray-600 mt-2 ${props.className || ""}`}>
-    {children}
-  </p>
+  <p {...props} className={`text-sm text-muted-foreground mt-2 ${props.className || ""}`}>{children}</p>
 );
 
 const CardContent: React.FC<any> = ({ children, ...props }) => (
@@ -802,8 +798,8 @@ export const AssessmentTool = () => {
     <div className="w-full max-w-7xl mx-auto p-6 bg-background min-h-screen">
       <Card className="w-full shadow-lg">
         <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700">
-          <CardTitle className="text-3xl font-bold text-foreground">OWASP Agentic AI Security Assessment</CardTitle>
-          <CardDescription className="text-muted-foreground text-base">
+          <CardTitle className="text-3xl font-bold text-white">OWASP Agentic AI Security Assessment</CardTitle>
+          <CardDescription className="text-blue-50 text-base drop-shadow font-medium">
             Identify security threats and controls for your agentic AI architecture based on the OWASP Securing Agentic Applications guide.
           </CardDescription>
         </CardHeader>
@@ -965,7 +961,7 @@ export const AssessmentTool = () => {
                       key={mitigation.id} 
                       className={`cursor-pointer transition-all duration-200 ${
                         selectedMitigations.includes(mitigation.id as MitigationCode) 
-                          ? "border-primary ring-2 ring-primary/40 bg-primary/20 shadow-lg text-primary" 
+                          ? "border-primary ring-2 ring-primary/40 bg-primary/10 shadow-lg text-primary" 
                           : "hover:border-gray-300 hover:shadow-sm"
                       }`}
                       onClick={() => handleMitigationToggle(mitigation.id as MitigationCode)}
@@ -980,8 +976,8 @@ export const AssessmentTool = () => {
                             <CheckCircle className="h-3 w-3 text-white" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className={`font-semibold text-sm mb-1 ${selectedMitigations.includes(mitigation.id as MitigationCode) ? 'text-primary-foreground' : 'text-foreground'}`}>{mitigation.name} <span className={`text-xs font-normal ml-1 ${selectedMitigations.includes(mitigation.id as MitigationCode) ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>({mitigation.id})</span></h4>
-                          <p className={`text-xs mb-3 line-clamp-3 ${selectedMitigations.includes(mitigation.id as MitigationCode) ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>{mitigation.description}</p>
+                          <h4 className={`font-semibold text-sm mb-1 ${selectedMitigations.includes(mitigation.id as MitigationCode) ? 'text-primary' : 'text-foreground'}`}>{mitigation.name} <span className={`text-xs font-normal ml-1 ${selectedMitigations.includes(mitigation.id as MitigationCode) ? 'text-primary/80' : 'text-muted-foreground'}`}>({mitigation.id})</span></h4>
+                          <p className={`text-xs mb-3 line-clamp-3 ${selectedMitigations.includes(mitigation.id as MitigationCode) ? 'text-primary/90' : 'text-muted-foreground'}`}>{mitigation.description}</p>
                           <div className="flex gap-2 flex-wrap">
                             {mitigation.effort && (
                               <Tooltip content={`Implementation effort: ${mitigation.effort}`}>

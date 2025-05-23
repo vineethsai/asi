@@ -4,7 +4,7 @@ export const Footer = () => {
   return (
     <footer className="border-t py-8 bg-background">
       <div className="container">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
           <div className="col-span-1">
             <h3 className="text-lg font-bold mb-4">OWASP Agentic Security</h3>
             <p className="text-muted-foreground">
@@ -40,7 +40,7 @@ export const Footer = () => {
           </div>
         </div>
 
-        <div className="mt-12 pt-4 border-t text-center text-muted-foreground">
+        <div className="mt-12 pt-4 border-t text-center text-muted-foreground text-xs sm:text-sm">
           <p>© {new Date().getFullYear()} OWASP Securing Agentic Applications Interactive Guide</p>
         </div>
       </div>

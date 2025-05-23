@@ -1,20 +1,40 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import ThemeToggle from "./ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Menu, X } from "lucide-react";
+import { Search, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
+import SidebarNav from "./SidebarNav";
 
 export const Header = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const location = useLocation();
+
+  // Determine sidebar type and activeId based on current path
+  let sidebarType = "architectures";
+  let activeId: string | undefined = undefined;
+  if (location.pathname.startsWith("/components")) {
+    sidebarType = "components";
+    activeId = location.pathname.split("/")[2];
+  } else if (location.pathname.startsWith("/threats")) {
+    sidebarType = "threats";
+    activeId = location.pathname.split("/")[2];
+  } else if (location.pathname.startsWith("/controls")) {
+    sidebarType = "controls";
+    activeId = location.pathname.split("/")[2];
+  } else if (location.pathname.startsWith("/architectures")) {
+    sidebarType = "architectures";
+    activeId = location.pathname.split("/")[2];
+  }
 
   const navItems = [
     { name: "Components", path: "/components" },
     { name: "Architecture", path: "/architectures" },
     { name: "Threats", path: "/threats" },
-    { name: "Controls", path: "/controls" },    { name: "Assessment", path: "/assessment" }
+    { name: "Controls", path: "/controls" },
+    { name: "Assessment", path: "/assessment" }
   ];
 
   return (
@@ -24,10 +44,10 @@ export const Header = () => {
           <Button 
             variant="ghost" 
             size="icon" 
-            className="md:hidden" 
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="lg:hidden" 
+            onClick={() => setIsSidebarOpen(true)}
           >
-            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            <Menu className="h-5 w-5" />
           </Button>
 
           <Link to="/" className="flex items-center gap-2">
@@ -72,7 +92,6 @@ export const Header = () => {
               </div>
             )}
           </div>
-          
           {!isSearchOpen && (
             <Button 
               variant="ghost" 
@@ -83,32 +102,16 @@ export const Header = () => {
               <Search className="h-5 w-5" />
             </Button>
           )}
-
           <ThemeToggle />
         </div>
       </div>
-
-      {/* Mobile Navigation */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden border-t animate-in">
-          <nav className="container py-3 flex flex-col">
-            {navItems.map((item) => (
-              <Link 
-                key={item.path} 
-                to={item.path}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="px-3 py-3 hover:bg-accent transition-colors rounded-md"
-              >
-                {item.name}
-              </Link>
-            ))}
-            <div className="flex items-center gap-2 mt-3 px-3 py-2 border-t">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input type="search" placeholder="Search..." className="flex-1" />
-            </div>
-          </nav>
-        </div>
-      )}
+      {/* Only use SidebarNav for mobile navigation */}
+      <SidebarNav
+        type={sidebarType as any}
+        activeId={activeId}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      />
     </header>
   );
 };
