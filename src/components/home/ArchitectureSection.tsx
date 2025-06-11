@@ -1,132 +1,25 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight, CheckCircle, AlertTriangle, GaugeCircle, BarChart3 } from "lucide-react";
-import clsx from "clsx";
+import { ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
 import { architecturesData, Architecture } from "../../components/components/architecturesData";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Icon } from "@/components/ui/icon";
 import { useState, useMemo } from "react";
 
 export const ArchitectureSection = () => {
   // Use all architectures from architecturesData, explicitly typed
   const architectures: Architecture[] = Object.values(architecturesData);
-  // Collect all tags and statuses
-  const allTags = Array.from(new Set(architectures.flatMap(a => a.tags || [])));
-  const allStatuses = Array.from(new Set(architectures.map(a => a.status).filter(Boolean)));
-  const [tagFilter, setTagFilter] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  // Filtering
-  const filtered = useMemo(() => architectures.filter(a => {
-    if (tagFilter && !(a.tags || []).includes(tagFilter)) return false;
-    if (statusFilter && a.status !== statusFilter) return false;
-    return true;
-  }), [architectures, tagFilter, statusFilter]);
-  // Analytics
-  const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    architectures.forEach(a => { if (a.status) counts[a.status] = (counts[a.status] || 0) + 1; });
-    return counts;
-  }, [architectures]);
-  const avgRisk = useMemo(() => {
-    const risks = architectures.map(a => a.riskScore).filter(Boolean) as number[];
-    return risks.length ? (risks.reduce((a, b) => a + b, 0) / risks.length).toFixed(1) : "-";
-  }, [architectures]);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
-  // Visual indicator helpers
-  const complexityIcon = (level: string) => {
-    switch (level) {
-      case "Low":
-        return <CheckCircle className="text-green-600 inline-block mr-1" size={18} />;
-      case "Medium":
-        return <GaugeCircle className="text-yellow-500 inline-block mr-1" size={18} />;
-      case "High":
-        return <AlertTriangle className="text-red-600 inline-block mr-1" size={18} />;
-      default:
-        return null;
-    }
-  };
-  const securityIcon = (level: string) => {
-    switch (level) {
-      case "Low":
-        return <AlertTriangle className="text-red-600 inline-block mr-1" size={18} />;
-      case "Medium":
-        return <GaugeCircle className="text-yellow-500 inline-block mr-1" size={18} />;
-      case "High":
-        return <CheckCircle className="text-green-600 inline-block mr-1" size={18} />;
-      default:
-        return null;
-    }
-  };
-  const performanceIcon = (level: string) => {
-    switch (level) {
-      case "High":
-        return <BarChart3 className="text-green-600 inline-block mr-1" size={18} />;
-      case "Medium":
-        return <BarChart3 className="text-yellow-500 inline-block mr-1" size={18} />;
-      case "Low":
-        return <BarChart3 className="text-red-600 inline-block mr-1" size={18} />;
-      case "Variable":
-        return <BarChart3 className="text-blue-600 inline-block mr-1" size={18} />;
-      default:
-        return null;
-    }
-  };
-
-  // Architecture meta for table (add for all 5)
-  const architectureMeta: Record<string, { complexity: string; security: string; performance: string }> = {
-    sequential: { complexity: "Low", security: "Medium", performance: "High" },
-    hierarchical: { complexity: "High", security: "High", performance: "Medium" },
-    collaborative: { complexity: "Medium", security: "Low", performance: "Variable" },
-    reactive: { complexity: "Medium", security: "Medium", performance: "High" },
-    knowledge: { complexity: "High", security: "Low", performance: "Medium" }
-  };
-
-  // Simple SVG representations of the architecture patterns
-  const renderArchitectureImage = (type: string) => {
-    if (type === "sequential") {
-      return (
-        <svg className="h-24 w-full" viewBox="0 0 200 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="20" y="40" width="30" height="30" rx="4" fill="currentColor" className="text-primary/20" stroke="currentColor" strokeWidth="2" />
-          <rect x="85" y="40" width="30" height="30" rx="4" fill="currentColor" className="text-primary/20" stroke="currentColor" strokeWidth="2" />
-          <rect x="150" y="40" width="30" height="30" rx="4" fill="currentColor" className="text-primary/20" stroke="currentColor" strokeWidth="2" />
-          <line x1="50" y1="55" x2="85" y2="55" stroke="currentColor" strokeWidth="2" />
-          <line x1="115" y1="55" x2="150" y2="55" stroke="currentColor" strokeWidth="2" />
-          <polygon points="79,50 79,60 89,55" fill="currentColor" />
-          <polygon points="144,50 144,60 154,55" fill="currentColor" />
-        </svg>
-      );
-    } else if (type === "hierarchical") {
-      return (
-        <svg className="h-24 w-full" viewBox="0 0 200 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="85" y="10" width="30" height="30" rx="4" fill="currentColor" className="text-primary/20" stroke="currentColor" strokeWidth="2" />
-          <rect x="20" y="60" width="30" height="30" rx="4" fill="currentColor" className="text-primary/20" stroke="currentColor" strokeWidth="2" />
-          <rect x="85" y="60" width="30" height="30" rx="4" fill="currentColor" className="text-primary/20" stroke="currentColor" strokeWidth="2" />
-          <rect x="150" y="60" width="30" height="30" rx="4" fill="currentColor" className="text-primary/20" stroke="currentColor" strokeWidth="2" />
-          <line x1="100" y1="40" x2="100" y2="60" stroke="currentColor" strokeWidth="2" />
-          <line x1="95" y1="25" x2="35" y2="60" stroke="currentColor" strokeWidth="2" />
-          <line x1="105" y1="25" x2="165" y2="60" stroke="currentColor" strokeWidth="2" />
-          <polygon points="100,54 95,44 105,44" fill="currentColor" />
-          <polygon points="41,54 31,46 46,40" fill="currentColor" />
-          <polygon points="159,54 169,46 154,40" fill="currentColor" />
-        </svg>
-      );
+  const toggleExpand = (architectureId: string) => {
+    const newExpanded = new Set(expandedCards);
+    if (newExpanded.has(architectureId)) {
+      newExpanded.delete(architectureId);
     } else {
-      return (
-        <svg className="h-24 w-full" viewBox="0 0 200 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="85" y="35" width="30" height="30" rx="4" fill="currentColor" className="text-primary/20" stroke="currentColor" strokeWidth="2" />
-          <rect x="20" y="35" width="30" height="30" rx="4" fill="currentColor" className="text-primary/20" stroke="currentColor" strokeWidth="2" />
-          <rect x="150" y="35" width="30" height="30" rx="4" fill="currentColor" className="text-primary/20" stroke="currentColor" strokeWidth="2" />
-          <line x1="50" y1="50" x2="85" y2="50" stroke="currentColor" strokeWidth="2" />
-          <line x1="115" y1="50" x2="150" y2="50" stroke="currentColor" strokeWidth="2" />
-          <line x1="35" y1="35" x2="75" y2="20" stroke="currentColor" strokeWidth="2" />
-          <line x1="165" y1="35" x2="125" y2="20" stroke="currentColor" strokeWidth="2" />
-          <line x1="35" y1="65" x2="75" y2="80" stroke="currentColor" strokeWidth="2" />
-          <line x1="165" y1="65" x2="125" y2="80" stroke="currentColor" strokeWidth="2" />
-        </svg>
-      );
+      newExpanded.add(architectureId);
     }
+    setExpandedCards(newExpanded);
   };
 
   return (
@@ -140,37 +33,55 @@ export const ArchitectureSection = () => {
             </p>
           </div>
         </div>
-        {/* Architecture Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
-          {filtered.map((architecture, i) => (
-            <Card key={i} className="overflow-hidden hover-card-trigger border" style={{ borderColor: architecture.color || undefined }}>
-              <CardContent className="p-6">
-                <div className="text-center mb-4 flex flex-col items-center gap-2">
-                  <Icon name={architecture.icon} color={architecture.color} size={32} />
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-xl font-bold mb-0">{architecture.name}</h3>
-                    {architecture.status && <Badge variant="outline" className="capitalize ml-2">{architecture.status}</Badge>}
+        
+        {/* Simplified Architecture Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-12">
+          {architectures.slice(0, 3).map((architecture) => {
+            const isExpanded = expandedCards.has(architecture.id);
+            return (
+              <Card key={architecture.id} className="overflow-hidden border hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Icon name={architecture.icon} color={architecture.color} size={20} />
+                      <h3 className="font-semibold text-foreground">
+                        {architecture.name.replace(' Architecture', '').replace(' Agent', '')}
+                      </h3>
+                    </div>
+                    <button
+                      onClick={() => toggleExpand(architecture.id)}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
                   </div>
-                </div>
-                <p className="text-muted-foreground mb-2">{architecture.description}</p>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {(architecture.tags || []).map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
-                </div>
-                <div className="text-xs text-muted-foreground mb-1">Version: {architecture.version || "-"} | Last Updated: {architecture.lastUpdated || "-"}</div>
-                <Link to={`/architectures/${architecture.id}`} className="inline-block w-full mt-2">
-                  <Button variant="outline" className="w-full">
-                    Explore
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ))}
+                  
+                  {isExpanded && (
+                    <div className="mt-4 space-y-3">
+                      <p className="text-sm text-muted-foreground">{architecture.description}</p>
+                      <div className="flex flex-wrap gap-1">
+                        {(architecture.tags || []).slice(0, 3).map(tag => (
+                          <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+                        ))}
+                      </div>
+                      <Link to={`/architectures/${architecture.id}`}>
+                        <Button variant="outline" size="sm" className="w-full">
+                          Learn More
+                          <ArrowRight className="ml-1 h-3 w-3" />
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
-        <div className="mt-12 text-center">
+        
+        <div className="mt-8 text-center">
           <Link to="/architectures">
             <Button size="lg">
-              View All Architectures
+              View All Architecture Patterns
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>

@@ -3,7 +3,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { architecturesData, Architecture } from "../components/components/architecturesData";
 import FeatureComparisonMatrix from "../components/home/FeatureComparisonMatrix";
-import SidebarNav from "../components/layout/SidebarNav";
 import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -64,8 +63,7 @@ const Architectures = () => {
       <Header />
       <section className="py-16 bg-secondary/50">
         <div className="container px-4 md:px-6">
-          <div className="flex flex-col lg:flex-row gap-8">
-            <SidebarNav type="architectures" />
+          <div className="flex flex-col gap-8">
             <div className="flex-1">
               {/* Architectures Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-0">

@@ -5,7 +5,6 @@ import { architecturesData, Architecture } from "../components/components/archit
 import { threatsData, mitigationsData } from "../components/components/securityData";
 import { frameworkData as allComponentNodes } from "../components/components/frameworkData";
 import { cn } from "@/lib/utils";
-import SidebarNav from "../components/layout/SidebarNav";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Icon } from "@/components/ui/icon";
@@ -20,20 +19,32 @@ const getComponentDescription = (id: string): string => {
 // Real-world examples for each architecture
 const realWorldExamples: Record<string, string[]> = {
   sequential: [
-    "Basic chatbots with scripted flows",
-    "Simple automation pipelines (e.g., ETL jobs)",
-    "Linear document processing workflows",
-    "Step-by-step customer support bots"
+    "Basic chatbots with linear conversation flows",
+    "Simple automation pipelines (e.g., data processing workflows)",
+    "Step-by-step customer support bots",
+    "Document processing agents with sequential validation",
+    "Linear content generation workflows"
   ],
   hierarchical: [
-    "Multi-agent task orchestration",
-    "Complex workflow engines",
-    "Enterprise RPA with sub-processes"
+    "Multi-agent task orchestration systems",
+    "Complex workflow engines with specialized agents",
+    "Enterprise RPA with sub-process delegation",
+    "AI-powered project management with task breakdown",
+    "Research assistants with domain-specific sub-agents"
   ],
   collaborative: [
-    "Swarm robotics",
-    "Distributed problem-solving agents",
-    "Crowdsourced moderation systems"
+    "Distributed problem-solving agent networks",
+    "Collaborative content creation systems",
+    "Multi-agent game AI with peer coordination",
+    "Decentralized decision-making systems",
+    "Swarm intelligence applications"
+  ],
+  swarm: [
+    "Distributed problem-solving agent networks",
+    "Collaborative content creation systems",
+    "Multi-agent game AI with peer coordination",
+    "Decentralized decision-making systems",
+    "Swarm intelligence applications"
   ],
   reactive: [
     "Real-time monitoring agents",
@@ -124,7 +135,72 @@ const ArchitectureDetail = () => {
         </div>
       );
     }
-    // Add more diagrams for other patterns as needed
+    
+    if (architecture.id === "hierarchical") {
+      return (
+        <div className="flex justify-center mb-10">
+          <svg width="420" height="200" viewBox="0 0 420 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            {/* Orchestrator */}
+            <rect x="160" y="20" width="100" height="40" rx="8" fill="#dcfce7" stroke="#22c55e" strokeWidth="2" />
+            <text x="210" y="45" textAnchor="middle" alignmentBaseline="middle" fontSize="14" fill="#15803d">Orchestrator</text>
+            
+            {/* Sub-agents */}
+            <rect x="20" y="120" width="80" height="40" rx="8" fill="#dcfce7" stroke="#22c55e" strokeWidth="2" />
+            <rect x="120" y="120" width="80" height="40" rx="8" fill="#dcfce7" stroke="#22c55e" strokeWidth="2" />
+            <rect x="220" y="120" width="80" height="40" rx="8" fill="#dcfce7" stroke="#22c55e" strokeWidth="2" />
+            <rect x="320" y="120" width="80" height="40" rx="8" fill="#dcfce7" stroke="#22c55e" strokeWidth="2" />
+            
+            <text x="60" y="145" textAnchor="middle" alignmentBaseline="middle" fontSize="12" fill="#15803d">Agent A</text>
+            <text x="160" y="145" textAnchor="middle" alignmentBaseline="middle" fontSize="12" fill="#15803d">Agent B</text>
+            <text x="260" y="145" textAnchor="middle" alignmentBaseline="middle" fontSize="12" fill="#15803d">Agent C</text>
+            <text x="360" y="145" textAnchor="middle" alignmentBaseline="middle" fontSize="12" fill="#15803d">Agent D</text>
+            
+            {/* Arrows */}
+            <line x1="185" y1="60" x2="80" y2="120" stroke="#22c55e" strokeWidth="2" markerEnd="url(#arrowhead)" />
+            <line x1="200" y1="60" x2="160" y2="120" stroke="#22c55e" strokeWidth="2" markerEnd="url(#arrowhead)" />
+            <line x1="215" y1="60" x2="260" y2="120" stroke="#22c55e" strokeWidth="2" markerEnd="url(#arrowhead)" />
+            <line x1="235" y1="60" x2="340" y2="120" stroke="#22c55e" strokeWidth="2" markerEnd="url(#arrowhead)" />
+            
+            {/* Arrow marker */}
+            <defs>
+              <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#22c55e" />
+              </marker>
+            </defs>
+          </svg>
+        </div>
+      );
+    }
+    
+    if (architecture.id === "collaborative" || architecture.id === "swarm") {
+      return (
+        <div className="flex justify-center mb-10">
+          <svg width="420" height="200" viewBox="0 0 420 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            {/* Swarm agents */}
+            <circle cx="100" cy="60" r="30" fill="#fef3c7" stroke="#f59e0b" strokeWidth="2" />
+            <circle cx="320" cy="60" r="30" fill="#fef3c7" stroke="#f59e0b" strokeWidth="2" />
+            <circle cx="100" cy="140" r="30" fill="#fef3c7" stroke="#f59e0b" strokeWidth="2" />
+            <circle cx="320" cy="140" r="30" fill="#fef3c7" stroke="#f59e0b" strokeWidth="2" />
+            <circle cx="210" cy="100" r="30" fill="#fef3c7" stroke="#f59e0b" strokeWidth="2" />
+            
+            <text x="100" y="67" textAnchor="middle" alignmentBaseline="middle" fontSize="12" fill="#92400e">Agent 1</text>
+            <text x="320" y="67" textAnchor="middle" alignmentBaseline="middle" fontSize="12" fill="#92400e">Agent 2</text>
+            <text x="100" y="147" textAnchor="middle" alignmentBaseline="middle" fontSize="12" fill="#92400e">Agent 3</text>
+            <text x="320" y="147" textAnchor="middle" alignmentBaseline="middle" fontSize="12" fill="#92400e">Agent 4</text>
+            <text x="210" y="107" textAnchor="middle" alignmentBaseline="middle" fontSize="12" fill="#92400e">Agent 5</text>
+            
+            {/* Communication lines */}
+            <line x1="130" y1="60" x2="180" y2="100" stroke="#f59e0b" strokeWidth="2" strokeDasharray="5,5" />
+            <line x1="290" y1="60" x2="240" y2="100" stroke="#f59e0b" strokeWidth="2" strokeDasharray="5,5" />
+            <line x1="130" y1="140" x2="180" y2="100" stroke="#f59e0b" strokeWidth="2" strokeDasharray="5,5" />
+            <line x1="290" y1="140" x2="240" y2="100" stroke="#f59e0b" strokeWidth="2" strokeDasharray="5,5" />
+            <line x1="130" y1="70" x2="290" y2="130" stroke="#f59e0b" strokeWidth="2" strokeDasharray="5,5" />
+            <line x1="130" y1="130" x2="290" y2="70" stroke="#f59e0b" strokeWidth="2" strokeDasharray="5,5" />
+          </svg>
+        </div>
+      );
+    }
+    
     return null;
   };
 
@@ -133,8 +209,7 @@ const ArchitectureDetail = () => {
       <Header />
       <section className="py-12 bg-secondary/50 min-h-screen">
         <div className="container px-4 md:px-6">
-          <div className="flex flex-col lg:flex-row gap-6">
-            <SidebarNav type="architectures" activeId={architecture.id} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+          <div className="flex flex-col gap-6">
             <div className="flex-1">
               <Link to="/architectures" className="inline-flex items-center text-muted-foreground hover:text-foreground mb-4">
                 &larr; Back to Architectures
@@ -155,6 +230,35 @@ const ArchitectureDetail = () => {
                   <p className="text-muted-foreground mt-4">{architecture.description}</p>
                 </CardContent>
               </Card>
+
+              {/* Detailed Description Card */}
+              {architecture.detailedDescription && (
+                <Card className="mb-4 border border-border">
+                  <CardContent className="p-4">
+                    <h2 className="text-lg font-semibold mb-3 text-foreground">Architecture Overview</h2>
+                    <p className="text-muted-foreground leading-relaxed">{architecture.detailedDescription}</p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Relevant Threats Section */}
+              {architecture.relevantThreats && architecture.relevantThreats.length > 0 && (
+                <Card className="mb-4 border border-red-200">
+                  <CardContent className="p-4">
+                    <h2 className="text-lg font-semibold mb-3 text-red-700">Relevant Threats</h2>
+                    <p className="text-sm text-muted-foreground mb-4">Security concerns are focused on protecting this architecture from the following attack vectors:</p>
+                    <div className="space-y-4">
+                      {architecture.relevantThreats.map((threat, index) => (
+                        <div key={index} className="border rounded-lg p-4 bg-red-50 border-red-200">
+                          <h3 className="font-semibold text-red-800 mb-2">{threat.title}</h3>
+                          <p className="text-sm text-red-700 leading-relaxed">{threat.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Grid for the rest of the cards */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Visual Diagram */}
