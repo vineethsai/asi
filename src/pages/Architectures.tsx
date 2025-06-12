@@ -10,6 +10,30 @@ import { Progress } from "@/components/ui/progress";
 import { Icon } from "@/components/ui/icon";
 import { Helmet } from "react-helmet";
 
+/**
+ * Only allow http/https URLs, not protocol-relative or any executable schemes.
+ * Returns true if the url is a string starting with 'http://' or 'https://', and parses as a valid URL.
+ */
+function isSafeHttpUrl(url: string): boolean {
+  if (typeof url !== "string") return false;
+  const trimmed = url.trim();
+  // Disallow protocol-relative URLs
+  if (trimmed.startsWith("//")) return false;
+  try {
+    const parsed = new URL(trimmed, window.location.origin);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      // Also ensure original string starts with http/https (not relative paths, even if resolved)
+      if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+        return true;
+      }
+    }
+    // else fail
+    return false;
+  } catch (e) {
+    return false;
+  }
+}
+
 const Architectures = () => {
   const architectures: Architecture[] = Object.values(architecturesData);
   // Collect all tags and statuses
@@ -83,7 +107,25 @@ const Architectures = () => {
                           {(arch.tags || []).map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
                         </div>
                         <div className="text-xs text-muted-foreground mb-1">Version: {arch.version || "-"} | Last Updated: {arch.lastUpdated || "-"}</div>
-                        {arch.references && arch.references.length > 0 && <div className="text-xs mt-1">{arch.references.map(ref => <a key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-600 mr-2">{ref.title}</a>)}</div>}
+                        {arch.references && arch.references.length > 0 && (
+                          <div className="text-xs mt-1">
+                            {arch.references.map(ref =>
+                              isSafeHttpUrl(ref.url) ? (
+                                <a
+                                  key={ref.url}
+                                  href={ref.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="underline text-blue-600 mr-2"
+                                >
+                                  {ref.title}
+                                </a>
+                              ) : (
+                                <span key={ref.url} className="text-muted-foreground mr-2">{ref.title}</span>
+                              )
+                            )}
+                          </div>
+                        )}
                         <div className="text-sm mt-2">
                           <span className="font-medium">Key Components: </span>
                           <span>{arch.keyComponents.map(id => id.toUpperCase()).join(", ")}</span>
@@ -104,4 +146,4 @@ const Architectures = () => {
   );
 };
 
-export default Architectures; 
+export default Architectures;
