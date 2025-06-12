@@ -8,6 +8,24 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Icon } from "@/components/ui/icon";
 
+// --- Helper function to validate safe URLs --- //
+function isSafeUrl(url: string): boolean {
+  try {
+    // Allow http, https, protocol-relative ("//example.com"), and anchor links (#foo)
+    // Disallow javascript:, data:, vbscript:, file:, etc.
+    // Also allow relative URLs (i.e., "/some/path")
+    if (url.startsWith("#") || url.startsWith("/")) return true;
+    // Protocol-relative
+    if (url.startsWith("//")) return true;
+    const parsed = new URL(url, window.location.origin);
+    const safeProtocols = ["http:", "https:"];
+    return safeProtocols.includes(parsed.protocol);
+  } catch {
+    // If parsing fails, treat as unsafe (e.g., malformed URL)
+    return false;
+  }
+}
+
 export const ThreatDetail = () => {
   const { threatId } = useParams<{ threatId: string }>();
   const threat: Threat | undefined = threatId ? threatsData[threatId] : undefined;
@@ -101,7 +119,13 @@ export const ThreatDetail = () => {
                     {(threat.tags || []).map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
                   </div>
                   <div className="text-xs text-muted-foreground mb-1">Version: {threat.version || "-"} | Last Updated: {threat.lastUpdated || "-"} | Updated By: {threat.updatedBy || "-"}</div>
-                  {threat.references && threat.references.length > 0 && <div className="text-xs mt-1">{threat.references.map(ref => <a key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-600 mr-2">{ref.title}</a>)}</div>}
+                  {threat.references && threat.references.length > 0 && <div className="text-xs mt-1">{threat.references.map(ref => 
+                    isSafeUrl(ref.url) ? (
+                      <a key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-600 mr-2">{ref.title}</a>
+                    ) : (
+                      <span key={ref.url} className="text-red-700 mr-2">{ref.title} (invalid or unsafe link)</span>
+                    )
+                  )}</div>}
                   <p className="text-muted-foreground mt-4">{threat.description}</p>
                   {/* Analytics widgets */}
                   <div className="flex flex-wrap gap-4 mt-4">
@@ -234,7 +258,11 @@ export const ThreatDetail = () => {
                     <ul className="list-disc pl-6 text-muted-foreground">
                       {(references[threat.id] || []).map((ref, i) => (
                         <li key={i}>
-                          <a href={ref} target="_blank" rel="noopener noreferrer" className="underline text-blue-700">{ref}</a>
+                          {isSafeUrl(ref) ? (
+                            <a href={ref} target="_blank" rel="noopener noreferrer" className="underline text-blue-700">{ref}</a>
+                          ) : (
+                            <span className="text-red-700">{ref} (invalid or unsafe link)</span>
+                          )}
                         </li>
                       ))}
                       {(!references[threat.id] || references[threat.id].length === 0) && (
@@ -252,4 +280,4 @@ export const ThreatDetail = () => {
   );
 };
 
-export default ThreatDetail; 
+export default ThreatDetail;
