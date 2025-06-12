@@ -17,6 +17,41 @@ const componentIdToName: Record<string, string> = Object.fromEntries(
   frameworkData.map((c) => [c.id, c.title])
 );
 
+// Utility to check for safe URL protocols
+function isSafeUrl(url: string | undefined | null): boolean {
+  if (!url || typeof url !== "string") return false;
+  try {
+    // Allow absolute http(s), mailto, and protocol-relative.
+    const trimmedUrl = url.trim();
+    // Allow relative URLs (beginning with / or ./ or ../), and protocol-relative //
+    if (
+      trimmedUrl.startsWith("/") ||
+      trimmedUrl.startsWith("./") ||
+      trimmedUrl.startsWith("../") ||
+      trimmedUrl.startsWith("//")
+    ) {
+      // Optionally: If protocol-relative ("//"), restrict to http(s)
+      if (trimmedUrl.startsWith("//")) {
+        // Check if it looks like //domain
+        // We'll treat protocol-relative as safe (same as browser does), but you can further restrict
+        return true; // Optionally: Add restrictions if needed
+      }
+      return true;
+    }
+    // Parse as a URL; if not absolute it will throw
+    const parsed = new URL(trimmedUrl, "http://dummybase.com"); // base needed for relative URLs
+    const protocol = parsed.protocol.toLowerCase();
+    return (
+      protocol === "http:" ||
+      protocol === "https:" ||
+      protocol === "mailto:"
+    );
+  } catch (e) {
+    // If URL parsing fails, do not allow
+    return false;
+  }
+}
+
 export const Threats = () => {
   const threats: Threat[] = Object.values(threatsData);
   // Collect all tags and statuses
@@ -100,7 +135,15 @@ export const Threats = () => {
                           {(threat.tags || []).map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
                         </div>
                         <div className="text-xs text-muted-foreground mb-1">Version: {threat.version || "-"} | Last Updated: {threat.lastUpdated || "-"} | Updated By: {threat.updatedBy || "-"}</div>
-                        {threat.references && threat.references.length > 0 && <div className="text-xs mt-1">{threat.references.map(ref => <a key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-600 mr-2">{ref.title}</a>)}</div>}
+                        {threat.references && threat.references.length > 0 && (
+                          <div className="text-xs mt-1">
+                            {threat.references.map(ref =>
+                              isSafeUrl(ref.url)
+                                ? <a key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-600 mr-2">{ref.title}</a>
+                                : <span key={ref.url} className="text-gray-400 mr-2">{ref.title}</span>
+                            )}
+                          </div>
+                        )}
                         <p className="text-muted-foreground mt-4">{threat.description}</p>
                       </CardContent>
                     </Card>
@@ -115,4 +158,4 @@ export const Threats = () => {
   );
 };
 
-export default Threats; 
+export default Threats;
