@@ -17,6 +17,25 @@ const getComponentDescription = (id: string): string => {
   return node?.description || "";
 };
 
+// ----- [START NEW CODE BLOCK] -----
+/**
+ * Check if a url string is safe for use in href (i.e., only allows http(s) protocols).
+ * Returns true if url is http(s)://..., false otherwise.
+ */
+function isSafeUrl(url: string): boolean {
+  try {
+    // Handles both absolute and protocol-relative URLs
+    // Also ensures that relative paths (e.g. "/something") are excluded from being rendered as external links
+    const parsed = new URL(url, "http://dummy-base/");
+    // Only allow http or https protocol
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    // If url is malformed, treat as unsafe
+    return false;
+  }
+}
+// ----- [END NEW CODE BLOCK] -----
+
 // Real-world examples for each architecture
 const realWorldExamples: Record<string, string[]> = {
   sequential: [
@@ -151,7 +170,30 @@ const ArchitectureDetail = () => {
                     {(architecture.tags || []).map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
                   </div>
                   <div className="text-xs text-muted-foreground mb-1">Version: {architecture.version || "-"} | Last Updated: {architecture.lastUpdated || "-"} | Updated By: {architecture.updatedBy || "-"}</div>
-                  {architecture.references && architecture.references.length > 0 && <div className="text-xs mt-1">{architecture.references.map(ref => <a key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-600 mr-2">{ref.title}</a>)}</div>}
+                  {/* ----- [START PATCHED REFERENCES BLOCK] ----- */}
+                  {architecture.references && architecture.references.length > 0 && (
+                    <div className="text-xs mt-1">
+                      {architecture.references.map(ref =>
+                        isSafeUrl(ref.url) ? (
+                          <a
+                            key={ref.url}
+                            href={ref.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline text-blue-600 mr-2"
+                          >
+                            {ref.title}
+                          </a>
+                        ) : (
+                          // Unsafe URLs: render as plain text (not a link)
+                          <span key={ref.url} className="text-blue-600 mr-2">
+                            {ref.title}
+                          </span>
+                        )
+                      )}
+                    </div>
+                  )}
+                  {/* ----- [END PATCHED REFERENCES BLOCK] ----- */}
                   <p className="text-muted-foreground mt-4">{architecture.description}</p>
                 </CardContent>
               </Card>
@@ -298,4 +340,4 @@ const ArchitectureDetail = () => {
   );
 };
 
-export default ArchitectureDetail; 
+export default ArchitectureDetail;
