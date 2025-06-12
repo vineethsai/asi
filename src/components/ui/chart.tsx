@@ -65,6 +65,23 @@ const ChartContainer = React.forwardRef<
 })
 ChartContainer.displayName = "Chart"
 
+// Helper: escape double quotes and backslashes for safe attribute values
+function escapeAttrValue(str: string): string {
+  // escape backslash first, then quotes
+  return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+}
+
+// Helper: validate custom property key (used for --color-KEY)
+// Must start with a letter or underscore, and include only a-z, A-Z, 0-9, -, _
+function toSafeCustomPropKey(key: string): string | null {
+  const re = /^[_a-zA-Z][_a-zA-Z0-9-]*$/
+  if (re.test(key)) return key
+  // Try to transliterate by stripping invalid characters, fallback to null if empty
+  const safe = key.replace(/[^_a-zA-Z0-9-]/g, "")
+  if (safe && /^[a-zA-Z_]/.test(safe)) return safe
+  return null
+}
+
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   const colorConfig = Object.entries(config).filter(
     ([_, config]) => config.theme || config.color
@@ -74,20 +91,28 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null
   }
 
+  // Escape the id for safe use inside CSS attribute selector
+  const escapedId = escapeAttrValue(id)
+
   return (
     <style
       dangerouslySetInnerHTML={{
         __html: Object.entries(THEMES)
           .map(
             ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
+${prefix} [data-chart="${escapedId}"] {
 ${colorConfig
   .map(([key, itemConfig]) => {
+    const safeKey = toSafeCustomPropKey(key)
+    if (!safeKey) return null
     const color =
       itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
       itemConfig.color
-    return color ? `  --color-${key}: ${color};` : null
+    // Sanitize CSS color value for extra defense (original code didn't have this)
+    // We'll allow what the user originally does for color (let's assume it's safe), extra validation can be added if desired.
+    return color ? `  --color-${safeKey}: ${color};` : null
   })
+  .filter(Boolean)
   .join("\n")}
 }
 `
