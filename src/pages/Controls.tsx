@@ -10,6 +10,16 @@ import { Progress } from "@/components/ui/progress";
 import { Icon } from "@/components/ui/icon";
 import { Helmet } from "react-helmet";
 
+// Allow only http(s) URLs
+function isSafeUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url, window.location.origin); // To allow relative URLs if ever needed; change logic if only absolutes wanted
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export const Controls = () => {
   const controls: Mitigation[] = Object.values(mitigationsData);
   // Collect all tags and statuses
@@ -93,7 +103,23 @@ export const Controls = () => {
                           {(control.tags || []).map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
                         </div>
                         <div className="text-xs text-muted-foreground mb-1">Version: {control.version || "-"} | Last Updated: {control.lastUpdated || "-"} | Updated By: {control.updatedBy || "-"}</div>
-                        {control.references && control.references.length > 0 && <div className="text-xs mt-1">{control.references.map(ref => <a key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-600 mr-2">{ref.title}</a>)}</div>}
+                        {control.references && control.references.length > 0 && (
+                          <div className="text-xs mt-1">
+                            {control.references
+                              .filter(ref => ref.url && isSafeUrl(ref.url))
+                              .map(ref => (
+                                <a
+                                  key={ref.url}
+                                  href={ref.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="underline text-blue-600 mr-2"
+                                >
+                                  {ref.title}
+                                </a>
+                              ))}
+                          </div>
+                        )}
                         <p className="text-muted-foreground mt-4">{control.description}</p>
                       </CardContent>
                     </Card>
@@ -108,4 +134,4 @@ export const Controls = () => {
   );
 };
 
-export default Controls; 
+export default Controls;
