@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Search, ZoomIn, ZoomOut, RotateCcw, Play, Pause } from 'lucide-react';
+import { Search, ZoomIn, ZoomOut, RotateCcw, Play, Pause, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface GraphNode extends d3.SimulationNodeDatum {
@@ -49,12 +49,6 @@ const ArchitectureNavigator: React.FC = () => {
 
   // Build graph data
   const { nodes, links } = useMemo(() => {
-    console.log('Building graph data...');
-    console.log('architecturesData:', architecturesData);
-    console.log('frameworkData:', frameworkData);
-    console.log('threatsData:', threatsData);
-    console.log('mitigationsData:', mitigationsData);
-    
     const nodeMap = new Map<string, GraphNode>();
     const linkArray: GraphLink[] = [];
 
@@ -157,16 +151,10 @@ const ArchitectureNavigator: React.FC = () => {
       console.error('Error building graph data:', error);
     }
 
-    const result = {
+    return {
       nodes: Array.from(nodeMap.values()),
       links: linkArray
     };
-    
-    console.log('Graph data built:', result);
-    console.log('Total nodes:', result.nodes.length);
-    console.log('Total links:', result.links.length);
-    
-    return result;
   }, []);
 
   // Filter nodes and links based on search and filters
@@ -232,36 +220,43 @@ const ArchitectureNavigator: React.FC = () => {
       });
 
     svg.call(zoom);
+    
+    // Click on empty space to clear selection
+    svg.on('click', () => {
+      setSelectedNode(null);
+      node.transition().duration(300).style('opacity', 1);
+      link.transition().duration(300).style('opacity', 0.6);
+    });
 
-    // Create simulation
+    // Create simulation with improved forces
     const simulation = d3.forceSimulation<GraphNode>(filteredData.nodes)
       .force('link', d3.forceLink<GraphNode, GraphLink>(filteredData.links)
         .id(d => d.id)
         .distance(d => {
           switch (d.type) {
-            case 'arch-comp': return 150;
-            case 'comp-threat': return 100;
-            case 'threat-mitigation': return 80;
-            default: return 100;
+            case 'arch-comp': return 120;
+            case 'comp-threat': return 80;
+            case 'threat-mitigation': return 60;
+            default: return 80;
           }
         })
-        .strength(d => d.strength))
+        .strength(d => d.strength * 0.8))
       .force('charge', d3.forceManyBody<GraphNode>()
         .strength(d => {
           switch (d.type) {
-            case 'architecture': return -2000;
-            case 'component': return -1000;
-            case 'threat': return -800;
-            case 'mitigation': return -600;
-            default: return -800;
+            case 'architecture': return -1500;
+            case 'component': return -800;
+            case 'threat': return -600;
+            case 'mitigation': return -400;
+            default: return -600;
           }
         }))
       .force('center', d3.forceCenter(dimensions.width / 2, dimensions.height / 2))
       .force('collision', d3.forceCollide<GraphNode>()
-        .radius(d => d.size + 10)
-        .strength(0.7))
-      .force('x', d3.forceX(dimensions.width / 2).strength(0.1))
-      .force('y', d3.forceY(dimensions.height / 2).strength(0.1));
+        .radius(d => d.size + 15)
+        .strength(0.8))
+      .force('x', d3.forceX(dimensions.width / 2).strength(0.05))
+      .force('y', d3.forceY(dimensions.height / 2).strength(0.05));
 
     simulationRef.current = simulation;
 
@@ -328,6 +323,27 @@ const ArchitectureNavigator: React.FC = () => {
       .on('click', (event, d) => {
         setSelectedNode(d);
         event.stopPropagation();
+        
+        // Highlight the clicked node and its connections
+        const connectedNodeIds = new Set<string>();
+        filteredData.links.forEach(link => {
+          const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+          const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+          if (sourceId === d.id) connectedNodeIds.add(targetId);
+          if (targetId === d.id) connectedNodeIds.add(sourceId);
+        });
+
+        // Animate highlight
+        node.transition()
+          .duration(300)
+          .style('opacity', n => n.id === d.id || connectedNodeIds.has(n.id) ? 1 : 0.3);
+        link.transition()
+          .duration(300)
+          .style('opacity', l => {
+            const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
+            const targetId = typeof l.target === 'string' ? l.target : l.target.id;
+            return sourceId === d.id || targetId === d.id ? 1 : 0.2;
+          });
       })
       .on('mouseover', (event, d) => {
         // Highlight connected nodes
@@ -359,7 +375,7 @@ const ArchitectureNavigator: React.FC = () => {
       .attr('stroke-width', 2);
 
     // Add risk indicators for threats
-    node.filter(d => d.type === 'threat' && d.riskScore)
+    node.filter(d => d.type === 'threat' && d.riskScore && d.riskScore > 0)
       .append('circle')
       .attr('r', d => d.size + 5)
       .attr('fill', 'none')
@@ -410,22 +426,24 @@ const ArchitectureNavigator: React.FC = () => {
       node.attr('transform', d => `translate(${d.x || 0},${d.y || 0})`);
     });
 
-    // Initial zoom to fit
-    const bounds = g.node()?.getBBox();
-    if (bounds) {
-      const fullWidth = dimensions.width;
-      const fullHeight = dimensions.height;
-      const width = bounds.width;
-      const height = bounds.height;
-      const midX = bounds.x + width / 2;
-      const midY = bounds.y + height / 2;
-      const scale = Math.min(fullWidth / width, fullHeight / height) * 0.8;
-      const translate = [fullWidth / 2 - scale * midX, fullHeight / 2 - scale * midY];
+    // Initial zoom to fit - with delay to ensure nodes are positioned
+    setTimeout(() => {
+      const bounds = (g.node() as SVGGElement)?.getBBox();
+      if (bounds && bounds.width > 0 && bounds.height > 0) {
+        const fullWidth = dimensions.width;
+        const fullHeight = dimensions.height;
+        const width = bounds.width;
+        const height = bounds.height;
+        const midX = bounds.x + width / 2;
+        const midY = bounds.y + height / 2;
+        const scale = Math.min(fullWidth / width, fullHeight / height) * 0.6;
+        const translate = [fullWidth / 2 - scale * midX, fullHeight / 2 - scale * midY];
 
-      svg.transition()
-        .duration(750)
-        .call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
-    }
+        svg.transition()
+          .duration(1000)
+          .call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
+      }
+    }, 1000);
 
     return () => {
       simulation.stop();
@@ -469,6 +487,50 @@ const ArchitectureNavigator: React.FC = () => {
     }
   }, [isSimulationRunning]);
 
+  const centerView = useCallback(() => {
+    if (svgRef.current) {
+      const svg = d3.select(svgRef.current);
+      const g = svg.select('g');
+      const bounds = (g.node() as SVGGElement)?.getBBox();
+      
+      if (bounds && bounds.width > 0 && bounds.height > 0) {
+        const fullWidth = dimensions.width;
+        const fullHeight = dimensions.height;
+        const width = bounds.width;
+        const height = bounds.height;
+        const midX = bounds.x + width / 2;
+        const midY = bounds.y + height / 2;
+        const scale = Math.min(fullWidth / width, fullHeight / height) * 0.6;
+        const translate = [fullWidth / 2 - scale * midX, fullHeight / 2 - scale * midY];
+
+        svg.transition()
+          .duration(750)
+          .call(d3.zoom<SVGSVGElement, unknown>().transform as any,
+            d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
+      }
+    }
+  }, [dimensions]);
+
+  // Early return for debugging
+  if (nodes.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <h3 className="text-lg font-semibold mb-2">No Data Available</h3>
+          <p className="text-muted-foreground">
+            No architecture data found. Check the console for details.
+          </p>
+          <div className="mt-4 text-sm text-muted-foreground">
+            <p>Architectures: {Object.keys(architecturesData).length}</p>
+            <p>Framework Components: {frameworkData.length}</p>
+            <p>Threats: {Object.keys(threatsData).length}</p>
+            <p>Mitigations: {Object.keys(mitigationsData).length}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col lg:flex-row gap-4 h-full">
       {/* Controls Panel */}
@@ -489,17 +551,21 @@ const ArchitectureNavigator: React.FC = () => {
 
               {/* Controls */}
               <div className="grid grid-cols-2 gap-2">
-                <Button onClick={zoomIn} variant="outline" size="sm">
+                <Button onClick={zoomIn} variant="outline" size="sm" title="Zoom In">
                   <ZoomIn className="h-4 w-4" />
                 </Button>
-                <Button onClick={zoomOut} variant="outline" size="sm">
+                <Button onClick={zoomOut} variant="outline" size="sm" title="Zoom Out">
                   <ZoomOut className="h-4 w-4" />
                 </Button>
-                <Button onClick={resetZoom} variant="outline" size="sm">
+                <Button onClick={centerView} variant="outline" size="sm" title="Center View">
+                  <Target className="h-4 w-4" />
+                </Button>
+                <Button onClick={resetZoom} variant="outline" size="sm" title="Reset Zoom">
                   <RotateCcw className="h-4 w-4" />
                 </Button>
-                <Button onClick={toggleSimulation} variant="outline" size="sm">
-                  {isSimulationRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                <Button onClick={toggleSimulation} variant="outline" size="sm" title={isSimulationRunning ? "Pause Animation" : "Start Animation"} className="col-span-2">
+                  {isSimulationRunning ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
+                  {isSimulationRunning ? "Pause" : "Start"}
                 </Button>
               </div>
 
@@ -517,6 +583,17 @@ const ArchitectureNavigator: React.FC = () => {
                     <span className="text-sm capitalize">{type}s</span>
                   </label>
                 ))}
+              </div>
+
+              {/* Instructions */}
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm">Instructions</h4>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>• Click nodes to select and see details</p>
+                  <p>• Drag nodes to reposition them</p>
+                  <p>• Use mouse wheel to zoom</p>
+                  <p>• Click empty space to deselect</p>
+                </div>
               </div>
 
               {/* Legend */}
@@ -548,7 +625,7 @@ const ArchitectureNavigator: React.FC = () => {
         {/* Selected Node Details */}
         {selectedNode && (
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-4 max-h-96 overflow-y-auto">
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <div
