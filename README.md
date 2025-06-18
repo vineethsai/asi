@@ -1,73 +1,110 @@
-# Welcome to your Lovable project
+# OWASP Securing Agentic Applications Guide
 
-## Project info
+## Project Info
 
-**URL**: https://lovable.dev/projects/eeb8c0bb-2622-47ec-b437-0fea1f61e38a
+**Live Site**: https://agenticsecurity.info/  
+**GitHub Repository**: https://github.com/vineethsai/asi/  
+**Author**: [Vineeth Sai](http://vineethsai.com/) | [LinkedIn](https://www.linkedin.com/in/vineethsai/)
 
-## How can I edit this code?
+## About
 
-There are several ways of editing your application.
+This is an interactive web application that provides a comprehensive guide for securing AI agentic applications using OWASP best practices. The guide includes:
 
-**Use Lovable**
+- **Components**: 6 key components of agentic AI systems with security considerations
+- **Architectures**: Common AI system architectures and their security patterns
+- **Threats**: Comprehensive threat catalog with attack vectors and impact analysis
+- **Controls**: Security controls and mitigations with implementation guidance
+- **Assessment Tool**: Interactive security assessment for agentic AI systems
+- **Interactive Explorer**: Visual graph-based exploration of components, threats, and mitigations
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/eeb8c0bb-2622-47ec-b437-0fea1f61e38a) and start prompting.
+## How to Run Locally
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+If you want to work locally using your own IDE, you can clone this repo and run it locally.
 
 The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
 Follow these steps:
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Step 1: Clone the repository
+git clone https://github.com/vineethsai/asi.git
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Step 2: Navigate to the project directory
+cd asi
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Step 3: Install the necessary dependencies
+npm install
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Step 4: Start the development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The application will be available at `http://localhost:5173`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
+## Technologies Used
 
 This project is built with:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- **Vite** - Fast build tool and dev server
+- **TypeScript** - Type-safe JavaScript
+- **React** - UI framework
+- **shadcn/ui** - Modern UI components
+- **Tailwind CSS** - Utility-first CSS framework
+- **React Router** - Client-side routing
+- **D3.js** - Interactive data visualizations
+- **React Helmet** - SEO optimization
 
-## How can I deploy this project?
+## Project Structure
 
-Simply open [Lovable](https://lovable.dev/projects/eeb8c0bb-2622-47ec-b437-0fea1f61e38a) and click on Share -> Publish.
+```
+src/
+├── components/          # Reusable UI components
+│   ├── ui/             # shadcn/ui components
+│   ├── layout/         # Layout components (Header, Footer, etc.)
+│   ├── home/           # Homepage sections
+│   ├── architecture/   # Architecture explorer components
+│   ├── assessment/     # Assessment tool components
+│   └── components/     # Framework data and component logic
+├── pages/              # Page components
+├── hooks/              # Custom React hooks
+└── lib/                # Utility functions and data
+```
 
-## Can I connect a custom domain to my Lovable project?
+## Features
 
-Yes, you can!
+### 🔍 Interactive Security Explorer
+- Visual graph-based exploration of AI security components
+- Interactive node selection and relationship mapping
+- Fullscreen mode for detailed analysis
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### 📊 Security Assessment Tool
+- Comprehensive questionnaire for AI system evaluation
+- Risk scoring and personalized recommendations
+- Export capabilities for security reports
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+### 📚 Comprehensive Documentation
+- Detailed component security guides
+- Architecture pattern analysis
+- Threat modeling with attack vectors
+- Implementation-ready security controls
+
+### 🎯 SEO Optimized
+- Complete meta tag optimization
+- Open Graph and Twitter Card support
+- Structured data (Schema.org) implementation
+- Social media sharing optimization
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is part of the OWASP Securing Agentic Applications project.
+
+## Contact
+
+- **Author**: [Vineeth Sai](http://vineethsai.com/)
+- **LinkedIn**: [vineethsai](https://www.linkedin.com/in/vineethsai/)
+- **GitHub**: [vineethsai/asi](https://github.com/vineethsai/asi/)
+- **OWASP Project**: [Securing Agentic Applications](https://owasp.org/www-project-securing-agentic-applications/)
