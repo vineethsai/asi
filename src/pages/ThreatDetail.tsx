@@ -15,53 +15,7 @@ export const ThreatDetail = () => {
     ? Object.values(mitigationsData).filter(m => m.threatIds.includes(threat.id))
     : [];
 
-  // Example data for new sections (in real app, this would come from threat data or a new file)
-  const realWorldExamples: Record<string, string[]> = {
-    t1: [
-      "A malicious user injects crafted data into an agent's memory, causing it to make incorrect decisions in a customer support chatbot.",
-      "Attackers persist poisoned context in a multi-session agent, leading to data leakage across users."
-    ],
-    // ... add for other threats as needed
-  };
 
-  const detectionMethods: Record<string, string[]> = {
-    t1: [
-      "Monitor memory for unexpected or out-of-schema data.",
-      "Detect anomalous agent behavior after memory updates.",
-      "Use audit logs to trace memory changes to suspicious sources."
-    ],
-    // ... add for other threats as needed
-  };
-
-  const impactAnalysis: Record<string, { business: string; technical: string }> = {
-    t1: {
-      business: "Loss of customer trust due to incorrect or manipulated agent responses; potential regulatory violations if sensitive data is leaked.",
-      technical: "Corrupted memory can lead to privilege escalation, data leakage, or persistent agent malfunction."
-    },
-    // ... add for other threats as needed
-  };
-
-  const attackScenarios: Record<string, string[]> = {
-    t1: [
-      "1. Attacker sends a specially crafted input to the agent.",
-      "2. The agent stores this input in its session or persistent memory.",
-      "3. On subsequent requests, the agent uses the poisoned memory, making decisions that benefit the attacker."
-    ],
-    // ... add for other threats as needed
-  };
-
-  const architectureImpact: Record<string, string> = {
-    t1: "In sequential architectures, memory poisoning can persist across steps. In collaborative or hierarchical systems, poisoned memory may propagate between agents, amplifying impact.",
-    // ... add for other threats as needed
-  };
-
-  const references: Record<string, string[]> = {
-    t1: [
-      "https://owasp.org/www-community/attacks/Memory_corruption",
-      "https://arxiv.org/abs/2302.08500"
-    ],
-    // ... add for other threats as needed
-  };
 
   if (!threat) {
     return (
@@ -85,7 +39,7 @@ export const ThreatDetail = () => {
       <section className="py-12 bg-secondary/50 min-h-screen">
         <div className="container px-4 md:px-6">
           <div className="flex flex-col lg:flex-row gap-6">
-            <SidebarNav type="threats" activeId={threat.id} />
+            <SidebarNav type="threats" activeId={threat.id} isOpen={false} onClose={() => {}} />
             <div className="flex-1">
               <Link to="/threats" className="inline-flex items-center text-muted-foreground hover:text-foreground mb-4">
                 &larr; Back to Threats
@@ -101,7 +55,7 @@ export const ThreatDetail = () => {
                     {(threat.tags || []).map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
                   </div>
                   <div className="text-xs text-muted-foreground mb-1">Version: {threat.version || "-"} | Last Updated: {threat.lastUpdated || "-"} | Updated By: {threat.updatedBy || "-"}</div>
-                  {threat.references && threat.references.length > 0 && <div className="text-xs mt-1">{threat.references.map(ref => <a key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-600 mr-2">{ref.title}</a>)}</div>}
+                  {threat.references && threat.references.length > 0 && <div className="text-xs mt-1">{threat.references.map(ref => <a key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80 mr-2">{ref.title}</a>)}</div>}
                   <p className="text-muted-foreground mt-4">{threat.description}</p>
                   {/* Analytics widgets */}
                   <div className="flex flex-wrap gap-4 mt-4">
@@ -115,7 +69,7 @@ export const ThreatDetail = () => {
                     </div>
                     <div className="bg-muted rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
                       <div className="text-xs text-muted-foreground mb-1">Tags</div>
-                      <span className="font-bold text-lg text-yellow-700">{tagCount}</span>
+                      <span className="font-bold text-lg text-yellow-600 dark:text-yellow-400">{tagCount}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -123,9 +77,9 @@ export const ThreatDetail = () => {
               {/* Grid for the rest of the cards */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Technical Details */}
-                <Card className="border border-blue-200">
+                <Card className="border border-blue-200 dark:border-blue-800">
                   <CardContent className="p-4">
-                    <h2 className="text-base font-semibold mb-2">Technical Details</h2>
+                    <h2 className="text-base font-semibold mb-2 text-blue-900 dark:text-blue-100">Technical Details</h2>
                     <div className="mb-2">
                       <span className="font-medium">Affected Components: </span>
                       <div className="flex flex-wrap gap-2 mt-1">
@@ -153,59 +107,141 @@ export const ThreatDetail = () => {
                   </CardContent>
                 </Card>
                 {/* Attack Vectors */}
-                <Card className="border border-yellow-200">
+                <Card className="border border-yellow-200 dark:border-yellow-800">
                   <CardContent className="p-4">
-                    <h2 className="text-base font-semibold mb-2">Attack Vectors</h2>
-                    <ul className="list-disc pl-6 text-muted-foreground">
-                      {(attackScenarios[threat.id] || ["No example scenarios documented."]).map((step, i) => (
-                        <li key={i}>{step}</li>
-                      ))}
-                    </ul>
+                    <h2 className="text-base font-semibold mb-2 text-yellow-900 dark:text-yellow-100">Attack Vectors</h2>
+                    <div className="space-y-3">
+                      {(threat.attackVectors || []).length > 0 ? (
+                        threat.attackVectors!.map((attack, i) => (
+                          <div key={i} className="border-l-4 border-yellow-400 pl-3">
+                            <div className="font-medium text-sm">{attack.vector}</div>
+                            {attack.example && <div className="text-xs text-muted-foreground mt-1">{attack.example}</div>}
+                            {attack.severity && (
+                              <span className={`inline-block text-xs px-2 py-0.5 rounded-full mt-1 ${
+                                attack.severity === "high"
+                                  ? "bg-destructive/10 text-destructive"
+                                  : attack.severity === "medium"
+                                  ? "bg-warning/10 text-warning"
+                                  : "bg-primary/10 text-primary"
+                              }`}>
+                                {attack.severity.charAt(0).toUpperCase() + attack.severity.slice(1)}
+                              </span>
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-muted-foreground">No attack vectors documented.</p>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
                 {/* Impact Analysis */}
-                <Card className="border border-red-200">
+                <Card className="border border-red-200 dark:border-red-800">
                   <CardContent className="p-4">
-                    <h2 className="text-base font-semibold mb-2">Impact Analysis</h2>
-                    <div className="mb-2">
-                      <span className="font-medium">Business Impact: </span>
-                      <span>{impactAnalysis[threat.id]?.business || "N/A"}</span>
-                    </div>
-                    <div>
-                      <span className="font-medium">Technical Impact: </span>
-                      <span>{impactAnalysis[threat.id]?.technical || "N/A"}</span>
-                    </div>
+                    <h2 className="text-base font-semibold mb-2 text-red-900 dark:text-red-100">Impact Analysis</h2>
+                    {threat.impactAnalysis ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">Confidentiality:</span>
+                          <span className={`px-2 py-1 rounded text-xs ${
+                            threat.impactAnalysis.confidentiality 
+                              ? "bg-destructive/10 text-destructive" 
+                              : "bg-muted text-muted-foreground"
+                          }`}>
+                            {threat.impactAnalysis.confidentiality ? "Affected" : "Not Affected"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">Integrity:</span>
+                          <span className={`px-2 py-1 rounded text-xs ${
+                            threat.impactAnalysis.integrity 
+                              ? "bg-destructive/10 text-destructive" 
+                              : "bg-muted text-muted-foreground"
+                          }`}>
+                            {threat.impactAnalysis.integrity ? "Affected" : "Not Affected"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">Availability:</span>
+                          <span className={`px-2 py-1 rounded text-xs ${
+                            threat.impactAnalysis.availability 
+                              ? "bg-destructive/10 text-destructive" 
+                              : "bg-muted text-muted-foreground"
+                          }`}>
+                            {threat.impactAnalysis.availability ? "Affected" : "Not Affected"}
+                          </span>
+                        </div>
+                        <div className="mt-3">
+                          <span className="font-medium">Risk Score: </span>
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${
+                            (threat.riskScore || 0) >= 8 
+                              ? "bg-destructive/10 text-destructive" 
+                              : (threat.riskScore || 0) >= 6
+                              ? "bg-warning/10 text-warning"
+                              : "bg-primary/10 text-primary"
+                          }`}>
+                            {threat.riskScore || "N/A"} / 10
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground">No impact analysis available.</p>
+                    )}
                   </CardContent>
                 </Card>
-                {/* Architecture-Specific Impact */}
-                <Card className="border border-purple-200">
+                {/* Affected Components */}
+                <Card className="border border-purple-200 dark:border-purple-800">
                   <CardContent className="p-4">
-                    <h2 className="text-base font-semibold mb-2">Architecture-Specific Impact</h2>
-                    <p className="text-muted-foreground">
-                      {architectureImpact[threat.id] || "No architecture-specific impact documented."}
-                    </p>
+                    <h2 className="text-base font-semibold mb-2 text-purple-900 dark:text-purple-100">Affected Components</h2>
+                    {threat.affectedComponents && threat.affectedComponents.length > 0 ? (
+                      <div className="space-y-2">
+                        {threat.affectedComponents.map((component, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                            <span className="text-sm">{component}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground">No specific affected components documented.</p>
+                    )}
                   </CardContent>
                 </Card>
-                {/* Real-world Examples/Case Studies */}
-                <Card className="border border-green-200">
+                {/* Mitigation Names */}
+                <Card className="border border-green-200 dark:border-green-800">
                   <CardContent className="p-4">
-                    <h2 className="text-base font-semibold mb-2">Real-world Examples / Case Studies</h2>
-                    <ul className="list-disc pl-6 text-muted-foreground">
-                      {(realWorldExamples[threat.id] || ["No real-world examples documented."]).map((ex, i) => (
-                        <li key={i}>{ex}</li>
-                      ))}
-                    </ul>
+                    <h2 className="text-base font-semibold mb-2 text-green-900 dark:text-green-100">Mitigation Categories</h2>
+                    {threat.mitigationNames && threat.mitigationNames.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {threat.mitigationNames.map((name, i) => (
+                          <Badge key={i} variant="outline" className="border-green-300 text-green-700 dark:border-green-700 dark:text-green-300">
+                            {name}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground">No mitigation categories documented.</p>
+                    )}
                   </CardContent>
                 </Card>
-                {/* Detection Methods */}
-                <Card className="border border-blue-300">
+                {/* References */}
+                <Card className="border border-blue-300 dark:border-blue-700">
                   <CardContent className="p-4">
-                    <h2 className="text-base font-semibold mb-2">Detection Methods</h2>
-                    <ul className="list-disc pl-6 text-muted-foreground">
-                      {(detectionMethods[threat.id] || ["No detection methods documented."]).map((method, i) => (
-                        <li key={i}>{method}</li>
-                      ))}
-                    </ul>
+                    <h2 className="text-base font-semibold mb-2 text-blue-900 dark:text-blue-100">References</h2>
+                    {threat.references && threat.references.length > 0 ? (
+                      <div className="space-y-2">
+                        {threat.references.map((ref, i) => (
+                          <div key={i} className="flex items-start gap-2">
+                            <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                            <a href={ref.url} target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80 text-sm">
+                              {ref.title}
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground">No references documented.</p>
+                    )}
                   </CardContent>
                 </Card>
                 {/* Mitigation */}
@@ -227,22 +263,7 @@ export const ThreatDetail = () => {
                     )}
                   </CardContent>
                 </Card>
-                {/* References */}
-                <Card className="border border-gray-300">
-                  <CardContent className="p-4">
-                    <h2 className="text-base font-semibold mb-2">References</h2>
-                    <ul className="list-disc pl-6 text-muted-foreground">
-                      {(references[threat.id] || []).map((ref, i) => (
-                        <li key={i}>
-                          <a href={ref} target="_blank" rel="noopener noreferrer" className="underline text-blue-700">{ref}</a>
-                        </li>
-                      ))}
-                      {(!references[threat.id] || references[threat.id].length === 0) && (
-                        <li>No references documented.</li>
-                      )}
-                    </ul>
-                  </CardContent>
-                </Card>
+
               </div>
             </div>
           </div>

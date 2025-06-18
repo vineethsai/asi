@@ -8,7 +8,8 @@ import { frameworkData } from "../components/components/frameworkData";
 import ReactMarkdown from "react-markdown";
 import { CopyToClipboard } from "react-copy-to-clipboard";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { duotoneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { duotoneLight, duotoneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { useEffect, useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -17,6 +18,27 @@ import { Icon } from "@/components/ui/icon";
 export const ControlDetail = () => {
   const { controlId } = useParams<{ controlId: string }>();
   const mitigation: Mitigation | undefined = controlId ? mitigationsData[controlId] : undefined;
+  
+  // Theme detection
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  
+  useEffect(() => {
+    const checkTheme = () => {
+      const isDark = document.documentElement.classList.contains("dark");
+      setIsDarkMode(isDark);
+    };
+    
+    checkTheme();
+    
+    // Watch for theme changes
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+    
+    return () => observer.disconnect();
+  }, []);
   const threats: Threat[] = mitigation
     ? mitigation.threatIds.map(id => threatsData[id]).filter(Boolean)
     : [];
@@ -85,7 +107,7 @@ export const ControlDetail = () => {
           {codeBlocks.map((block, i) => (
             <TabsContent key={i} value={block.lang || `code${i}`}> 
               <div className="relative">
-                <SyntaxHighlighter language={block.lang} style={duotoneLight} customStyle={{ borderRadius: 8, fontSize: 13, padding: 16 }}>
+                <SyntaxHighlighter language={block.lang} style={isDarkMode ? duotoneDark : duotoneLight} customStyle={{ borderRadius: 8, fontSize: 13, padding: 16 }}>
                   {block.value}
                 </SyntaxHighlighter>
                 <CopyToClipboard text={block.value}>
@@ -105,7 +127,7 @@ export const ControlDetail = () => {
             <div key={i} className="prose prose-sm max-w-none text-muted-foreground"><ReactMarkdown>{part.value.trim()}</ReactMarkdown></div>
           ) : (
             <div key={i} className="relative">
-              <SyntaxHighlighter language={part.lang} style={duotoneLight} customStyle={{ borderRadius: 8, fontSize: 13, padding: 16 }}>
+              <SyntaxHighlighter language={part.lang} style={isDarkMode ? duotoneDark : duotoneLight} customStyle={{ borderRadius: 8, fontSize: 13, padding: 16 }}>
                 {part.value}
               </SyntaxHighlighter>
               <CopyToClipboard text={part.value}>
@@ -140,7 +162,7 @@ export const ControlDetail = () => {
       <section className="py-12 bg-secondary/50 min-h-screen">
         <div className="container px-4 md:px-6">
           <div className="flex flex-col lg:flex-row gap-6">
-            <SidebarNav type="controls" activeId={mitigation.id} />
+            <SidebarNav type="controls" activeId={mitigation.id} isOpen={false} onClose={() => {}} />
             <div className="flex-1">
               <Link to="/controls" className="inline-flex items-center text-muted-foreground hover:text-foreground mb-4">
                 &larr; Back to Controls
@@ -157,7 +179,7 @@ export const ControlDetail = () => {
                     {(mitigation.tags || []).map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
                   </div>
                   <div className="text-xs text-muted-foreground mb-1">Version: {mitigation.version || "-"} | Last Updated: {mitigation.lastUpdated || "-"} | Updated By: {mitigation.updatedBy || "-"}</div>
-                  {mitigation.references && mitigation.references.length > 0 && <div className="text-xs mt-1">{mitigation.references.map(ref => <a key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-600 mr-2">{ref.title}</a>)}</div>}
+                  {mitigation.references && mitigation.references.length > 0 && <div className="text-xs mt-1">{mitigation.references.map(ref => <a key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80 mr-2">{ref.title}</a>)}</div>}
                   <p className="text-muted-foreground mt-4">{mitigation.description}</p>
                   {/* Analytics widgets */}
                   <div className="flex flex-wrap gap-4 mt-4">
@@ -167,11 +189,11 @@ export const ControlDetail = () => {
                     </div>
                     <div className="bg-muted rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
                       <div className="text-xs text-muted-foreground mb-1">Tags</div>
-                      <span className="font-bold text-lg text-yellow-700">{tagCount}</span>
+                      <span className="font-bold text-lg text-yellow-600 dark:text-yellow-400">{tagCount}</span>
                     </div>
                     <div className="bg-muted rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
                       <div className="text-xs text-muted-foreground mb-1">Phases</div>
-                      <span className="font-bold text-lg text-blue-700">{phaseCount}</span>
+                      <span className="font-bold text-lg text-blue-600 dark:text-blue-400">{phaseCount}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -180,44 +202,44 @@ export const ControlDetail = () => {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Design Phase */}
                 {mitigation.implementationDetail.design && mitigation.implementationDetail.design.trim() && (
-                  <div id="design-phase" className="border border-blue-200 rounded-lg bg-background">
+                  <div id="design-phase" className="border border-blue-200 dark:border-blue-800 rounded-lg bg-card">
                     <div className="p-4">
-                      <h2 className="text-base font-semibold mb-2 text-blue-900">Design Phase</h2>
+                      <h2 className="text-base font-semibold mb-2 text-blue-700 dark:text-blue-300">Design Phase</h2>
                       {renderSectionContent(mitigation.implementationDetail.design, "design-phase")}
                     </div>
                   </div>
                 )}
                 {/* Build Phase */}
                 {mitigation.implementationDetail.build && mitigation.implementationDetail.build.trim() && (
-                  <div id="build-phase" className="border border-yellow-200 rounded-lg bg-background">
+                  <div id="build-phase" className="border border-yellow-200 dark:border-yellow-800 rounded-lg bg-card">
                     <div className="p-4">
-                      <h2 className="text-base font-semibold mb-2 text-yellow-900">Build Phase</h2>
+                      <h2 className="text-base font-semibold mb-2 text-yellow-700 dark:text-yellow-300">Build Phase</h2>
                       {renderSectionContent(mitigation.implementationDetail.build, "build-phase")}
                     </div>
                   </div>
                 )}
                 {/* Operation Phase */}
                 {mitigation.implementationDetail.operations && mitigation.implementationDetail.operations.trim() && (
-                  <div id="operation-phase" className="border border-green-200 rounded-lg bg-background">
+                  <div id="operation-phase" className="border border-green-200 dark:border-green-800 rounded-lg bg-card">
                     <div className="p-4">
-                      <h2 className="text-base font-semibold mb-2 text-green-900">Operation Phase</h2>
+                      <h2 className="text-base font-semibold mb-2 text-green-700 dark:text-green-300">Operation Phase</h2>
                       {renderSectionContent(mitigation.implementationDetail.operations, "operation-phase")}
                     </div>
                   </div>
                 )}
                 {/* Tools & Frameworks */}
                 {mitigation.implementationDetail.toolsAndFrameworks && mitigation.implementationDetail.toolsAndFrameworks.trim() && (
-                  <div id="tools-frameworks" className="border border-purple-200 rounded-lg bg-white">
+                  <div id="tools-frameworks" className="border border-purple-200 dark:border-purple-800 rounded-lg bg-card">
                     <div className="p-4">
-                      <h2 className="text-base font-semibold mb-2 text-purple-900">Tools & Frameworks</h2>
+                      <h2 className="text-base font-semibold mb-2 text-purple-700 dark:text-purple-300">Tools & Frameworks</h2>
                       {renderSectionContent(mitigation.implementationDetail.toolsAndFrameworks, "tools-frameworks")}
                     </div>
                   </div>
                 )}
                 {/* Mitigates Threats */}
-                <div id="mitigates-threats" className="border border-red-200 rounded-lg bg-white">
+                <div id="mitigates-threats" className="border border-red-200 dark:border-red-800 rounded-lg bg-card">
                   <div className="p-4">
-                    <h2 className="text-base font-semibold mb-2 text-red-900">Mitigates Threats</h2>
+                    <h2 className="text-base font-semibold mb-2 text-red-700 dark:text-red-300">Mitigates Threats</h2>
                     {threats.length > 0 ? (
                       <ul className="mt-2 space-y-2">
                         {threats.map(threat => (
