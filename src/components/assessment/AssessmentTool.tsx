@@ -2,6 +2,36 @@ import React, { useState, useCallback } from "react";
 import { frameworkData } from "../components/frameworkData";
 import { threatsData, mitigationsData, type Threat as SecurityThreat, type Mitigation as SecurityMitigation } from "../components/securityData";
 
+// Import proper UI components
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+// Import icons from lucide-react
+import { 
+  CheckCircle, 
+  AlertTriangle, 
+  Shield, 
+  Clock, 
+  Info, 
+  ChevronRight, 
+  AlertCircle, 
+  Target, 
+  Layers, 
+  Activity,
+  Brain,
+  Database,
+  Zap,
+  Network,
+  Eye,
+  Lock
+} from "lucide-react";
+
 // --- UI Component Stubs (for self-contained execution if needed) ---
 const Button: React.FC<any> = ({ children, variant = "default", ...props }) => (
   <button 
