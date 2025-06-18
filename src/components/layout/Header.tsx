@@ -5,29 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
-import SidebarNav from "./SidebarNav";
 
 export const Header = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
-
-  // Determine sidebar type and activeId based on current path
-  let sidebarType = "architectures";
-  let activeId: string | undefined = undefined;
-  if (location.pathname.startsWith("/components")) {
-    sidebarType = "components";
-    activeId = location.pathname.split("/")[2];
-  } else if (location.pathname.startsWith("/threats")) {
-    sidebarType = "threats";
-    activeId = location.pathname.split("/")[2];
-  } else if (location.pathname.startsWith("/controls")) {
-    sidebarType = "controls";
-    activeId = location.pathname.split("/")[2];
-  } else if (location.pathname.startsWith("/architectures")) {
-    sidebarType = "architectures";
-    activeId = location.pathname.split("/")[2];
-  }
 
   const navItems = [
     { name: "Components", path: "/components" },
@@ -41,15 +22,6 @@ export const Header = () => {
     <header className="sticky top-0 z-30 w-full border-b bg-background/80 backdrop-blur">
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="lg:hidden" 
-            onClick={() => setIsSidebarOpen(true)}
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-
           <Link to="/" className="flex items-center gap-2">
             <div className="rounded-md bg-primary p-1">
               <div className="h-6 w-6 text-primary-foreground font-bold flex items-center justify-center">
@@ -105,13 +77,6 @@ export const Header = () => {
           <ThemeToggle />
         </div>
       </div>
-      {/* Only use SidebarNav for mobile navigation */}
-      <SidebarNav
-        type={sidebarType as any}
-        activeId={activeId}
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
     </header>
   );
 };
