@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Icon } from "@/components/ui/icon";
 import { useState } from "react";
+import { Helmet } from "react-helmet";
 
 // Helper to get component description from frameworkData
 const getComponentDescription = (id: string): string => {
@@ -264,6 +265,49 @@ const ArchitectureDetail = () => {
 
   return (
     <>
+      <Helmet>
+        <title>{architecture.name} Architecture | OWASP Securing Agentic Applications Guide</title>
+        <meta name="description" content={`${architecture.description} Learn about security threats, mitigations, and implementation best practices for this AI architecture pattern.`} />
+        <meta name="keywords" content={`${architecture.name}, AI architecture, OWASP, agentic systems, ${architecture.tags?.join(', ') || ''}, AI security patterns, architecture security`} />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href={`https://agenticsecurity.info/architectures/${architecture.id}`} />
+        <meta property="og:title" content={`${architecture.name} Architecture | OWASP Guide`} />
+        <meta property="og:description" content={architecture.description} />
+        <meta property="og:type" content="article" />
+        <meta property="og:url" content={`https://agenticsecurity.info/architectures/${architecture.id}`} />
+        <meta property="og:site_name" content="OWASP Securing Agentic Applications Guide" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${architecture.name} Architecture | OWASP Guide`} />
+        <meta name="twitter:description" content={architecture.description} />
+        <meta name="twitter:url" content={`https://agenticsecurity.info/architectures/${architecture.id}`} />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "TechArticle",
+            "headline": `${architecture.name} Architecture`,
+            "description": architecture.description,
+                         "url": `https://agenticsecurity.info/architectures/${architecture.id}`,
+            "datePublished": new Date().toISOString(),
+            "dateModified": new Date().toISOString(),
+            "author": {
+              "@type": "Organization",
+              "name": "OWASP"
+            },
+            "publisher": {
+              "@type": "Organization",
+              "name": "OWASP",
+              "url": "https://owasp.org"
+            },
+            "about": "AI Architecture Security",
+            "keywords": architecture.tags?.join(', ') || '',
+            "isPartOf": {
+              "@type": "WebSite",
+              "name": "OWASP Securing Agentic Applications Guide",
+                             "url": "https://agenticsecurity.info"
+            }
+          })}
+        </script>
+      </Helmet>
       <Header />
       
       {/* Sidebar Navigation */}

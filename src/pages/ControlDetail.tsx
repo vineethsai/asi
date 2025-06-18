@@ -14,6 +14,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs"
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Icon } from "@/components/ui/icon";
+import { Helmet } from "react-helmet";
 
 export const ControlDetail = () => {
   const { controlId } = useParams<{ controlId: string }>();
@@ -158,6 +159,49 @@ export const ControlDetail = () => {
 
   return (
     <>
+      <Helmet>
+        <title>{mitigation.name} | OWASP Securing Agentic Applications Guide</title>
+        <meta name="description" content={`${mitigation.description} Learn how to implement this AI security control to mitigate threats in agentic systems.`} />
+        <meta name="keywords" content={`${mitigation.name}, AI security control, OWASP, agentic systems, ${mitigation.tags?.join(', ') || ''}, AI mitigations, security controls`} />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href={`https://agenticsecurity.info/controls/${mitigation.id}`} />
+        <meta property="og:title" content={`${mitigation.name} | OWASP Guide`} />
+        <meta property="og:description" content={mitigation.description} />
+        <meta property="og:type" content="article" />
+        <meta property="og:url" content={`https://agenticsecurity.info/controls/${mitigation.id}`} />
+        <meta property="og:site_name" content="OWASP Securing Agentic Applications Guide" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${mitigation.name} | OWASP Guide`} />
+        <meta name="twitter:description" content={mitigation.description} />
+        <meta name="twitter:url" content={`https://agenticsecurity.info/controls/${mitigation.id}`} />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "TechArticle",
+            "headline": mitigation.name,
+            "description": mitigation.description,
+            "url": `https://agenticsecurity.info/controls/${mitigation.id}`,
+            "datePublished": new Date().toISOString(),
+            "dateModified": new Date().toISOString(),
+            "author": {
+              "@type": "Organization",
+              "name": "OWASP"
+            },
+            "publisher": {
+              "@type": "Organization",
+              "name": "OWASP",
+              "url": "https://owasp.org"
+            },
+            "about": "AI Security Control",
+            "keywords": mitigation.tags?.join(', ') || '',
+            "isPartOf": {
+              "@type": "WebSite",
+              "name": "OWASP Securing Agentic Applications Guide",
+              "url": "https://agenticsecurity.info"
+            }
+          })}
+        </script>
+      </Helmet>
       <Header />
       <section className="py-12 bg-secondary/50 min-h-screen">
         <div className="container px-4 md:px-6">

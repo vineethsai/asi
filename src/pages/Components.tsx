@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { frameworkData } from "@/components/components/frameworkData";
 import SidebarNav from "@/components/layout/SidebarNav";
 import { Icon } from "@/components/ui/icon";
+import { Helmet } from "react-helmet";
 
 const getAllTags = (data) => {
   const tags = new Set();
@@ -63,6 +64,43 @@ const Components = () => {
 
   return (
     <>
+      <Helmet>
+        <title>AI Security Components | OWASP Securing Agentic Applications Guide</title>
+        <meta name="description" content="Explore the 6 key components of agentic AI systems: Language Models, Orchestration, Reasoning/Planning, Memory, Tool Integration, and Operational Environment. Learn security best practices for each component." />
+        <meta name="keywords" content="AI components, LLM security, agentic systems, AI orchestration, memory modules, tool integration, operational environment, AI security framework, OWASP AI" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://agenticsecurity.info/components" />
+        <meta property="og:title" content="AI Security Components | OWASP Guide" />
+        <meta property="og:description" content="Explore the 6 key components of agentic AI systems and learn security best practices for each component." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://agenticsecurity.info/components" />
+        <meta property="og:site_name" content="OWASP Securing Agentic Applications Guide" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="AI Security Components | OWASP Guide" />
+        <meta name="twitter:description" content="Explore the 6 key components of agentic AI systems and learn security best practices for each component." />
+        <meta name="twitter:url" content="https://agenticsecurity.info/components" />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "ItemList",
+            "name": "AI Security Components",
+            "description": "Key components of agentic AI systems and their security considerations",
+            "url": "https://agenticsecurity.info/components",
+            "numberOfItems": frameworkData.length,
+            "itemListElement": frameworkData.map((component, index) => ({
+              "@type": "ListItem",
+              "position": index + 1,
+              "item": {
+                "@type": "TechArticle",
+                "name": component.title,
+                "description": component.description,
+                "url": `https://agenticsecurity.info/components/${component.id}`,
+                "about": "AI Security"
+              }
+            }))
+          })}
+        </script>
+      </Helmet>
       <Header />
       
       {/* Floating sidebar controlled by toggle button */}

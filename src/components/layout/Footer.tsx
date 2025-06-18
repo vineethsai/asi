@@ -35,7 +35,9 @@ export const Footer = () => {
             <h4 className="font-semibold mb-3">Resources</h4>
             <ul className="space-y-2">
               <li><a href="https://owasp.org/www-project-securing-agentic-applications/" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">OWASP Official</a></li>
-              <li><a href="https://github.com/OWASP" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">GitHub</a></li>
+              <li><a href="https://github.com/vineethsai/asi/" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">GitHub</a></li>
+              <li><a href="http://vineethsai.com/" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">Author</a></li>
+              <li><a href="https://www.linkedin.com/in/vineethsai/" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">LinkedIn</a></li>
             </ul>
           </div>
         </div>

@@ -7,6 +7,7 @@ import SidebarNav from "../components/layout/SidebarNav";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Icon } from "@/components/ui/icon";
+import { Helmet } from "react-helmet";
 
 export const ThreatDetail = () => {
   const { threatId } = useParams<{ threatId: string }>();
@@ -35,6 +36,49 @@ export const ThreatDetail = () => {
 
   return (
     <>
+      <Helmet>
+        <title>{threat.name} | OWASP Securing Agentic Applications Guide</title>
+        <meta name="description" content={`${threat.description} Learn about this AI security threat, its impact, attack vectors, and available mitigations.`} />
+        <meta name="keywords" content={`${threat.name}, AI security threat, OWASP, agentic systems, ${threat.tags?.join(', ') || ''}, AI threats, security vulnerabilities`} />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href={`https://agenticsecurity.info/threats/${threat.id}`} />
+        <meta property="og:title" content={`${threat.name} | OWASP Guide`} />
+        <meta property="og:description" content={threat.description} />
+        <meta property="og:type" content="article" />
+        <meta property="og:url" content={`https://agenticsecurity.info/threats/${threat.id}`} />
+        <meta property="og:site_name" content="OWASP Securing Agentic Applications Guide" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${threat.name} | OWASP Guide`} />
+        <meta name="twitter:description" content={threat.description} />
+        <meta name="twitter:url" content={`https://agenticsecurity.info/threats/${threat.id}`} />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "TechArticle",
+            "headline": threat.name,
+            "description": threat.description,
+            "url": `https://agenticsecurity.info/threats/${threat.id}`,
+            "datePublished": new Date().toISOString(),
+            "dateModified": new Date().toISOString(),
+            "author": {
+              "@type": "Organization",
+              "name": "OWASP"
+            },
+            "publisher": {
+              "@type": "Organization",
+              "name": "OWASP",
+              "url": "https://owasp.org"
+            },
+            "about": "AI Security Threat",
+            "keywords": threat.tags?.join(', ') || '',
+            "isPartOf": {
+              "@type": "WebSite",
+              "name": "OWASP Securing Agentic Applications Guide",
+              "url": "https://agenticsecurity.info"
+            }
+          })}
+        </script>
+      </Helmet>
       <Header />
       <section className="py-12 bg-secondary/50 min-h-screen">
         <div className="container px-4 md:px-6">

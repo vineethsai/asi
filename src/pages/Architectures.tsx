@@ -57,9 +57,9 @@ const Architectures = () => {
         <meta name="description" content="Explore agentic AI system architectures, their security implications, and best practices for secure design." />
         <meta name="keywords" content="AI security, OWASP, agentic architectures, security patterns, AI best practices, LLM security, agent security" />
         <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://asi.lovable.dev/architectures" />
-        <meta property="og:url" content="https://asi.lovable.dev/architectures" />
-        <meta name="twitter:url" content="https://asi.lovable.dev/architectures" />
+        <link rel="canonical" href="https://agenticsecurity.info/architectures" />
+        <meta property="og:url" content="https://agenticsecurity.info/architectures" />
+        <meta name="twitter:url" content="https://agenticsecurity.info/architectures" />
       </Helmet>
       <Header />
       

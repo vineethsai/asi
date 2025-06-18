@@ -65,9 +65,9 @@ export const Threats = () => {
         <meta name="description" content="Explore key threats to agentic AI systems, including prompt injection, memory poisoning, and more. Learn how to secure your AI applications." />
         <meta name="keywords" content="AI security, OWASP, agentic threats, prompt injection, memory poisoning, AI risks, LLM security, agent security" />
         <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://asi.lovable.dev/threats" />
-        <meta property="og:url" content="https://asi.lovable.dev/threats" />
-        <meta name="twitter:url" content="https://asi.lovable.dev/threats" />
+        <link rel="canonical" href="https://agenticsecurity.info/threats" />
+        <meta property="og:url" content="https://agenticsecurity.info/threats" />
+        <meta name="twitter:url" content="https://agenticsecurity.info/threats" />
       </Helmet>
       <Header />
       

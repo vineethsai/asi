@@ -10,13 +10,39 @@ const Index = () => {
   return (
     <>
       <Helmet>
-        <title>OWASP Securing Agentic Applications Guide</title>
-        <meta name="description" content="Interactive guide for securing AI agentic applications using OWASP best practices. Explore architectures, threats, and controls." />
-        <meta name="keywords" content="AI security, OWASP, agentic systems, AI threats, AI mitigations, AI architectures, security guide, LLM security, agent security, AI best practices" />
+        <title>OWASP Securing Agentic Applications Guide - Complete AI Security Framework</title>
+        <meta name="description" content="Comprehensive OWASP guide for securing AI agentic applications. Interactive tools, security assessments, threat analysis, and implementation guidance for LLM-based systems." />
+        <meta name="keywords" content="AI security, OWASP, agentic systems, AI threats, AI mitigations, AI architectures, security guide, LLM security, agent security, AI best practices, AI assessment, security framework" />
         <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://asi.lovable.dev/" />
-        <meta property="og:url" content="https://asi.lovable.dev/" />
-        <meta name="twitter:url" content="https://asi.lovable.dev/" />
+        <link rel="canonical" href="https://agenticsecurity.info/" />
+        <meta property="og:title" content="OWASP Securing Agentic Applications Guide" />
+        <meta property="og:description" content="Comprehensive OWASP guide for securing AI agentic applications with interactive tools and security assessments." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://agenticsecurity.info/" />
+        <meta property="og:site_name" content="OWASP Securing Agentic Applications Guide" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="OWASP Securing Agentic Applications Guide" />
+        <meta name="twitter:description" content="Comprehensive OWASP guide for securing AI agentic applications with interactive tools and security assessments." />
+        <meta name="twitter:url" content="https://agenticsecurity.info/" />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": "OWASP Securing Agentic Applications Guide",
+            "description": "Comprehensive guide for securing AI agentic applications using OWASP best practices",
+            "url": "https://agenticsecurity.info",
+            "publisher": {
+              "@type": "Organization",
+              "name": "OWASP",
+              "url": "https://owasp.org"
+            },
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": "https://agenticsecurity.info/search?q={search_term_string}",
+              "query-input": "required name=search_term_string"
+            }
+          })}
+        </script>
       </Helmet>
       <Header />
       <main>

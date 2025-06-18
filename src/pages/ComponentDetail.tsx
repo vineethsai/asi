@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, ArrowRight, Shield, AlertTriangle, GitMerge, Wrench, Code, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { threatsData, mitigationsData, Threat, Mitigation } from "../components/components/securityData";
+import { Helmet } from "react-helmet";
 
 // Define the component data structure
 type Component = {
@@ -357,8 +358,56 @@ const ComponentDetail = () => {
     );
   }
 
+  // Prepare SEO data
+  const pageTitle = isSubComponent ? subComponent!.title : component.title;
+  const pageDescription = isSubComponent ? subComponent!.description : component.description;
+  const pageUrl = `https://agenticsecurity.info/components/${componentId}`;
+
   return (
     <>
+      <Helmet>
+        <title>{pageTitle} | OWASP Securing Agentic Applications Guide</title>
+        <meta name="description" content={`${pageDescription} Learn about security threats, mitigations, and best practices for this AI component.`} />
+        <meta name="keywords" content={`${pageTitle}, AI security, OWASP, agentic systems, ${component.threatCodes.join(', ')}, AI threats, security controls`} />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href={pageUrl} />
+        <meta property="og:title" content={`${pageTitle} | OWASP Guide`} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:type" content="article" />
+        <meta property="og:url" content={pageUrl} />
+        <meta property="og:site_name" content="OWASP Securing Agentic Applications Guide" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${pageTitle} | OWASP Guide`} />
+        <meta name="twitter:description" content={pageDescription} />
+        <meta name="twitter:url" content={pageUrl} />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "TechArticle",
+            "headline": pageTitle,
+            "description": pageDescription,
+            "url": pageUrl,
+            "datePublished": new Date().toISOString(),
+            "dateModified": new Date().toISOString(),
+            "author": {
+              "@type": "Organization",
+              "name": "OWASP"
+            },
+            "publisher": {
+              "@type": "Organization",
+              "name": "OWASP",
+              "url": "https://owasp.org"
+            },
+            "about": "AI Security",
+            "keywords": component.threatCodes.join(', '),
+                         "isPartOf": {
+               "@type": "WebSite",
+               "name": "OWASP Securing Agentic Applications Guide",
+               "url": "https://agenticsecurity.info"
+             }
+          })}
+        </script>
+      </Helmet>
       <Header />
       
       {/* Sidebar Navigation */}

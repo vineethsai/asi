@@ -58,9 +58,9 @@ export const Controls = () => {
         <meta name="description" content="Explore security controls and mitigations for agentic AI systems. Learn how to protect your AI applications using OWASP best practices." />
         <meta name="keywords" content="AI security, OWASP, security controls, mitigations, agentic systems, LLM security, agent security, best practices" />
         <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://asi.lovable.dev/controls" />
-        <meta property="og:url" content="https://asi.lovable.dev/controls" />
-        <meta name="twitter:url" content="https://asi.lovable.dev/controls" />
+        <link rel="canonical" href="https://agenticsecurity.info/controls" />
+        <meta property="og:url" content="https://agenticsecurity.info/controls" />
+        <meta name="twitter:url" content="https://agenticsecurity.info/controls" />
       </Helmet>
       <Header />
       
