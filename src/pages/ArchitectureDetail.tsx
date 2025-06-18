@@ -407,7 +407,7 @@ const ArchitectureDetail = () => {
                             <div className="mb-3">
                               <div className="flex items-center justify-between mb-2">
                                 <div>
-                                  <span className="font-bold text-lg text-primary">{node?.title || comp.id.toUpperCase()}</span>
+                              <span className="font-bold text-lg text-primary">{node?.title || comp.id.toUpperCase()}</span>
                                   <span className="ml-2 font-mono text-xs text-primary/70 bg-primary/10 px-2 py-1 rounded">{comp.id.replace(/-/g, '.').toUpperCase()}</span>
                                 </div>
                                 <Link 

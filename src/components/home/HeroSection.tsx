@@ -23,8 +23,8 @@ export const HeroSection = () => {
                 Secure Your Agentic AI Applications
               </h1>
               <p className="text-lg text-muted-foreground md:text-xl">
-                Navigate the complexities of AI security with our interactive OWASP guide. 
-                Build safer agentic systems with actionable controls and implementation guidance.
+                The central hub for all things agentic security. Our goal is to provide a comprehensive guide to help you secure your agentic AI applications and systems.
+                
               </p>
             </div>
             

@@ -34,7 +34,7 @@ export const Header = () => {
                 AI
               </div>
             </div>
-            <span className="font-bold text-lg hidden sm:inline-block">OWASP Agentic Security</span>
+            <span className="font-bold text-lg hidden sm:inline-block">Agentic Security Hub</span>
             <span className="font-bold text-lg sm:hidden">OWASP</span>
           </Link>
         </div>

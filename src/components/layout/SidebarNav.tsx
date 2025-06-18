@@ -163,7 +163,7 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ type, activeId, isOpen, onClose
                 AI
               </div>
             </div>
-            <span className="font-semibold text-sm">OWASP Agentic Security</span>
+            <span className="font-semibold text-sm">Agentic Security Hub</span>
           </div>
           <button 
             onClick={onClose} 
