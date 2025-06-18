@@ -17,7 +17,7 @@ interface SidebarNavProps {
 const SidebarNav: React.FC<SidebarNavProps> = ({ type, activeId, isOpen, onClose }) => {
   const [isDesktopOpen, setIsDesktopOpen] = useState(false);
   const location = useLocation();
-  let items: { id: string; label: string; path: string }[] = [];
+  let items: { id: string; label: string; path: string; level?: number; parentId?: string }[] = [];
 
   if (type === "architectures") {
     items = Object.values(architecturesData as Record<string, Architecture>).map((a) => ({
@@ -38,11 +38,31 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ type, activeId, isOpen, onClose
       path: `/controls/${m.id}`
     }));
   } else if (type === "components") {
-    items = frameworkData.map((c) => ({
-      id: c.id,
-      label: c.title,
-      path: `/components/${c.id}`
-    }));
+    // Build hierarchical component items including sub-components and sub-sub-components
+    const componentItems: { id: string; label: string; path: string; level: number; parentId?: string }[] = [];
+    
+    const addComponentsRecursively = (components: any[], level: number, parentId?: string) => {
+      components.forEach((comp) => {
+        // Normalize ID for consistent routing (replace dashes with dots)
+        const normalizedId = comp.id.replace(/-/g, '.');
+        
+        componentItems.push({
+          id: normalizedId,
+          label: comp.title,
+          path: `/components/${normalizedId}`,
+          level: level,
+          parentId: parentId
+        });
+        
+        // Recursively add children
+        if (comp.children && comp.children.length > 0) {
+          addComponentsRecursively(comp.children, level + 1, normalizedId);
+        }
+      });
+    };
+    
+    addComponentsRecursively(frameworkData, 0);
+    items = componentItems;
   }
 
   // Main navigation items for mobile
@@ -97,17 +117,22 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ type, activeId, isOpen, onClose
       <nav aria-label="Sidebar Navigation">
         <ul className="space-y-1">
           {items.map((item) => (
-            <li key={item.id}>
+            <li key={item.id} className={item.level ? `ml-${item.level * 4}` : ""}>
               <Link
                 to={item.path}
                 className={cn(
-                  "block px-3 py-2 rounded-md transition-all duration-200 font-medium text-sm",
+                  "block px-3 py-2 rounded-md transition-all duration-200 font-medium",
+                  item.level === 0 ? "text-sm" : item.level === 1 ? "text-xs" : "text-xs",
                   (activeId === item.id || location.pathname === item.path)
                     ? "bg-primary/10 text-primary font-semibold shadow-sm"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                  item.level && item.level > 0 && "border-l-2 border-muted ml-2 pl-3"
                 )}
                 onClick={() => setIsDesktopOpen(false)}
               >
+                {item.level === 1 && "└ "}
+                {item.level === 2 && "  └ "}
+                {item.level > 2 && "    └ "}
                 {item.label}
               </Link>
             </li>
@@ -184,17 +209,22 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ type, activeId, isOpen, onClose
               <nav aria-label={`${type} Navigation`}>
                 <ul className="space-y-1">
                   {items.map((item) => (
-                    <li key={item.id}>
+                    <li key={item.id} className={item.level ? `ml-${item.level * 4}` : ""}>
                       <Link
                         to={item.path}
                         className={cn(
-                          "block px-3 py-2 rounded-md transition-all duration-200 font-medium text-sm",
+                          "block px-3 py-2 rounded-md transition-all duration-200 font-medium",
+                          item.level === 0 ? "text-sm" : item.level === 1 ? "text-xs" : "text-xs",
                           (activeId === item.id || location.pathname === item.path)
                             ? "bg-primary/10 text-primary font-semibold shadow-sm"
-                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                          item.level && item.level > 0 && "border-l-2 border-muted ml-2 pl-3"
                         )}
                         onClick={onClose}
                       >
+                        {item.level === 1 && "└ "}
+                        {item.level === 2 && "  └ "}
+                        {item.level > 2 && "    └ "}
                         {item.label}
                       </Link>
                     </li>

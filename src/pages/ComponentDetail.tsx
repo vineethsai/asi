@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import SidebarNav from "@/components/layout/SidebarNav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Shield, AlertTriangle, GitMerge, Wrench, Code, Database } from "lucide-react";
+import { ArrowLeft, ArrowRight, Shield, AlertTriangle, GitMerge, Wrench, Code, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { threatsData, mitigationsData, Threat, Mitigation } from "../components/components/securityData";
 
@@ -281,8 +282,26 @@ const ComponentDetail = () => {
   const { componentId } = useParams<{ componentId: string }>();
   const [activeTab, setActiveTab] = useState<"overview" | "threats" | "mitigations" | "architectures">("overview");
   
-  // Get component data
-  const component = componentId ? componentsData[componentId] : undefined;
+  // Normalize component ID (handle both dash and dot notation)
+  const normalizedComponentId = componentId?.replace(/\./g, '-');
+  
+  // Check if this is a sub-component ID (contains a dot in original or dash in normalized)
+  const isSubComponent = componentId?.includes('.') || normalizedComponentId?.includes('-');
+  const mainComponentId = isSubComponent 
+    ? (componentId?.includes('.') ? componentId.split('.')[0] : normalizedComponentId?.split('-')[0])
+    : componentId;
+  
+  // Get component data - first check if it exists directly, then with normalization
+  let component = componentId ? componentsData[componentId] : undefined;
+  if (!component && mainComponentId) {
+    component = componentsData[mainComponentId];
+  }
+  
+  // If it's a sub-component, find the specific sub-component data
+  // Try both original ID and normalized ID formats
+  const subComponent = isSubComponent && component 
+    ? component.subComponents.find(sub => sub.id === componentId || sub.id === normalizedComponentId)
+    : null;
   
   // Get related threats by matching component ID with threat componentIds
   const relatedThreats: Threat[] = component 
@@ -312,16 +331,18 @@ const ComponentDetail = () => {
     }
   };
 
-  // If component not found, show not found message
-  if (!component) {
+  // If component not found, or sub-component not found, show not found message
+  if (!component || (isSubComponent && !subComponent)) {
     return (
       <>
         <Header />
         <main className="container py-12">
           <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-3xl font-bold mb-4">Component Not Found</h1>
+            <h1 className="text-3xl font-bold mb-4">
+              {isSubComponent ? "Sub-Component Not Found" : "Component Not Found"}
+            </h1>
             <p className="text-muted-foreground mb-6">
-              The component you're looking for does not exist or has been removed.
+              The {isSubComponent ? "sub-component" : "component"} you're looking for does not exist or has been removed.
             </p>
             <Link to="/components">
               <Button>
@@ -339,16 +360,48 @@ const ComponentDetail = () => {
   return (
     <>
       <Header />
+      
+      {/* Sidebar Navigation */}
+      <SidebarNav 
+        type="components" 
+        activeId={componentId} 
+        isOpen={false} 
+        onClose={() => {}} 
+      />
+      
       <main className="container py-12">
         <div className="mb-8">
-          <Link to="/components" className="inline-flex items-center text-muted-foreground hover:text-foreground mb-4">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Components Overview
-          </Link>
+          <div className="flex items-center gap-2 mb-4">
+            <Link to="/components" className="inline-flex items-center text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Components
+            </Link>
+            
+            {isSubComponent && (
+              <>
+                <span className="text-muted-foreground">/</span>
+                <Link 
+                  to={`/components/${mainComponentId}`} 
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  {component.title}
+                </Link>
+              </>
+            )}
+          </div>
           
           <div className={cn("p-6 rounded-lg mb-8", component.color)}>
-            <h1 className="text-3xl font-bold mb-2 text-foreground">{component.title}</h1>
-            <p className="text-lg text-muted-foreground">{component.description}</p>
+            <h1 className="text-3xl font-bold mb-2 text-foreground">
+              {isSubComponent ? subComponent!.title : component.title}
+            </h1>
+            <p className="text-lg text-muted-foreground">
+              {isSubComponent ? subComponent!.description : component.description}
+            </p>
+            {isSubComponent && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Part of: {component.title}
+              </p>
+            )}
           </div>
           
           {/* Tab navigation */}
@@ -414,63 +467,103 @@ const ComponentDetail = () => {
           <div>
             {activeTab === "overview" && (
               <div className="space-y-8">
-                <div>
-                  <h2 className="text-xl font-semibold mb-4">Subcomponents</h2>
-                  <div className="grid grid-cols-1 gap-4">
-                    {component.subComponents.map(subComponent => (
-                      <Card key={subComponent.id}>
-                        <CardContent className="pt-6">
-                          <div className="flex items-center mb-2">
-                            {getSubcomponentIcon(subComponent.id)}
-                            <h3 className="text-lg font-medium">{subComponent.title}</h3>
+                {!isSubComponent && (
+                  <div>
+                    <h2 className="text-xl font-semibold mb-4">Subcomponents</h2>
+                    <div className="grid grid-cols-1 gap-4">
+                      {component.subComponents.map(subComp => (
+                        <Link to={`/components/${subComp.id}`} key={subComp.id}>
+                          <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                            <CardContent className="pt-6">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center">
+                                  {getSubcomponentIcon(subComp.id)}
+                                  <h3 className="text-lg font-medium">{subComp.title}</h3>
+                                </div>
+                                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                              <p className="text-muted-foreground">
+                                {subComp.description}
+                              </p>
+                            </CardContent>
+                          </Card>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {isSubComponent && (
+                  <div>
+                    <h2 className="text-xl font-semibold mb-4">Detailed Information</h2>
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="space-y-4">
+                          <div>
+                            <h3 className="font-medium mb-2">Description</h3>
+                            <p className="text-muted-foreground">
+                              {subComponent!.description}
+                            </p>
                           </div>
+                          <div>
+                            <h3 className="font-medium mb-2">Parent Component</h3>
+                            <Link to={`/components/${mainComponentId}`}>
+                              <div className={cn(
+                                "inline-block border rounded-md p-3 transition-colors hover:bg-accent",
+                                component.color
+                              )}>
+                                {component.title}
+                              </div>
+                            </Link>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+                
+                {!isSubComponent && (
+                  <>
+                    <div>
+                      <h2 className="text-xl font-semibold mb-4">Security Implications</h2>
+                      <Card>
+                        <CardContent className="pt-6">
                           <p className="text-muted-foreground">
-                            {subComponent.description}
+                            {component.securityImplications}
                           </p>
                         </CardContent>
                       </Card>
-                    ))}
-                  </div>
-                </div>
-                
-                <div>
-                  <h2 className="text-xl font-semibold mb-4">Security Implications</h2>
-                  <Card>
-                    <CardContent className="pt-6">
-                      <p className="text-muted-foreground">
-                        {component.securityImplications}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
-                
-                <div>
-                  <h2 className="text-xl font-semibold mb-4">Implementation Considerations</h2>
-                  <Card>
-                    <CardContent className="pt-6">
-                      <p className="text-muted-foreground">
-                        {component.implementationConsiderations}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
-                
-                <div>
-                  <h2 className="text-xl font-semibold mb-4">Related Components</h2>
-                  <div className="flex flex-wrap gap-3">
-                    {component.relatedComponents.map(id => (
-                      <Link to={`/components/${id}`} key={id}>
-                        <div className={cn(
-                          "border rounded-md p-3 transition-colors",
-                          componentsData[id]?.color
-                        )}>
-                          {componentsData[id]?.title}
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              </div>
+                    </div>
+                    
+                    <div>
+                      <h2 className="text-xl font-semibold mb-4">Implementation Considerations</h2>
+                      <Card>
+                        <CardContent className="pt-6">
+                          <p className="text-muted-foreground">
+                            {component.implementationConsiderations}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </div>
+                    
+                    <div>
+                      <h2 className="text-xl font-semibold mb-4">Related Components</h2>
+                      <div className="flex flex-wrap gap-3">
+                        {component.relatedComponents.map(id => (
+                          <Link to={`/components/${id}`} key={id}>
+                            <div className={cn(
+                              "border rounded-md p-3 transition-colors hover:bg-accent",
+                              componentsData[id]?.color
+                            )}>
+                              {componentsData[id]?.title}
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+                              </div>
             )}
             
             {activeTab === "threats" && (

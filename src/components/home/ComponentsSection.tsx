@@ -1,9 +1,23 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 export const ComponentsSection = () => {
+  const [expandedComponents, setExpandedComponents] = useState<Set<string>>(new Set());
+
+  const toggleComponent = (componentId: string) => {
+    const newExpanded = new Set(expandedComponents);
+    if (newExpanded.has(componentId)) {
+      newExpanded.delete(componentId);
+    } else {
+      newExpanded.add(componentId);
+    }
+    setExpandedComponents(newExpanded);
+  };
+
   const components = [
     {
       id: "kc1",
@@ -141,38 +155,68 @@ export const ComponentsSection = () => {
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-12">
-          {components.map((component, i) => (
-            <Link to={`/components/${component.id}`} key={i}>
-              <Card className={`h-full hover-card-trigger border ${component.color}`}>
+          {components.map((component, i) => {
+            const isExpanded = expandedComponents.has(component.id);
+            return (
+              <Card key={i} className={`border ${component.color}`}>
                 <CardContent className="p-6">
-                  <h3 className="text-xl font-bold mb-2">{component.title}</h3>
-                  <p className="text-muted-foreground mb-4">{component.description}</p>
-                  
-                  <div className="mb-4">
-                    <div className="text-sm font-semibold mb-2">Subcomponents:</div>
-                    <ul className="space-y-1">
-                      {component.subComponents.map((subComponent, j) => (
-                        <li key={j} className="text-sm text-muted-foreground pl-4 border-l-2 border-muted">
-                          {subComponent}
-                        </li>
-                      ))}
-                    </ul>
+                  <div className="flex items-center justify-between mb-2">
+                    <Link to={`/components/${component.id}`} className="flex-1">
+                      <h3 className="text-xl font-bold hover:underline">{component.title}</h3>
+                    </Link>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleComponent(component.id)}
+                      className="ml-2 p-1 h-8 w-8"
+                    >
+                      {isExpanded ? 
+                        <ChevronDown className="h-4 w-4" /> : 
+                        <ChevronRight className="h-4 w-4" />
+                      }
+                    </Button>
                   </div>
                   
-                  <div className="space-y-1">
-                    <div className="text-sm font-semibold mb-2">Key Threats:</div>
-                    <ul>
-                      {component.threats.map((threat, j) => (
-                        <li key={j} className="text-sm text-muted-foreground">
-                          {threat}
-                        </li>
-                      ))}
-                    </ul>
+                  <p className="text-muted-foreground mb-4">{component.description}</p>
+                  
+                  <div className={cn(
+                    "overflow-hidden transition-all duration-300 ease-in-out",
+                    isExpanded ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
+                  )}>
+                    <div className="mb-4">
+                      <div className="text-sm font-semibold mb-2">Subcomponents:</div>
+                      <ul className="space-y-1">
+                        {component.subComponents.map((subComponent, j) => (
+                          <li key={j} className="text-sm text-muted-foreground pl-4 border-l-2 border-muted">
+                            {subComponent}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <div className="text-sm font-semibold mb-2">Key Threats:</div>
+                      <ul>
+                        {component.threats.map((threat, j) => (
+                          <li key={j} className="text-sm text-muted-foreground">
+                            {threat}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <Link to={`/components/${component.id}`}>
+                      <Button variant="outline" size="sm" className="w-full">
+                        View Details <ArrowRight className="ml-2 h-3 w-3" />
+                      </Button>
+                    </Link>
                   </div>
                 </CardContent>
               </Card>
-            </Link>
-          ))}
+            );
+          })}
         </div>
         
         <div className="mt-12 text-center">

@@ -41,6 +41,24 @@ export const HeroSection = () => {
               </Link>
             </div>
             
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 justify-center lg:justify-start mt-4">
+              <Link to="/threats" className="w-full">
+                <Button variant="outline" size="lg" className="w-full">
+                  View Threats
+                </Button>
+              </Link>
+              <Link to="/controls" className="w-full">
+                <Button variant="outline" size="lg" className="w-full">
+                  View Controls
+                </Button>
+              </Link>
+              <Link to="/architectures" className="w-full">
+                <Button variant="outline" size="lg" className="w-full">
+                  Explore Architectures
+                </Button>
+              </Link>
+            </div>
+            
             <div className="mt-4">
               <ul className="grid gap-3 sm:grid-cols-2">
                 {benefits.map((benefit, i) => (
@@ -53,18 +71,20 @@ export const HeroSection = () => {
             </div>
           </div>
           
-          {/* Right column - Visual element (can be an illustration or other content) */}
+          {/* Right column - Visual element */}
           <div className="relative hidden lg:block">
-            <div className="relative w-full h-full min-h-[400px] bg-muted/50 rounded-2xl overflow-hidden border border-border">
+            <div className="relative w-full h-full min-h-[400px] bg-gradient-to-br from-primary/5 to-primary/10 rounded-2xl overflow-hidden border border-primary/20">
               <div className="absolute inset-0 flex items-center justify-center p-8">
-                <div className="text-center space-y-4">
-                  <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
-                    <ShieldCheck className="h-8 w-8 text-primary" />
+                <div className="text-center space-y-6">
+                  <div className="w-20 h-20 mx-auto rounded-full bg-primary/10 flex items-center justify-center border-2 border-primary/20">
+                    <ShieldCheck className="h-10 w-10 text-primary" />
                   </div>
-                  <h3 className="text-xl font-semibold">Interactive Security Explorer</h3>
-                  <p className="text-muted-foreground">
-                    Explore our visual guide to understand and implement security best practices
-                  </p>
+                  <div className="space-y-2">
+                    <h3 className="text-2xl font-bold text-primary">Secure AI Systems</h3>
+                    <p className="text-muted-foreground text-lg">
+                      Comprehensive OWASP guidance for agentic applications
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

@@ -32,268 +32,6 @@ import {
   Lock
 } from "lucide-react";
 
-// --- UI Component Stubs (for self-contained execution if needed) ---
-const Button: React.FC<any> = ({ children, variant = "default", ...props }) => (
-  <button 
-    {...props} 
-    className={`px-4 py-2 rounded-md font-medium transition-colors ${
-      variant === "outline" 
-        ? "border border-gray-300 bg-white hover:bg-gray-50 text-gray-700" 
-        : "bg-blue-600 hover:bg-blue-700 text-white"
-    } ${props.className || ""}`}
-  >
-    {children}
-  </button>
-);
-
-const Card: React.FC<any> = ({ children, ...props }) => (
-  <div {...props} className={`border rounded-lg shadow-sm bg-background ${props.className || ""}`}>
-    {children}
-  </div>
-);
-
-const CardHeader: React.FC<any> = ({ children, ...props }) => (
-  <div {...props} className={`p-6 border-b ${props.className || ""}`}>
-    {children}
-  </div>
-);
-
-const CardTitle: React.FC<any> = ({ children, ...props }) => (
-  <h3 {...props} className={`text-xl font-semibold leading-none tracking-tight text-foreground ${props.className || ""}`}>{children}</h3>
-);
-
-const CardDescription: React.FC<any> = ({ children, ...props }) => (
-  <p {...props} className={`text-sm text-muted-foreground mt-2 ${props.className || ""}`}>{children}</p>
-);
-
-const CardContent: React.FC<any> = ({ children, ...props }) => (
-  <div {...props} className={`p-6 pt-0 ${props.className || ""}`}>
-    {children}
-  </div>
-);
-
-const CardFooter: React.FC<any> = ({ children, ...props }) => (
-  <div {...props} className={`flex items-center p-6 pt-0 ${props.className || ""}`}>
-    {children}
-  </div>
-);
-
-const Accordion: React.FC<any> = ({ children, ...props }) => (
-  <div {...props} className="space-y-2">
-    {children}
-  </div>
-);
-
-const AccordionItem: React.FC<any> = ({ children, value, ...props }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  return (
-    <div {...props} className="border rounded-lg overflow-hidden">
-      {React.Children.map(children, child => 
-        React.isValidElement(child) 
-          ? React.cloneElement(child as React.ReactElement, { 
-              isOpen, 
-              onToggle: () => setIsOpen(!isOpen),
-              value 
-            })
-          : child
-      )}
-    </div>
-  );
-};
-
-const AccordionTrigger: React.FC<any> = ({ children, isOpen, onToggle, ...props }) => (
-  <button 
-    {...props} 
-    onClick={onToggle}
-    className={`w-full text-left py-4 px-6 font-medium hover:bg-gray-50 focus:outline-none focus:bg-gray-50 flex justify-between items-center transition-colors ${props.className || ""}`}
-  >
-    <div className="flex-1">{children}</div>
-    <span className={`transform transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`}>
-      →
-    </span>
-  </button>
-);
-
-const AccordionContent: React.FC<any> = ({ children, isOpen, ...props }) => (
-  <div className={`overflow-hidden transition-all duration-200 ${isOpen ? 'max-h-screen' : 'max-h-0'}`}>
-    <div {...props} className={`p-6 pt-0 border-t bg-background ${props.className || ""}`}>
-      {children}
-    </div>
-  </div>
-);
-
-// Icons
-const CheckCircle: React.FC<any> = (props) => (
-  <svg {...props} className={`inline-block ${props.className || ""}`} fill="currentColor" viewBox="0 0 20 20">
-    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-  </svg>
-);
-
-const AlertTriangle: React.FC<any> = (props) => (
-  <svg {...props} className={`inline-block ${props.className || ""}`} fill="currentColor" viewBox="0 0 20 20">
-    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 3.001-1.742 3.001H4.42c-1.53 0-2.493-1.667-1.743-3.001l5.58-9.92zM10 13a1 1 0 110-2 1 1 0 010 2zm-1-8a1 1 0 011-1h.01a1 1 0 010 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
-  </svg>
-);
-
-const Shield: React.FC<any> = (props) => (
-  <svg {...props} className={`inline-block ${props.className || ""}`} fill="currentColor" viewBox="0 0 20 20">
-    <path d="M10 12l-6-3V3h12v6l-6 3zm0 2.236l-6-3V14a2 2 0 002 2h8a2 2 0 002-2v-2.764l-6 3z" />
-  </svg>
-);
-
-const Clock: React.FC<any> = (props) => (
-  <svg {...props} className={`inline-block ${props.className || ""}`} fill="currentColor" viewBox="0 0 20 20">
-    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-  </svg>
-);
-
-const Info: React.FC<any> = (props) => (
-  <svg {...props} className={`inline-block ${props.className || ""}`} fill="currentColor" viewBox="0 0 20 20">
-    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-  </svg>
-);
-
-const ChevronRight: React.FC<any> = (props) => (
-  <svg {...props} className={`inline-block ${props.className || ""}`} fill="currentColor" viewBox="0 0 20 20">
-    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-  </svg>
-);
-
-const AlertCircle: React.FC<any> = (props) => (
-  <svg {...props} className={`inline-block ${props.className || ""}`} fill="currentColor" viewBox="0 0 20 20">
-    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-  </svg>
-);
-
-const Target: React.FC<any> = (props) => (
-  <svg {...props} className={`inline-block ${props.className || ""}`} fill="currentColor" viewBox="0 0 20 20">
-    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9 10a1 1 0 112 0v1a1 1 0 11-2 0v-1zm1-4a3 3 0 100 6 3 3 0 000-6z" clipRule="evenodd" />
-  </svg>
-);
-
-const Layers: React.FC<any> = (props) => (
-  <svg {...props} className={`inline-block ${props.className || ""}`} fill="currentColor" viewBox="0 0 20 20">
-    <path d="M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2H5zm10 12H5V5h10v10zM3 7a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 6a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" />
-  </svg>
-);
-
-const Activity: React.FC<any> = (props) => (
-  <svg {...props} className={`inline-block ${props.className || ""}`} fill="currentColor" viewBox="0 0 20 20">
-    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13H9v3.586l-1.293-1.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 8.586V5z" clipRule="evenodd" />
-  </svg>
-);
-
-const Badge: React.FC<any> = ({ children, variant = "default", ...props }) => (
-  <span 
-    {...props} 
-    className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full ${
-      variant === "outline" 
-        ? "border border-border text-foreground bg-background" 
-        : variant === "destructive"
-        ? "bg-destructive/10 text-destructive"
-        : variant === "secondary"
-        ? "bg-muted text-muted-foreground"
-        : "bg-primary/10 text-primary"
-    } ${props.className || ""}`}
-  >
-    {children}
-  </span>
-);
-
-const Progress: React.FC<any> = ({ value, ...props }) => (
-  <div className={`w-full bg-gray-200 rounded-full h-2 ${props.className || ""}`}>
-    <div 
-      className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-      style={{ width: `${Math.min(100, Math.max(0, value || 0))}%` }}
-    />
-  </div>
-);
-
-const Tabs: React.FC<any> = ({ children, defaultValue, className, ...props }) => {
-  const [activeTab, setActiveTab] = useState(defaultValue);
-  return (
-    <div className={className}>
-      {React.Children.map(children, child =>
-        React.isValidElement(child)
-          ? React.cloneElement(child as React.ReactElement, { activeTab, setActiveTab })
-          : child
-      )}
-    </div>
-  );
-};
-
-const TabsList: React.FC<any> = ({ children, activeTab, setActiveTab, className, ...props }) => (
-  <div className={`flex border-b bg-white ${className || ""}`}>
-    {React.Children.map(children, child =>
-      React.isValidElement(child)
-        ? React.cloneElement(child as React.ReactElement, { activeTab, setActiveTab })
-        : child
-    )}
-  </div>
-);
-
-const TabsTrigger: React.FC<any> = ({ children, value, activeTab, setActiveTab, ...props }) => (
-  <button
-    {...props}
-    onClick={() => setActiveTab(value)}
-    className={`py-3 px-6 -mb-px border-b-2 font-medium text-sm transition-colors flex items-center gap-2 ${
-      activeTab === value
-        ? "border-blue-500 text-blue-600 bg-blue-50"
-        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-    } ${props.className || ""}`}
-  >
-    {children}
-  </button>
-);
-
-const TabsContent: React.FC<any> = ({ children, value, activeTab, ...props }) => (
-  activeTab === value ? (
-    <div {...props} className={`mt-6 ${props.className || ""}`}>
-      {children}
-    </div>
-  ) : null
-);
-
-const Alert: React.FC<any> = ({ children, ...props }) => (
-  <div {...props} className={`p-4 border rounded-lg bg-muted border-border flex items-start gap-3 ${props.className || ""}`}>
-    {children}
-  </div>
-);
-
-const AlertDescription: React.FC<any> = ({ children, ...props }) => (
-  <div {...props} className="text-sm text-blue-800">
-    {children}
-  </div>
-);
-
-const AlertTitle: React.FC<any> = ({ children, ...props }) => (
-  <h5 {...props} className="font-medium text-blue-900 mb-1">
-    {children}
-  </h5>
-);
-
-const Tooltip: React.FC<any> = ({ children, content, ...props }) => {
-  const [show, setShow] = useState(false);
-  return (
-    <div className="relative inline-block" {...props}>
-      <div
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
-      >
-        {children}
-      </div>
-      {show && (
-        <div className="absolute z-50 bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap">
-          {content}
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-foreground" />
-        </div>
-      )}
-    </div>
-  );
-};
-
-// --- End UI Component Stubs ---
-
 // Use the actual types from securityData.ts
 export type Threat = SecurityThreat & {
   category?: string; 
@@ -1010,22 +748,36 @@ export const AssessmentTool = () => {
                           <p className={`text-xs mb-3 line-clamp-3 ${selectedMitigations.includes(mitigation.id as MitigationCode) ? 'text-primary/90' : 'text-muted-foreground'}`}>{mitigation.description}</p>
                           <div className="flex gap-2 flex-wrap">
                             {mitigation.effort && (
-                              <Tooltip content={`Implementation effort: ${mitigation.effort}`}>
-                                <Badge variant="outline" className="text-xs flex items-center gap-1">
-                                  {getEffortIcon(mitigation.effort)}
-                                  {mitigation.effort}
-                                </Badge>
-                              </Tooltip>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge variant="outline" className="text-xs flex items-center gap-1">
+                                      {getEffortIcon(mitigation.effort)}
+                                      {mitigation.effort}
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Implementation effort: {mitigation.effort}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             )}
                             {mitigation.priority && (
-                              <Tooltip content={`Priority level: ${mitigation.priority}`}>
-                                <Badge 
-                                  variant={mitigation.priority === "high" ? "destructive" : "secondary"} 
-                                  className="text-xs"
-                                >
-                                  {mitigation.priority} priority
-                                </Badge>
-                              </Tooltip>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge 
+                                      variant={mitigation.priority === "high" ? "destructive" : "secondary"} 
+                                      className="text-xs"
+                                    >
+                                      {mitigation.priority} priority
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Priority level: {mitigation.priority}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             )}
                           </div>
                         </div>

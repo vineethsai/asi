@@ -15,21 +15,12 @@ export const ArchitectureGraphSection = () => {
         
         <div className="relative bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 shadow-lg overflow-hidden" 
              style={{ 
-               height: 'calc(100vh - 300px)', 
-               minHeight: '600px',
-               maxHeight: '800px',
+               height: 'calc(100vh - 200px)', 
+               minHeight: '700px',
                background: 'radial-gradient(circle at center, rgba(99, 102, 241, 0.1) 0%, rgba(0, 0, 0, 0) 70%)'
              }}>
           <div className="absolute inset-0">
             <HierarchicalArchitectureNavigator />
-          </div>
-          <div className="absolute bottom-6 left-6 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-lg p-3 text-sm text-foreground shadow-lg border border-border/20">
-            <div className="flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-              </svg>
-              <span>Tip: Click and drag nodes to explore the architecture</span>
-            </div>
           </div>
         </div>
         
