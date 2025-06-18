@@ -63,43 +63,43 @@ export const Controls = () => {
         <meta name="twitter:url" content="https://asi.lovable.dev/controls" />
       </Helmet>
       <Header />
+      
+      {/* Floating sidebar controlled by toggle button */}
+      <SidebarNav type="controls" isOpen={false} onClose={() => {}} />
+      
       <section className="py-16 bg-secondary/50">
         <div className="container px-4 md:px-6">
-          <div className="flex flex-col lg:flex-row gap-8">
-            <SidebarNav type="controls" />
-            <div className="flex-1">
-              <div className="flex flex-col items-center justify-center space-y-4 text-center">
-                <div className="space-y-2 max-w-3xl">
-                  <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Security Controls & Mitigations</h2>
-                  <p className="text-muted-foreground md:text-xl">
-                    Explore security controls and mitigations for agentic systems
-                  </p>
-                </div>
+          <div className="max-w-7xl mx-auto">
+            <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
+              <div className="space-y-2 max-w-3xl">
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Security Controls & Mitigations</h2>
+                <p className="text-muted-foreground md:text-xl">
+                  Explore security controls and mitigations for agentic systems
+                </p>
               </div>
-              {/* Analytics widgets */}
-              {/* (Removed analytics widgets bar) */}
-              {/* Controls grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
-                {sortedControls.map((control) => (
-                  <Link to={`/controls/${control.id}`} key={control.id}>
-                    <Card className="h-full border border-control/20 hover:shadow-lg transition-shadow">
-                      <CardContent className="p-6">
-                        <div className="flex items-center mb-2 gap-2">
-                          {control.icon && <Icon name={control.icon} color={control.color} size={28} />}
-                          <h3 className="text-xl font-bold text-foreground" style={{ color: control.color }}>{control.name}</h3>
-                          {control.status && <Badge variant="outline" className="capitalize ml-2">{control.status}</Badge>}
-                        </div>
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {(control.tags || []).map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
-                        </div>
-                        <div className="text-xs text-muted-foreground mb-1">Version: {control.version || "-"} | Last Updated: {control.lastUpdated || "-"} | Updated By: {control.updatedBy || "-"}</div>
-                        {control.references && control.references.length > 0 && <div className="text-xs mt-1">{control.references.map(ref => <a key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-600 mr-2">{ref.title}</a>)}</div>}
-                        <p className="text-muted-foreground mt-4">{control.description}</p>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
+            </div>
+            
+            {/* Controls grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              {sortedControls.map((control) => (
+                <Link to={`/controls/${control.id}`} key={control.id}>
+                  <Card className="h-full border border-control/20 hover:shadow-lg transition-all duration-200 hover:-translate-y-1">
+                    <CardContent className="p-6">
+                      <div className="flex items-center mb-2 gap-2">
+                        {control.icon && <Icon name={control.icon} color={control.color} size={28} />}
+                        <h3 className="text-xl font-bold text-foreground" style={{ color: control.color }}>{control.name}</h3>
+                        {control.status && <Badge variant="outline" className="capitalize ml-2">{control.status}</Badge>}
+                      </div>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {(control.tags || []).map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
+                      </div>
+                      <div className="text-xs text-muted-foreground mb-1">Version: {control.version || "-"} | Last Updated: {control.lastUpdated || "-"} | Updated By: {control.updatedBy || "-"}</div>
+                      {control.references && control.references.length > 0 && <div className="text-xs mt-1">{control.references.map(ref => <a key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-600 mr-2">{ref.title}</a>)}</div>}
+                      <p className="text-muted-foreground mt-4">{control.description}</p>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
             </div>
           </div>
         </div>

@@ -70,43 +70,45 @@ export const Threats = () => {
         <meta name="twitter:url" content="https://asi.lovable.dev/threats" />
       </Helmet>
       <Header />
+      
+      {/* Floating sidebar controlled by toggle button */}
+      <SidebarNav type="threats" isOpen={false} onClose={() => {}} />
+      
       <section className="py-16 bg-secondary/50">
         <div className="container px-4 md:px-6">
-          <div className="flex flex-col lg:flex-row gap-8">
-            <SidebarNav type="threats" />
-            <div className="flex-1">
-              <div className="flex flex-col items-center justify-center space-y-4 text-center">
-                <div className="space-y-2 max-w-3xl">
-                  <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Threats</h2>
-                  <p className="text-muted-foreground md:text-xl">
-                    Explore the key threats to agentic systems and their components
-                  </p>
-                </div>
+          <div className="max-w-7xl mx-auto">
+            <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
+              <div className="space-y-2 max-w-3xl">
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Threats</h2>
+                <p className="text-muted-foreground md:text-xl">
+                  Explore the key threats to agentic systems and their components
+                </p>
               </div>
-              {/* Threats grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
-                {sortedThreats.map((threat) => (
-                  <Link to={`/threats/${threat.id}`} key={threat.id}>
-                    <Card className="h-full border border-threat/20 hover:shadow-lg transition-shadow">
-                      <CardContent className="p-6">
-                        <div className="flex items-center mb-2 gap-2">
-                          {threat.icon && <Icon name={threat.icon} color={threat.color} size={28} />}
-                          <span className="font-mono text-xs bg-threat/10 text-threat px-2 py-0.5 rounded">
-                            {threat.code}
-                          </span>
-                          <h3 className="text-xl font-bold" style={{ color: threat.color }}>{threat.name}</h3>
-                        </div>
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {(threat.tags || []).map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
-                        </div>
-                        <div className="text-xs text-muted-foreground mb-1">Version: {threat.version || "-"} | Last Updated: {threat.lastUpdated || "-"} | Updated By: {threat.updatedBy || "-"}</div>
-                        {threat.references && threat.references.length > 0 && <div className="text-xs mt-1">{threat.references.map(ref => <a key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-600 mr-2">{ref.title}</a>)}</div>}
-                        <p className="text-muted-foreground mt-4">{threat.description}</p>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
+            </div>
+            
+            {/* Threats grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              {sortedThreats.map((threat) => (
+                <Link to={`/threats/${threat.id}`} key={threat.id}>
+                  <Card className="h-full border border-threat/20 hover:shadow-lg transition-all duration-200 hover:-translate-y-1">
+                    <CardContent className="p-6">
+                      <div className="flex items-center mb-2 gap-2">
+                        {threat.icon && <Icon name={threat.icon} color={threat.color} size={28} />}
+                        <span className="font-mono text-xs bg-threat/10 text-threat px-2 py-0.5 rounded">
+                          {threat.code}
+                        </span>
+                        <h3 className="text-xl font-bold" style={{ color: threat.color }}>{threat.name}</h3>
+                      </div>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {(threat.tags || []).map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
+                      </div>
+                      <div className="text-xs text-muted-foreground mb-1">Version: {threat.version || "-"} | Last Updated: {threat.lastUpdated || "-"} | Updated By: {threat.updatedBy || "-"}</div>
+                      {threat.references && threat.references.length > 0 && <div className="text-xs mt-1">{threat.references.map(ref => <a key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-600 mr-2">{ref.title}</a>)}</div>}
+                      <p className="text-muted-foreground mt-4">{threat.description}</p>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
             </div>
           </div>
         </div>

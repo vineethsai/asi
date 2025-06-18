@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -129,4 +128,68 @@
   .component-diagram-item {
     @apply absolute rounded-lg border p-2 bg-white dark:bg-black text-center transition-all duration-300 hover:shadow-md hover:-translate-y-1;
   }
+
+  /* Navigation improvements */
+  .nav-link {
+    @apply relative overflow-hidden;
+  }
+
+  .nav-link::before {
+    @apply absolute inset-0 bg-primary/5 scale-x-0 transition-transform duration-200 origin-left;
+    content: '';
+  }
+
+  .nav-link:hover::before {
+    @apply scale-x-100;
+  }
+
+  .nav-link-active {
+    @apply relative;
+  }
+
+  .nav-link-active::after {
+    @apply absolute bottom-0 left-1/2 w-1 h-1 bg-primary rounded-full transform -translate-x-1/2;
+    content: '';
+  }
+
+  /* Smooth scrolling for better UX */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Focus styles for better accessibility */
+  .focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+  }
+
+  /* Mobile navigation improvements */
+  .mobile-nav-overlay {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+
+  .mobile-nav-sidebar {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+
+  /* Improved transitions */
+  .transition-all-smooth {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* Animation keyframes */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
 }

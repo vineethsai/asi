@@ -1,8 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { architecturesData, Architecture } from "../components/architecturesData";
 import { threatsData, Threat, mitigationsData, Mitigation } from "../components/securityData";
 import { frameworkData } from "../components/frameworkData";
+import { cn } from "@/lib/utils";
+import { X, Menu, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface SidebarNavProps {
   type: "architectures" | "threats" | "controls" | "components";
@@ -12,6 +15,7 @@ interface SidebarNavProps {
 }
 
 const SidebarNav: React.FC<SidebarNavProps> = ({ type, activeId, isOpen, onClose }) => {
+  const [isDesktopOpen, setIsDesktopOpen] = useState(false);
   const location = useLocation();
   let items: { id: string; label: string; path: string }[] = [];
 
@@ -41,23 +45,68 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ type, activeId, isOpen, onClose
     }));
   }
 
+  // Main navigation items for mobile
+  const mainNavItems = [
+    { name: "Components", path: "/components" },
+    { name: "Architecture", path: "/architectures" },
+    { name: "Threats", path: "/threats" },
+    { name: "Controls", path: "/controls" },
+    { name: "Assessment", path: "/assessment" }
+  ];
+
+  // Helper function to check if nav item is active
+  const isActiveNavItem = (path: string) => {
+    if (path === "/") return location.pathname === "/";
+    return location.pathname.startsWith(path);
+  };
+
+  // Desktop sidebar toggle button
+  const sidebarToggle = items.length > 0 ? (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => setIsDesktopOpen(!isDesktopOpen)}
+      className="fixed top-20 left-4 z-40 hidden lg:flex items-center gap-2 bg-background/80 backdrop-blur-sm border shadow-md hover:shadow-lg transition-all"
+      aria-label={isDesktopOpen ? "Close sidebar" : "Open sidebar"}
+    >
+      <Menu className="h-4 w-4" />
+      <span className="text-xs font-medium">
+        {type.charAt(0).toUpperCase() + type.slice(1)}
+      </span>
+      <ChevronRight className={cn("h-3 w-3 transition-transform", isDesktopOpen && "rotate-90")} />
+    </Button>
+  ) : null;
+
   // Desktop sidebar
-  const sidebar = (
-    <aside className="sticky top-24 h-fit max-h-[80vh] overflow-y-auto w-64 bg-background border-r border-border/30 rounded-xl shadow-sm p-4 hidden lg:block">
+  const sidebar = isDesktopOpen && items.length > 0 ? (
+    <aside className="fixed top-24 left-4 z-30 h-fit max-h-[calc(100vh-8rem)] overflow-y-auto w-72 bg-background/95 backdrop-blur-sm border border-border shadow-xl rounded-xl p-4 hidden lg:block">
+      <div className="flex items-center justify-between mb-4 pb-2 border-b border-border">
+        <h3 className="font-semibold text-sm text-foreground">
+          {type.charAt(0).toUpperCase() + type.slice(1)}
+        </h3>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsDesktopOpen(false)}
+          className="h-6 w-6 p-0"
+          aria-label="Close sidebar"
+        >
+          <X className="h-3 w-3" />
+        </Button>
+      </div>
       <nav aria-label="Sidebar Navigation">
         <ul className="space-y-1">
           {items.map((item) => (
             <li key={item.id}>
               <Link
                 to={item.path}
-                className={`block px-3 py-2 rounded-md transition-colors font-medium text-sm
-                  ${
-                    (activeId === item.id || location.pathname === item.path)
-                      ? "bg-primary/10 text-primary font-semibold"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                  }
-                `}
-                onClick={onClose}
+                className={cn(
+                  "block px-3 py-2 rounded-md transition-all duration-200 font-medium text-sm",
+                  (activeId === item.id || location.pathname === item.path)
+                    ? "bg-primary/10 text-primary font-semibold shadow-sm"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                )}
+                onClick={() => setIsDesktopOpen(false)}
               >
                 {item.label}
               </Link>
@@ -66,39 +115,100 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ type, activeId, isOpen, onClose
         </ul>
       </nav>
     </aside>
-  );
+  ) : null;
 
   // Mobile drawer
   const mobileDrawer = isOpen ? (
-    <div className="fixed inset-0 z-40 bg-black/40 flex lg:hidden" onClick={onClose} aria-modal="true" role="dialog">
-      <aside className="w-64 bg-background border-r border-border/30 rounded-r-xl shadow-lg p-4 h-full" onClick={e => e.stopPropagation()}>
-        <button className="mb-4 text-sm font-medium" onClick={onClose} aria-label="Close sidebar">Close ✕</button>
-        <nav aria-label="Sidebar Navigation">
-          <ul className="space-y-1">
-            {items.map((item) => (
-              <li key={item.id}>
-                <Link
-                  to={item.path}
-                  className={`block px-3 py-3 rounded-md transition-colors font-medium text-base
-                    ${
-                      (activeId === item.id || location.pathname === item.path)
-                        ? "bg-primary/10 text-primary font-semibold"
-                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                    }
-                  `}
-                  onClick={onClose}
-                >
-                  {item.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+    <div 
+      className="fixed inset-0 z-50 bg-black/50 flex lg:hidden" 
+      onClick={onClose} 
+      aria-modal="true" 
+      role="dialog"
+      aria-label="Navigation menu"
+    >
+      <aside 
+        className="w-80 max-w-[85vw] bg-background border-r border-border shadow-xl h-full overflow-y-auto" 
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <div className="rounded-md bg-primary p-1">
+              <div className="h-5 w-5 text-primary-foreground font-bold flex items-center justify-center text-xs">
+                AI
+              </div>
+            </div>
+            <span className="font-semibold text-sm">OWASP Agentic Security</span>
+          </div>
+          <button 
+            onClick={onClose} 
+            aria-label="Close navigation menu"
+            className="p-2 rounded-md hover:bg-accent transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Main Navigation */}
+        <div className="p-4">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            Main Navigation
+          </h3>
+          <nav aria-label="Main Navigation">
+            <ul className="space-y-1 mb-6">
+              {mainNavItems.map((item) => (
+                <li key={item.path}>
+                  <Link
+                    to={item.path}
+                    className={cn(
+                      "block px-3 py-2 rounded-md transition-all duration-200 font-medium text-sm",
+                      isActiveNavItem(item.path)
+                        ? "bg-primary/10 text-primary font-semibold shadow-sm"
+                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    )}
+                    onClick={onClose}
+                  >
+                    {item.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          {/* Section-specific items */}
+          {items.length > 0 && (
+            <>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </h3>
+              <nav aria-label={`${type} Navigation`}>
+                <ul className="space-y-1">
+                  {items.map((item) => (
+                    <li key={item.id}>
+                      <Link
+                        to={item.path}
+                        className={cn(
+                          "block px-3 py-2 rounded-md transition-all duration-200 font-medium text-sm",
+                          (activeId === item.id || location.pathname === item.path)
+                            ? "bg-primary/10 text-primary font-semibold shadow-sm"
+                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                        )}
+                        onClick={onClose}
+                      >
+                        {item.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            </>
+          )}
+        </div>
       </aside>
     </div>
   ) : null;
 
-  return <>{sidebar}{mobileDrawer}</>;
+  return <>{sidebarToggle}{sidebar}{mobileDrawer}</>;
 };
 
 export default SidebarNav; 

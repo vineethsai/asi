@@ -64,48 +64,49 @@ const Components = () => {
   return (
     <>
       <Header />
+      
+      {/* Floating sidebar controlled by toggle button */}
+      <SidebarNav type="components" isOpen={false} onClose={() => {}} />
+      
       <main className="py-16 bg-secondary/50">
         <div className="container px-4 md:px-6">
-          <div className="flex flex-col lg:flex-row gap-8">
-            <SidebarNav type="components" />
-            <div className="flex-1">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-0">
-                {filtered.map(component => (
-                  <Link to={`/components/${component.id}`} key={component.id}>
-                    <Card
-                      className="h-full border hover:shadow-lg transition-shadow"
-                      style={{ borderColor: colorMap[component.id]?.border || '#e5e7eb' }}
-                    >
-                      <CardContent className="p-6">
-                        <div className="flex items-center gap-3 mb-2">
-                          {component.icon && (
-                            <span
-                              className="rounded-md border p-2 flex items-center justify-center"
-                              style={{
-                                background: colorMap[component.id]?.bg || '#f1f5f9',
-                                borderColor: colorMap[component.id]?.border || '#e5e7eb',
-                              }}
-                            >
-                              <Icon name={component.icon} color={colorMap[component.id]?.icon || '#2563eb'} size={32} />
-                            </span>
-                          )}
-                          <h3 className="text-xl font-bold text-foreground">{component.title}</h3>
-                        </div>
-                        <p className="text-muted-foreground mb-2">{component.description}</p>
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {(component.threatCategories || []).map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
-                        </div>
-                        {component.children && component.children.length > 0 && (
-                          <div className="text-xs mt-2">
-                            <span className="font-medium">Subcomponents: </span>
-                            <span>{component.children.map(sc => sc.title).join(", ")}</span>
-                          </div>
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-0">
+              {filtered.map(component => (
+                <Link to={`/components/${component.id}`} key={component.id}>
+                  <Card
+                    className="h-full border hover:shadow-lg transition-shadow"
+                    style={{ borderColor: colorMap[component.id]?.border || '#e5e7eb' }}
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-3 mb-2">
+                        {component.icon && (
+                          <span
+                            className="rounded-md border p-2 flex items-center justify-center"
+                            style={{
+                              background: colorMap[component.id]?.bg || '#f1f5f9',
+                              borderColor: colorMap[component.id]?.border || '#e5e7eb',
+                            }}
+                          >
+                            <Icon name={component.icon} color={colorMap[component.id]?.icon || '#2563eb'} size={32} />
+                          </span>
                         )}
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
+                        <h3 className="text-xl font-bold text-foreground">{component.title}</h3>
+                      </div>
+                      <p className="text-muted-foreground mb-2">{component.description}</p>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {(component.threatCategories || []).map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
+                      </div>
+                      {component.children && component.children.length > 0 && (
+                        <div className="text-xs mt-2">
+                          <span className="font-medium">Subcomponents: </span>
+                          <span>{component.children.map(sc => sc.title).join(", ")}</span>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
             </div>
           </div>
         </div>
