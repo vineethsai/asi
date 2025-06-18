@@ -49,6 +49,12 @@ const ArchitectureNavigator: React.FC = () => {
 
   // Build graph data
   const { nodes, links } = useMemo(() => {
+    console.log('Building graph data...');
+    console.log('architecturesData:', architecturesData);
+    console.log('frameworkData:', frameworkData);
+    console.log('threatsData:', threatsData);
+    console.log('mitigationsData:', mitigationsData);
+    
     const nodeMap = new Map<string, GraphNode>();
     const linkArray: GraphLink[] = [];
 
@@ -151,10 +157,16 @@ const ArchitectureNavigator: React.FC = () => {
       console.error('Error building graph data:', error);
     }
 
-    return {
+    const result = {
       nodes: Array.from(nodeMap.values()),
       links: linkArray
     };
+    
+    console.log('Graph data built:', result);
+    console.log('Total nodes:', result.nodes.length);
+    console.log('Total links:', result.links.length);
+    
+    return result;
   }, []);
 
   // Filter nodes and links based on search and filters
