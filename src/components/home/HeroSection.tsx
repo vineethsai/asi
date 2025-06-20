@@ -41,7 +41,7 @@ export const HeroSection = () => {
               </Link>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 justify-center lg:justify-start mt-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 justify-center lg:justify-start mt-4">
               <Link to="/threats" className="w-full">
                 <Button variant="outline" size="lg" className="w-full">
                   View Threats
@@ -52,9 +52,14 @@ export const HeroSection = () => {
                   View Controls
                 </Button>
               </Link>
+              <Link to="/aisvs" className="w-full">
+                <Button variant="outline" size="lg" className="w-full">
+                  AISVS
+                </Button>
+              </Link>
               <Link to="/architectures" className="w-full">
                 <Button variant="outline" size="lg" className="w-full">
-                  Explore Architectures
+                  Architectures
                 </Button>
               </Link>
             </div>

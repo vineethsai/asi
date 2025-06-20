@@ -15,6 +15,8 @@ export const Header = () => {
     { name: "Architecture", path: "/architectures" },
     { name: "Threats", path: "/threats" },
     { name: "Controls", path: "/controls" },
+    { name: "AISVS", path: "/aisvs" },
+    { name: "NIST Mapping", path: "/nist-mapping" },
     { name: "Assessment", path: "/assessment" }
   ];
 

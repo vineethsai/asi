@@ -14,6 +14,8 @@ import Controls from "./pages/Controls";
 import ControlDetail from "./pages/ControlDetail";
 import Architectures from "./pages/Architectures";
 import ArchitectureDetail from "./pages/ArchitectureDetail";
+import AISVS from "./pages/AISVS";
+import NISTMapping from "./pages/NISTMapping";
 import TestNavigator from "./pages/TestNavigator";
 import ScrollToTop from "@/components/layout/ScrollToTop";
 
@@ -37,6 +39,8 @@ const App = () => (
           <Route path="/controls/:controlId" element={<ControlDetail />} />
           <Route path="/architectures" element={<Architectures />} />
           <Route path="/architectures/:architectureId" element={<ArchitectureDetail />} />
+          <Route path="/aisvs" element={<AISVS />} />
+          <Route path="/nist-mapping" element={<NISTMapping />} />
           <Route path="/test-navigator" element={<TestNavigator />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

@@ -6,7 +6,7 @@ export const Footer = () => {
       <div className="container">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
           <div className="col-span-1">
-            <h3 className="text-lg font-bold mb-4">OWASP Agentic Security</h3>
+            <h3 className="text-lg font-bold mb-4">Agentic Security Hub</h3>
             <p className="text-muted-foreground">
               Securing AI systems through the entire development lifecycle.
             </p>
@@ -19,6 +19,7 @@ export const Footer = () => {
               <li><Link to="/architectures" className="text-muted-foreground hover:text-foreground">Architecture</Link></li>
               <li><Link to="/threats" className="text-muted-foreground hover:text-foreground">Threats</Link></li>
               <li><Link to="/controls" className="text-muted-foreground hover:text-foreground">Controls</Link></li>
+              <li><Link to="/aisvs" className="text-muted-foreground hover:text-foreground">AISVS</Link></li>
             </ul>
           </div>
 

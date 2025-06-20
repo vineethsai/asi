@@ -6,7 +6,6 @@ import Header from "@/components/layout/Header";
 import SidebarNav from "../components/layout/SidebarNav";
 import { frameworkData } from "../components/components/frameworkData";
 import ReactMarkdown from "react-markdown";
-import { CopyToClipboard } from "react-copy-to-clipboard";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { duotoneLight, duotoneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { useEffect, useState } from "react";
@@ -15,6 +14,11 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Icon } from "@/components/ui/icon";
 import { Helmet } from "react-helmet";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Checkbox } from "@/components/ui/checkbox";
+import { CheckCircle2, Circle, Copy, Check, Play, Eye, EyeOff, Info, ExternalLink, Lightbulb, AlertTriangle, Target } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 
 export const ControlDetail = () => {
   const { controlId } = useParams<{ controlId: string }>();
@@ -22,6 +26,11 @@ export const ControlDetail = () => {
   
   // Theme detection
   const [isDarkMode, setIsDarkMode] = useState(false);
+  
+  // Interactive state management
+  const [checkedItems, setCheckedItems] = useState<{[key: string]: boolean}>({});
+  const [copiedCode, setCopiedCode] = useState<{[key: string]: boolean}>({});
+  const [expandedSections, setExpandedSections] = useState<{[key: string]: boolean}>({});
   
   useEffect(() => {
     const checkTheme = () => {
@@ -40,6 +49,34 @@ export const ControlDetail = () => {
     
     return () => observer.disconnect();
   }, []);
+
+  // Load saved progress from localStorage
+  useEffect(() => {
+    if (mitigation?.id) {
+      const saved = localStorage.getItem(`control-${mitigation.id}-progress`);
+      if (saved) {
+        setCheckedItems(JSON.parse(saved));
+      }
+    }
+  }, [mitigation?.id]);
+
+  // Save progress to localStorage
+  const updateProgress = (itemId: string, checked: boolean) => {
+    const newCheckedItems = { ...checkedItems, [itemId]: checked };
+    setCheckedItems(newCheckedItems);
+    if (mitigation?.id) {
+      localStorage.setItem(`control-${mitigation.id}-progress`, JSON.stringify(newCheckedItems));
+    }
+  };
+
+  // Handle code copy with feedback
+  const handleCodeCopy = (codeId: string, code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCode({ ...copiedCode, [codeId]: true });
+    setTimeout(() => {
+      setCopiedCode({ ...copiedCode, [codeId]: false });
+    }, 2000);
+  };
   const threats: Threat[] = mitigation
     ? mitigation.threatIds.map(id => threatsData[id]).filter(Boolean)
     : [];
@@ -71,69 +108,299 @@ export const ControlDetail = () => {
     return parts.filter(p => p.value.trim() !== '');
   }
 
-  function renderSectionContent(content: string, sectionId: string) {
+  // Enhanced text processing with interactive elements
+  function enhanceTextWithInteractivity(text: string): JSX.Element {
+    if (!text || text.trim() === '') {
+      return <span>{text}</span>;
+    }
+
+    // Define technical terms and their explanations
+    const technicalTerms: Record<string, { definition: string; icon: JSX.Element }> = {
+      'containerization': {
+        definition: 'A lightweight form of virtualization that packages applications with their dependencies into containers',
+        icon: <Target className="h-3 w-3" />
+      },
+      'virtualization': {
+        definition: 'Technology that creates virtual versions of computing resources like servers, storage, or networks',
+        icon: <Target className="h-3 w-3" />
+      },
+      'Docker': {
+        definition: 'A platform for developing, shipping, and running applications using containerization technology',
+        icon: <ExternalLink className="h-3 w-3" />
+      },
+      'Podman': {
+        definition: 'A daemonless container engine for developing, managing, and running OCI containers',
+        icon: <ExternalLink className="h-3 w-3" />
+      },
+      'SELinux': {
+        definition: 'Security-Enhanced Linux - a mandatory access control security mechanism',
+        icon: <AlertTriangle className="h-3 w-3" />
+      },
+      'AppArmor': {
+        definition: 'A Linux kernel security module that restricts programs capabilities with per-program profiles',
+        icon: <AlertTriangle className="h-3 w-3" />
+      },
+      'WASM': {
+        definition: 'WebAssembly - a binary instruction format for a stack-based virtual machine',
+        icon: <Lightbulb className="h-3 w-3" />
+      },
+      'QEMU': {
+        definition: 'Quick Emulator - a generic and open source machine emulator and virtualizer',
+        icon: <ExternalLink className="h-3 w-3" />
+      },
+      'KVM': {
+        definition: 'Kernel-based Virtual Machine - a virtualization infrastructure for Linux',
+        icon: <ExternalLink className="h-3 w-3" />
+      },
+      'Firecracker': {
+        definition: 'A virtualization technology for creating and managing secure, multi-tenant container environments',
+        icon: <ExternalLink className="h-3 w-3" />
+      },
+      'microVM': {
+        definition: 'Lightweight virtual machines optimized for serverless computing workloads',
+        icon: <Lightbulb className="h-3 w-3" />
+      },
+      'cgroups': {
+        definition: 'Control groups - a Linux kernel feature that limits and isolates resource usage',
+        icon: <Target className="h-3 w-3" />
+      },
+      'namespaces': {
+        definition: 'Linux kernel feature that partitions kernel resources so that one set of processes sees one set of resources',
+        icon: <Target className="h-3 w-3" />
+      },
+      'seccomp': {
+        definition: 'Secure computing mode - a computer security facility in Linux that restricts system calls',
+        icon: <AlertTriangle className="h-3 w-3" />
+      }
+    };
+
+    // Risk level indicators
+    const riskLevels: Record<string, { color: string; icon: JSX.Element }> = {
+      'LOW RISK': { color: 'text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900', icon: <CheckCircle2 className="h-3 w-3" /> },
+      'MEDIUM RISK': { color: 'text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900', icon: <AlertTriangle className="h-3 w-3" /> },
+      'HIGH RISK': { color: 'text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900', icon: <AlertTriangle className="h-3 w-3" /> },
+      'CRITICAL RISK': { color: 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900', icon: <AlertTriangle className="h-3 w-3" /> }
+    };
+
+    // Simple approach: split by words and process each
+    const words = text.split(/(\s+)/);
+    const elements: JSX.Element[] = [];
+
+    words.forEach((word, index) => {
+      const cleanWord = word.replace(/[^\w]/g, '').toLowerCase();
+      const techTerm = Object.keys(technicalTerms).find(term => 
+        term.toLowerCase() === cleanWord
+      );
+      
+      const riskLevel = Object.keys(riskLevels).find(level => 
+        text.toUpperCase().includes(level)
+      );
+
+      if (techTerm && word.toLowerCase().includes(techTerm.toLowerCase())) {
+        const termInfo = technicalTerms[techTerm];
+        elements.push(
+          <TooltipProvider key={`term-${index}`}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 mx-0.5 rounded bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 cursor-help hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors text-sm">
+                  {termInfo.icon}
+                  <span className="font-medium">{word.trim()}</span>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs">
+                <p className="text-sm">{termInfo.definition}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      } else if (riskLevel && word.toUpperCase().includes(riskLevel)) {
+        const levelInfo = riskLevels[riskLevel];
+        elements.push(
+          <span key={`risk-${index}`} className={`inline-flex items-center gap-1 px-2 py-1 mx-1 rounded-full text-xs font-medium ${levelInfo.color}`}>
+            {levelInfo.icon}
+            {word.trim()}
+          </span>
+        );
+      } else {
+        elements.push(<span key={`text-${index}`}>{word}</span>);
+      }
+    });
+
+    return <span>{elements}</span>;
+  }
+
+  // Enhanced function to render interactive checklists
+  function renderInteractiveChecklist(content: string, sectionId: string) {
     const lines = content.split("\n").filter(l => l.trim() !== "");
-    // If all lines start with '-', render as a list
+    
     if (lines.length > 1 && lines.every(l => l.trim().startsWith("- "))) {
+      const items = lines.map(l => l.replace(/^\s*-\s*/, "").trim());
+      const completedCount = items.filter((_, i) => checkedItems[`${sectionId}-${i}`]).length;
+      const progressPercentage = items.length > 0 ? (completedCount / items.length) * 100 : 0;
+      
       return (
-        <ul className="list-disc pl-6 text-sm text-muted-foreground">
-          {lines.map((l, i) => <li key={i}>{l.replace(/^\s*-\s*/, "")}</li>)}
-        </ul>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">Progress: {completedCount}/{items.length}</span>
+            <span className="text-sm text-muted-foreground">{Math.round(progressPercentage)}%</span>
+          </div>
+          <Progress value={progressPercentage} className="h-2" />
+          <div className="space-y-3">
+            {items.map((item, i) => {
+              const itemId = `${sectionId}-${i}`;
+              const isChecked = checkedItems[itemId] || false;
+              return (
+                <div key={i} className="flex items-start space-x-3 group">
+                  <Checkbox
+                    id={itemId}
+                    checked={isChecked}
+                    onCheckedChange={(checked) => updateProgress(itemId, checked as boolean)}
+                    className="mt-0.5"
+                  />
+                  <label 
+                    htmlFor={itemId} 
+                    className={`text-sm cursor-pointer transition-all ${
+                      isChecked ? 'line-through text-muted-foreground' : 'text-foreground'
+                    }`}
+                  >
+                    {enhanceTextWithInteractivity(item)}
+                  </label>
+                  {isChecked && <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />}
+                </div>
+              );
+            })}
+          </div>
+        </div>
       );
     }
-    // If a single line contains multiple ' - ', render as a list
+    
+    return renderSectionContent(content, sectionId);
+  }
+
+  // Enhanced function to render code with better interactions
+  function renderEnhancedCode(code: string, language: string, codeId: string) {
+    const isCopied = copiedCode[codeId];
+    
+    return (
+      <div className="relative group">
+        <div className="absolute top-2 right-2 flex gap-2 z-10">
+          <button
+            onClick={() => handleCodeCopy(codeId, code)}
+            className="bg-muted px-3 py-1.5 rounded text-xs border hover:bg-accent transition-colors flex items-center gap-1"
+          >
+            {isCopied ? (
+              <>
+                <Check className="h-3 w-3" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Copy className="h-3 w-3" />
+                Copy
+              </>
+            )}
+          </button>
+          {language && (
+            <span className="bg-muted px-2 py-1.5 rounded text-xs border text-muted-foreground">
+              {language.toUpperCase()}
+            </span>
+          )}
+        </div>
+        <SyntaxHighlighter 
+          language={language} 
+          style={isDarkMode ? duotoneDark : duotoneLight} 
+          customStyle={{ 
+            borderRadius: 8, 
+            fontSize: 13, 
+            padding: 16,
+            paddingTop: 40 // Make room for buttons
+          }}
+        >
+          {code}
+        </SyntaxHighlighter>
+      </div>
+    );
+  }
+
+  function renderSectionContent(content: string, sectionId: string) {
+    const lines = content.split("\n").filter(l => l.trim() !== "");
+    
+    // If all lines start with '-', render as interactive checklist
+    if (lines.length > 1 && lines.every(l => l.trim().startsWith("- "))) {
+      return renderInteractiveChecklist(content, sectionId);
+    }
+    
+    // If a single line contains multiple ' - ', render as enhanced list
     if (lines.length === 1 && (content.match(/ - /g) || []).length > 1) {
       const items = content.split(/ - /).map(s => s.trim()).filter(Boolean);
       return (
-        <ul className="list-disc pl-6 text-sm text-muted-foreground">
-          {items.map((item, i) => <li key={i}>{item}</li>)}
-        </ul>
+        <div className="space-y-2">
+          {items.map((item, i) => (
+            <div key={i} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group">
+              <div className="w-2 h-2 rounded-full bg-primary mt-2 group-hover:scale-125 transition-transform"></div>
+              <div className="flex-1 text-sm text-muted-foreground">
+                {enhanceTextWithInteractivity(item)}
+              </div>
+            </div>
+          ))}
+        </div>
       );
     }
+    
     // Otherwise, split prose and code
     const parts = splitProseAndCode(content);
     if (parts.length === 1 && parts[0].type === 'prose') {
-      return <div className="prose prose-sm max-w-none text-muted-foreground"><ReactMarkdown>{parts[0].value.trim()}</ReactMarkdown></div>;
+      return (
+        <div className="prose prose-sm max-w-none text-muted-foreground">
+          <div className="space-y-2">
+            {parts[0].value.trim().split('\n').map((line, i) => (
+              <p key={i} className="mb-2 leading-relaxed">
+                {enhanceTextWithInteractivity(line)}
+              </p>
+            ))}
+          </div>
+        </div>
+      );
     }
-    // If multiple code blocks, use tabs
+    
+    // If multiple code blocks, use tabs with enhanced code rendering
     const codeBlocks = parts.filter(p => p.type === 'code');
     if (codeBlocks.length > 1) {
       return (
         <Tabs defaultValue={codeBlocks[0].lang || 'code'} className="w-full mt-2">
           <TabsList>
             {codeBlocks.map((block, i) => (
-              <TabsTrigger key={i} value={block.lang || `code${i}`}>{`Code ${i+1}`}</TabsTrigger>
+              <TabsTrigger key={i} value={block.lang || `code${i}`}>
+                {block.lang ? block.lang.toUpperCase() : `Code ${i+1}`}
+              </TabsTrigger>
             ))}
           </TabsList>
           {codeBlocks.map((block, i) => (
             <TabsContent key={i} value={block.lang || `code${i}`}> 
-              <div className="relative">
-                <SyntaxHighlighter language={block.lang} style={isDarkMode ? duotoneDark : duotoneLight} customStyle={{ borderRadius: 8, fontSize: 13, padding: 16 }}>
-                  {block.value}
-                </SyntaxHighlighter>
-                <CopyToClipboard text={block.value}>
-                  <button className="absolute top-2 right-2 bg-muted px-2 py-1 rounded text-xs border hover:bg-accent">Copy</button>
-                </CopyToClipboard>
-              </div>
+              {renderEnhancedCode(block.value, block.lang || '', `${sectionId}-code-${i}`)}
             </TabsContent>
           ))}
         </Tabs>
       );
     }
+    
     // Otherwise, render prose and code blocks sequentially
     return (
       <div className="space-y-4">
         {parts.map((part, i) =>
           part.type === 'prose' ? (
-            <div key={i} className="prose prose-sm max-w-none text-muted-foreground"><ReactMarkdown>{part.value.trim()}</ReactMarkdown></div>
+            <div key={i} className="prose prose-sm max-w-none text-muted-foreground">
+              <div className="space-y-2">
+                {part.value.trim().split('\n').map((line, j) => (
+                  <p key={j} className="mb-2 leading-relaxed">
+                    {enhanceTextWithInteractivity(line)}
+                  </p>
+                ))}
+              </div>
+            </div>
           ) : (
-            <div key={i} className="relative">
-              <SyntaxHighlighter language={part.lang} style={isDarkMode ? duotoneDark : duotoneLight} customStyle={{ borderRadius: 8, fontSize: 13, padding: 16 }}>
-                {part.value}
-              </SyntaxHighlighter>
-              <CopyToClipboard text={part.value}>
-                <button className="absolute top-2 right-2 bg-muted px-2 py-1 rounded text-xs border hover:bg-accent">Copy</button>
-              </CopyToClipboard>
+            <div key={i}>
+              {renderEnhancedCode(part.value, part.lang || '', `${sectionId}-code-${i}`)}
             </div>
           )
         )}
@@ -156,6 +423,29 @@ export const ControlDetail = () => {
   const threatCount = mitigation.threatIds?.length || 0;
   const tagCount = (mitigation.tags || []).length;
   const phaseCount = [mitigation.designPhase, mitigation.buildPhase, mitigation.operationPhase].filter(Boolean).length;
+
+  // Calculate overall progress
+  const getAllChecklistItems = () => {
+    const sections = [
+      mitigation.implementationDetail.design,
+      mitigation.implementationDetail.build,
+      mitigation.implementationDetail.operations,
+      mitigation.implementationDetail.toolsAndFrameworks
+    ].filter(Boolean);
+    
+    return sections.reduce((total, section) => {
+      const lines = section.split('\n').filter(l => l.trim().startsWith('- '));
+      return total + lines.length;
+    }, 0);
+  };
+
+  const getCompletedItems = () => {
+    return Object.values(checkedItems).filter(Boolean).length;
+  };
+
+  const totalItems = getAllChecklistItems();
+  const completedItems = getCompletedItems();
+  const overallProgress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
 
   return (
     <>
@@ -224,7 +514,9 @@ export const ControlDetail = () => {
                   </div>
                   <div className="text-xs text-muted-foreground mb-1">Version: {mitigation.version || "-"} | Last Updated: {mitigation.lastUpdated || "-"} | Updated By: {mitigation.updatedBy || "-"}</div>
                   {mitigation.references && mitigation.references.length > 0 && <div className="text-xs mt-1">{mitigation.references.map(ref => <a key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80 mr-2">{ref.title}</a>)}</div>}
-                  <p className="text-muted-foreground mt-4">{mitigation.description}</p>
+                  <div className="text-muted-foreground mt-4 leading-relaxed">
+                    {enhanceTextWithInteractivity(mitigation.description)}
+                  </div>
                   {/* Analytics widgets */}
                   <div className="flex flex-wrap gap-4 mt-4">
                     <div className="bg-muted rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
@@ -242,63 +534,178 @@ export const ControlDetail = () => {
                   </div>
                 </CardContent>
               </Card>
-              {/* Grid for the rest of the cards */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Design Phase */}
-                {mitigation.implementationDetail.design && mitigation.implementationDetail.design.trim() && (
-                  <div id="design-phase" className="border border-blue-200 dark:border-blue-800 rounded-lg bg-card">
-                    <div className="p-4">
-                      <h2 className="text-base font-semibold mb-2 text-blue-700 dark:text-blue-300">Design Phase</h2>
-                      {renderSectionContent(mitigation.implementationDetail.design, "design-phase")}
+
+              {/* Implementation Progress Card */}
+              {totalItems > 0 && (
+                <Card className="mb-4 border border-green-200 dark:border-green-800">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h2 className="text-lg font-semibold text-green-700 dark:text-green-300">Implementation Progress</h2>
+                      <Badge variant={overallProgress === 100 ? "default" : "secondary"} className="text-sm">
+                        {Math.round(overallProgress)}% Complete
+                      </Badge>
                     </div>
-                  </div>
-                )}
-                {/* Build Phase */}
-                {mitigation.implementationDetail.build && mitigation.implementationDetail.build.trim() && (
-                  <div id="build-phase" className="border border-yellow-200 dark:border-yellow-800 rounded-lg bg-card">
-                    <div className="p-4">
-                      <h2 className="text-base font-semibold mb-2 text-yellow-700 dark:text-yellow-300">Build Phase</h2>
-                      {renderSectionContent(mitigation.implementationDetail.build, "build-phase")}
+                    <Progress value={overallProgress} className="h-3 mb-3" />
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span>{completedItems} of {totalItems} tasks completed</span>
+                      {overallProgress === 100 && (
+                        <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                          <CheckCircle2 className="h-4 w-4" />
+                          <span className="font-medium">All Done!</span>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
-                {/* Operation Phase */}
-                {mitigation.implementationDetail.operations && mitigation.implementationDetail.operations.trim() && (
-                  <div id="operation-phase" className="border border-green-200 dark:border-green-800 rounded-lg bg-card">
-                    <div className="p-4">
-                      <h2 className="text-base font-semibold mb-2 text-green-700 dark:text-green-300">Operation Phase</h2>
-                      {renderSectionContent(mitigation.implementationDetail.operations, "operation-phase")}
-                    </div>
-                  </div>
-                )}
-                {/* Tools & Frameworks */}
-                {mitigation.implementationDetail.toolsAndFrameworks && mitigation.implementationDetail.toolsAndFrameworks.trim() && (
-                  <div id="tools-frameworks" className="border border-purple-200 dark:border-purple-800 rounded-lg bg-card">
-                    <div className="p-4">
-                      <h2 className="text-base font-semibold mb-2 text-purple-700 dark:text-purple-300">Tools & Frameworks</h2>
-                      {renderSectionContent(mitigation.implementationDetail.toolsAndFrameworks, "tools-frameworks")}
-                    </div>
-                  </div>
-                )}
-                {/* Mitigates Threats */}
-                <div id="mitigates-threats" className="border border-red-200 dark:border-red-800 rounded-lg bg-card">
-                  <div className="p-4">
-                    <h2 className="text-base font-semibold mb-2 text-red-700 dark:text-red-300">Mitigates Threats</h2>
-                    {threats.length > 0 ? (
-                      <ul className="mt-2 space-y-2">
-                        {threats.map(threat => (
-                          <li key={threat.id}>
-                            <Link to={`/threats/${threat.id}`} className="text-threat underline">
-                              {threat.code} - {threat.name}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <span className="ml-2 text-muted-foreground">No threats documented.</span>
-                    )}
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Implementation Details with Accordion */}
+              <div className="space-y-4">
+                <Accordion type="multiple" defaultValue={["design-phase", "threats"]} className="w-full">
+                  {/* Design Phase */}
+                  {mitigation.implementationDetail.design && mitigation.implementationDetail.design.trim() && (
+                    <AccordionItem value="design-phase" className="border border-blue-200 dark:border-blue-800 rounded-lg bg-card">
+                      <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                          <span className="text-base font-semibold text-blue-700 dark:text-blue-300">Design Phase</span>
+                          <Badge variant="outline" className="ml-auto mr-4">
+                            {mitigation.implementationDetail.design.split('\n').filter(l => l.trim().startsWith('- ')).length} items
+                          </Badge>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-4 pb-4">
+                        {renderSectionContent(mitigation.implementationDetail.design, "design-phase")}
+                      </AccordionContent>
+                    </AccordionItem>
+                  )}
+
+                  {/* Build Phase */}
+                  {mitigation.implementationDetail.build && mitigation.implementationDetail.build.trim() && (
+                    <AccordionItem value="build-phase" className="border border-yellow-200 dark:border-yellow-800 rounded-lg bg-card">
+                      <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                          <span className="text-base font-semibold text-yellow-700 dark:text-yellow-300">Build Phase</span>
+                          <Badge variant="outline" className="ml-auto mr-4">
+                            {mitigation.implementationDetail.build.split('\n').filter(l => l.trim().startsWith('- ')).length} items
+                          </Badge>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-4 pb-4">
+                        {renderSectionContent(mitigation.implementationDetail.build, "build-phase")}
+                      </AccordionContent>
+                    </AccordionItem>
+                  )}
+
+                  {/* Operation Phase */}
+                  {mitigation.implementationDetail.operations && mitigation.implementationDetail.operations.trim() && (
+                    <AccordionItem value="operation-phase" className="border border-green-200 dark:border-green-800 rounded-lg bg-card">
+                      <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                          <span className="text-base font-semibold text-green-700 dark:text-green-300">Operation Phase</span>
+                          <Badge variant="outline" className="ml-auto mr-4">
+                            {mitigation.implementationDetail.operations.split('\n').filter(l => l.trim().startsWith('- ')).length} items
+                          </Badge>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-4 pb-4">
+                        {renderSectionContent(mitigation.implementationDetail.operations, "operation-phase")}
+                      </AccordionContent>
+                    </AccordionItem>
+                  )}
+
+                  {/* Tools & Frameworks */}
+                  {mitigation.implementationDetail.toolsAndFrameworks && mitigation.implementationDetail.toolsAndFrameworks.trim() && (
+                    <AccordionItem value="tools-frameworks" className="border border-purple-200 dark:border-purple-800 rounded-lg bg-card">
+                      <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                          <span className="text-base font-semibold text-purple-700 dark:text-purple-300">Tools & Frameworks</span>
+                          <Badge variant="outline" className="ml-auto mr-4">
+                            {mitigation.implementationDetail.toolsAndFrameworks.split('\n').filter(l => l.trim().startsWith('- ')).length} items
+                          </Badge>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-4 pb-4">
+                        {renderSectionContent(mitigation.implementationDetail.toolsAndFrameworks, "tools-frameworks")}
+                      </AccordionContent>
+                    </AccordionItem>
+                  )}
+
+                  {/* Mitigates Threats */}
+                  <AccordionItem value="threats" className="border border-red-200 dark:border-red-800 rounded-lg bg-card">
+                    <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                        <span className="text-base font-semibold text-red-700 dark:text-red-300">Mitigates Threats</span>
+                        <Badge variant="outline" className="ml-auto mr-4">
+                          {threats.length} threats
+                        </Badge>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-4 pb-4">
+                      {threats.length > 0 ? (
+                        <div className="grid gap-3">
+                          {threats.map(threat => (
+                            <HoverCard key={threat.id}>
+                              <HoverCardTrigger asChild>
+                                <Link 
+                                  to={`/threats/${threat.id}`} 
+                                  className="flex items-center gap-3 p-3 rounded-lg border border-red-100 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-950 transition-colors group"
+                                >
+                                  <div className="w-2 h-2 rounded-full bg-red-500 group-hover:scale-125 transition-transform"></div>
+                                  <div className="flex-1">
+                                    <div className="font-medium text-red-700 dark:text-red-300 group-hover:text-red-600 dark:group-hover:text-red-200">
+                                      {threat.code} - {threat.name}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground line-clamp-2">
+                                      {enhanceTextWithInteractivity(threat.description)}
+                                    </div>
+                                  </div>
+                                  <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors" />
+                                </Link>
+                              </HoverCardTrigger>
+                              <HoverCardContent className="w-80">
+                                <div className="space-y-2">
+                                  <h4 className="text-sm font-semibold text-red-700 dark:text-red-300">
+                                    {threat.code} - {threat.name}
+                                  </h4>
+                                  <p className="text-sm text-muted-foreground">
+                                    {enhanceTextWithInteractivity(threat.description)}
+                                  </p>
+                                  {threat.impactLevel && (
+                                    <div className="flex items-center gap-2 mt-2">
+                                      <span className="text-xs font-medium">Impact Level:</span>
+                                      <Badge variant={threat.impactLevel === 'high' ? 'destructive' : threat.impactLevel === 'medium' ? 'secondary' : 'outline'}>
+                                        {threat.impactLevel}
+                                      </Badge>
+                                    </div>
+                                  )}
+                                  {threat.tags && threat.tags.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-2">
+                                      {threat.tags.slice(0, 3).map(tag => (
+                                        <Badge key={tag} variant="outline" className="text-xs">
+                                          {tag}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </HoverCardContent>
+                            </HoverCard>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <Circle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          <p>No threats documented for this control.</p>
+                        </div>
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               </div>
             </div>
           </div>
