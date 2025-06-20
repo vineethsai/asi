@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import * as d3 from "d3";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -56,7 +56,7 @@ const nistAIRMF: NISTFunction[] = [
         id: "govern.1",
         code: "GOVERN.1",
         name: "Policies, Processes, Procedures, and Practices",
-        description: "AI governance, risk management, and assurance processes and practices are established, maintained, and documented.",
+        description: "Policies, processes, procedures, and practices across the organization related to the mapping, measuring, and managing of AI risks are in place, transparent, and implemented effectively.",
         subcategories: [
           {
             id: "govern.1.1",
@@ -67,61 +67,169 @@ const nistAIRMF: NISTFunction[] = [
           },
           {
             id: "govern.1.2",
-            code: "GOVERN.1.2", 
-            name: "AI Risk Management Strategy",
-            description: "A comprehensive AI risk management strategy is developed, documented, and implemented.",
-            aisvsMapping: ["C1", "C3", "C12"]
+            code: "GOVERN.1.2",
+            name: "Trustworthy AI Characteristics Integration",
+            description: "The characteristics of trustworthy AI are integrated into organizational policies, processes, procedures, and practices.",
+            aisvsMapping: ["C1", "C3", "C11", "C13"]
           },
           {
             id: "govern.1.3",
             code: "GOVERN.1.3",
-            name: "Roles and Responsibilities",
-            description: "Roles and responsibilities for AI governance are clearly defined and assigned.",
-            aisvsMapping: ["C5", "C13"]
+            name: "Risk Management Activity Levels",
+            description: "Processes, procedures, and practices are in place to determine the needed level of risk management activities based on the organization's risk tolerance.",
+            aisvsMapping: ["C3", "C12"]
+          },
+          {
+            id: "govern.1.4",
+            code: "GOVERN.1.4",
+            name: "Risk Management Process Establishment",
+            description: "The risk management process and its outcomes are established through transparent policies, procedures, and other controls based on organizational risk priorities.",
+            aisvsMapping: ["C1", "C3", "C12"]
+          },
+          {
+            id: "govern.1.5",
+            code: "GOVERN.1.5",
+            name: "Ongoing Monitoring and Review",
+            description: "Ongoing monitoring and periodic review of the risk management process and its outcomes are planned and organizational roles and responsibilities clearly defined, including determining the frequency of periodic review.",
+            aisvsMapping: ["C12", "C13"]
+          },
+          {
+            id: "govern.1.6",
+            code: "GOVERN.1.6",
+            name: "AI Systems Inventory",
+            description: "Mechanisms are in place to inventory AI systems and are resourced according to organizational risk priorities.",
+            aisvsMapping: ["C3", "C5"]
+          },
+          {
+            id: "govern.1.7",
+            code: "GOVERN.1.7",
+            name: "Decommissioning Procedures",
+            description: "Processes and procedures are in place for decommissioning and phasing out AI systems safely and in a manner that does not increase risks or decrease the organization's trustworthiness.",
+            aisvsMapping: ["C12", "C13"]
           }
         ]
       },
       {
         id: "govern.2",
-        code: "GOVERN.2", 
-        name: "Human-AI Configuration",
-        description: "The organization's approach to designing, developing, and using AI systems accounts for human considerations.",
+        code: "GOVERN.2",
+        name: "Accountability Structures",
+        description: "Accountability structures are in place so that the appropriate teams and individuals are empowered, responsible, and trained for mapping, measuring, and managing AI risks.",
         subcategories: [
           {
             id: "govern.2.1",
             code: "GOVERN.2.1",
-            name: "Human-AI Interaction Design",
-            description: "Human-AI configurations are designed to be meaningful and appropriate for their intended use.",
-            aisvsMapping: ["C13", "C7"]
+            name: "Roles and Responsibilities",
+            description: "Roles and responsibilities and lines of communication related to mapping, measuring, and managing AI risks are documented and are clear to individuals and teams throughout the organization.",
+            aisvsMapping: ["C5", "C13"]
           },
           {
             id: "govern.2.2",
             code: "GOVERN.2.2",
-            name: "Human Review and Decision Authority",
-            description: "Human review and decision-making authority are maintained for consequential decisions.",
-            aisvsMapping: ["C13", "C7"]
+            name: "AI Risk Management Training",
+            description: "The organization's personnel and partners receive AI risk management training to enable them to perform their duties and responsibilities consistent with related policies, procedures, and agreements.",
+            aisvsMapping: ["C5", "C13"]
+          },
+          {
+            id: "govern.2.3",
+            code: "GOVERN.2.3",
+            name: "Executive Leadership Responsibility",
+            description: "Executive leadership of the organization takes responsibility for decisions about risks associated with AI system development and deployment.",
+            aisvsMapping: ["C5", "C13"]
           }
         ]
       },
       {
         id: "govern.3",
         code: "GOVERN.3",
-        name: "AI Risk Management",
-        description: "Processes and procedures for AI risk management are established, maintained, and documented.",
+        name: "Workforce Diversity and Inclusion",
+        description: "Workforce diversity, equity, inclusion, and accessibility processes are prioritized in the mapping, measuring, and managing of AI risks throughout the lifecycle.",
         subcategories: [
           {
             id: "govern.3.1",
             code: "GOVERN.3.1",
-            name: "AI Risk Assessment",
-            description: "AI risks are regularly assessed and documented throughout the AI lifecycle.",
-            aisvsMapping: ["C1", "C3", "C12"]
+            name: "Diverse Decision-Making Teams",
+            description: "Decision-making related to mapping, measuring, and managing AI risks throughout the lifecycle is informed by a diverse team (e.g., diversity of demographics, disciplines, experience, expertise, and backgrounds).",
+            aisvsMapping: ["C11", "C13"]
           },
           {
             id: "govern.3.2",
             code: "GOVERN.3.2",
-            name: "Risk Tolerance and Appetite",
-            description: "Risk tolerance and appetite are clearly defined and communicated for AI systems.",
-            aisvsMapping: ["C3", "C13"]
+            name: "Human-AI Configuration Roles",
+            description: "Policies and procedures are in place to define and differentiate roles and responsibilities for human-AI configurations and oversight of AI systems.",
+            aisvsMapping: ["C7", "C13"]
+          }
+        ]
+      },
+      {
+        id: "govern.4",
+        code: "GOVERN.4",
+        name: "Risk Communication Culture",
+        description: "Organizational teams are committed to a culture that considers and communicates AI risk.",
+        subcategories: [
+          {
+            id: "govern.4.1",
+            code: "GOVERN.4.1",
+            name: "Critical Thinking and Safety Mindset",
+            description: "Organizational policies and practices are in place to foster a critical thinking and safety-first mindset in the design, development, deployment, and uses of AI systems to minimize potential negative impacts.",
+            aisvsMapping: ["C1", "C3", "C13"]
+          },
+          {
+            id: "govern.4.2",
+            code: "GOVERN.4.2",
+            name: "Risk Documentation and Communication",
+            description: "Organizational teams document the risks and potential impacts of the AI technology they design, develop, deploy, evaluate, and use, and they communicate about the impacts more broadly.",
+            aisvsMapping: ["C3", "C11", "C12"]
+          },
+          {
+            id: "govern.4.3",
+            code: "GOVERN.4.3",
+            name: "Testing and Information Sharing",
+            description: "Organizational practices are in place to enable AI testing, identification of incidents, and information sharing.",
+            aisvsMapping: ["C10", "C12", "C13"]
+          }
+        ]
+      },
+      {
+        id: "govern.5",
+        code: "GOVERN.5",
+        name: "Stakeholder Engagement",
+        description: "Processes are in place for robust engagement with relevant AI actors.",
+        subcategories: [
+          {
+            id: "govern.5.1",
+            code: "GOVERN.5.1",
+            name: "External Feedback Collection",
+            description: "Organizational policies and practices are in place to collect, consider, prioritize, and integrate feedback from those external to the team that developed or deployed the AI system regarding the potential individual and societal impacts related to AI risks.",
+            aisvsMapping: ["C11", "C12", "C13"]
+          },
+          {
+            id: "govern.5.2",
+            code: "GOVERN.5.2",
+            name: "Feedback Integration Mechanisms",
+            description: "Mechanisms are established to enable the team that developed or deployed AI systems to regularly incorporate adjudicated feedback from relevant AI actors into system design and implementation.",
+            aisvsMapping: ["C11", "C12", "C13"]
+          }
+        ]
+      },
+      {
+        id: "govern.6",
+        code: "GOVERN.6",
+        name: "Third-Party Risk Management",
+        description: "Policies and procedures are in place to address AI risks and benefits arising from third-party software and data and other supply chain issues.",
+        subcategories: [
+          {
+            id: "govern.6.1",
+            code: "GOVERN.6.1",
+            name: "Third-Party Risk Policies",
+            description: "Policies and procedures are in place that address AI risks associated with third-party entities, including risks of infringement of a third-party's intellectual property or other rights.",
+            aisvsMapping: ["C6"]
+          },
+          {
+            id: "govern.6.2",
+            code: "GOVERN.6.2",
+            name: "Third-Party Contingency Processes",
+            description: "Contingency processes are in place to handle failures or incidents in third-party data or AI systems deemed to be high-risk.",
+            aisvsMapping: ["C6", "C12"]
           }
         ]
       }
@@ -138,66 +246,166 @@ const nistAIRMF: NISTFunction[] = [
       {
         id: "map.1",
         code: "MAP.1",
-        name: "AI System Context",
-        description: "The AI system's context of use and operating environment are understood and documented.",
+        name: "Context Establishment",
+        description: "Context is established and understood.",
         subcategories: [
           {
             id: "map.1.1",
             code: "MAP.1.1",
-            name: "System Purpose and Use Cases",
-            description: "AI system purpose, intended use cases, and operating context are clearly defined.",
-            aisvsMapping: ["C3", "C7"]
+            name: "Intended Purposes and Context",
+            description: "Intended purposes, potentially beneficial uses, context-specific laws, norms and expectations, and prospective settings in which the AI system will be deployed are understood and documented.",
+            aisvsMapping: ["C1", "C3", "C7"]
           },
           {
             id: "map.1.2",
             code: "MAP.1.2",
-            name: "Stakeholder Analysis",
-            description: "Stakeholders who may be impacted by the AI system are identified and their concerns documented.",
+            name: "Interdisciplinary Team Diversity",
+            description: "Interdisciplinary AI actors, competencies, skills, and capacities for establishing context reflect demographic diversity and broad domain and user experience expertise, and their participation is documented.",
             aisvsMapping: ["C11", "C13"]
+          },
+          {
+            id: "map.1.3",
+            code: "MAP.1.3",
+            name: "Organizational Mission and Goals",
+            description: "The organization's mission and relevant goals for AI technology are understood and documented.",
+            aisvsMapping: ["C1", "C3"]
+          },
+          {
+            id: "map.1.4",
+            code: "MAP.1.4",
+            name: "Business Value Definition",
+            description: "The business value or context of business use has been clearly defined or – in the case of assessing existing AI systems – re-evaluated.",
+            aisvsMapping: ["C3", "C7"]
+          },
+          {
+            id: "map.1.5",
+            code: "MAP.1.5",
+            name: "Risk Tolerance Documentation",
+            description: "Organizational risk tolerances are determined and documented.",
+            aisvsMapping: ["C3", "C12"]
+          },
+          {
+            id: "map.1.6",
+            code: "MAP.1.6",
+            name: "System Requirements",
+            description: "System requirements are elicited from and understood by relevant AI actors. Design decisions take socio-technical implications into account to address AI risks.",
+            aisvsMapping: ["C1", "C3", "C7", "C11"]
           }
         ]
       },
       {
         id: "map.2",
         code: "MAP.2",
-        name: "Categorization and Impact Assessment",
-        description: "AI systems are categorized and their potential impacts are assessed.",
+        name: "AI System Categorization",
+        description: "Categorization of the AI system is performed.",
         subcategories: [
           {
             id: "map.2.1",
             code: "MAP.2.1",
-            name: "AI System Categorization",
-            description: "AI systems are categorized based on their impact level and risk profile.",
-            aisvsMapping: ["C3", "C12"]
+            name: "Task and Method Definition",
+            description: "The specific tasks and methods used to implement the tasks that the AI system will support are defined (e.g., classifiers, generative models, recommenders).",
+            aisvsMapping: ["C3", "C7"]
           },
           {
             id: "map.2.2",
             code: "MAP.2.2",
-            name: "Impact Assessment",
-            description: "Potential positive and negative impacts of AI systems are identified and assessed.",
-            aisvsMapping: ["C1", "C11", "C12"]
+            name: "Knowledge Limits Documentation",
+            description: "Information about the AI system's knowledge limits and how system output may be utilized and overseen by humans is documented.",
+            aisvsMapping: ["C7", "C13"]
+          },
+          {
+            id: "map.2.3",
+            code: "MAP.2.3",
+            name: "Scientific Integrity and TEVV",
+            description: "Scientific integrity and TEVV considerations are identified and documented, including those related to experimental design, data collection and selection, system trustworthiness, and construct validation.",
+            aisvsMapping: ["C1", "C10", "C11"]
           }
         ]
       },
       {
         id: "map.3",
         code: "MAP.3",
-        name: "AI Risk Identification",
-        description: "AI risks and their potential sources are identified and documented.",
+        name: "AI Capabilities Assessment",
+        description: "AI capabilities, targeted usage, goals, and expected benefits and costs compared with appropriate benchmarks are understood.",
         subcategories: [
           {
             id: "map.3.1",
             code: "MAP.3.1",
-            name: "Risk Source Identification",
-            description: "Sources of AI risk throughout the system lifecycle are identified.",
-            aisvsMapping: ["C1", "C6", "C10"]
+            name: "Potential Benefits Documentation",
+            description: "Potential benefits of intended AI system functionality and performance are examined and documented.",
+            aisvsMapping: ["C3", "C7"]
           },
           {
             id: "map.3.2",
             code: "MAP.3.2",
-            name: "Threat Modeling",
-            description: "AI-specific threats and attack vectors are identified and documented.",
-            aisvsMapping: ["C2", "C8", "C9", "C10"]
+            name: "Potential Costs Assessment",
+            description: "Potential costs, including non-monetary costs, which result from expected or realized AI errors or system functionality and trustworthiness are examined and documented.",
+            aisvsMapping: ["C3", "C11", "C12"]
+          },
+          {
+            id: "map.3.3",
+            code: "MAP.3.3",
+            name: "Application Scope Specification",
+            description: "Targeted application scope is specified and documented based on the system's capability, established context, and AI system categorization.",
+            aisvsMapping: ["C3", "C7"]
+          },
+          {
+            id: "map.3.4",
+            code: "MAP.3.4",
+            name: "Operator Proficiency Processes",
+            description: "Processes for operator and practitioner proficiency with AI system performance and trustworthiness are defined, assessed, and documented.",
+            aisvsMapping: ["C5", "C13"]
+          },
+          {
+            id: "map.3.5",
+            code: "MAP.3.5",
+            name: "Human Oversight Processes",
+            description: "Processes for human oversight are defined, assessed, and documented in accordance with organizational policies from the GOVERN function.",
+            aisvsMapping: ["C7", "C13"]
+          }
+        ]
+      },
+      {
+        id: "map.4",
+        code: "MAP.4",
+        name: "Component Risk Mapping",
+        description: "Risks and benefits are mapped for all components of the AI system including third-party software and data.",
+        subcategories: [
+          {
+            id: "map.4.1",
+            code: "MAP.4.1",
+            name: "Technology and Legal Risk Mapping",
+            description: "Approaches for mapping AI technology and legal risks of its components – including the use of third-party data or software – are in place, followed, and documented.",
+            aisvsMapping: ["C1", "C6", "C10"]
+          },
+          {
+            id: "map.4.2",
+            code: "MAP.4.2",
+            name: "Internal Risk Controls",
+            description: "Internal risk controls for components of the AI system, including third-party AI technologies, are identified and documented.",
+            aisvsMapping: ["C2", "C4", "C6", "C10"]
+          }
+        ]
+      },
+      {
+        id: "map.5",
+        code: "MAP.5",
+        name: "Impact Characterization",
+        description: "Impacts to individuals, groups, communities, organizations, and society are characterized.",
+        subcategories: [
+          {
+            id: "map.5.1",
+            code: "MAP.5.1",
+            name: "Impact Likelihood and Magnitude",
+            description: "Likelihood and magnitude of each identified impact (both potentially beneficial and harmful) based on expected use, past uses of AI systems in similar contexts, public incident reports, feedback from those external to the team that developed or deployed the AI system, or other data are identified and documented.",
+            aisvsMapping: ["C1", "C11", "C12"]
+          },
+          {
+            id: "map.5.2",
+            code: "MAP.5.2",
+            name: "Stakeholder Engagement Practices",
+            description: "Practices and personnel for supporting regular engagement with relevant AI actors and integrating feedback about positive, negative, and unanticipated impacts are in place and documented.",
+            aisvsMapping: ["C11", "C12", "C13"]
           }
         ]
       }
@@ -214,44 +422,186 @@ const nistAIRMF: NISTFunction[] = [
       {
         id: "measure.1",
         code: "MEASURE.1",
-        name: "Performance Measurement",
-        description: "AI system performance is measured and monitored throughout the lifecycle.",
+        name: "Methods and Metrics",
+        description: "Appropriate methods and metrics are identified and applied.",
         subcategories: [
           {
             id: "measure.1.1",
             code: "MEASURE.1.1",
-            name: "Performance Metrics",
-            description: "Appropriate performance metrics for AI systems are defined and measured.",
-            aisvsMapping: ["C3", "C12"]
+            name: "Risk Measurement Approaches",
+            description: "Approaches and metrics for measurement of AI risks enumerated during the MAP function are selected for implementation starting with the most significant AI risks.",
+            aisvsMapping: ["C3", "C10", "C12"]
           },
           {
             id: "measure.1.2",
             code: "MEASURE.1.2",
-            name: "Bias and Fairness Testing",
-            description: "AI systems are tested for bias and fairness throughout development and deployment.",
-            aisvsMapping: ["C1", "C11"]
+            name: "Metrics Assessment and Updates",
+            description: "Appropriateness of AI metrics and effectiveness of existing controls are regularly assessed and updated, including reports of errors and potential impacts on affected communities.",
+            aisvsMapping: ["C10", "C11", "C12"]
+          },
+          {
+            id: "measure.1.3",
+            code: "MEASURE.1.3",
+            name: "Independent Assessment",
+            description: "Internal experts who did not serve as front-line developers for the system and/or independent assessors are involved in regular assessments and updates.",
+            aisvsMapping: ["C10", "C12", "C13"]
           }
         ]
       },
       {
         id: "measure.2",
         code: "MEASURE.2",
-        name: "Risk Assessment and Analysis",
-        description: "AI risks are assessed and analyzed using appropriate methods and tools.",
+        name: "Trustworthy Characteristics Evaluation",
+        description: "AI systems are evaluated for trustworthy characteristics.",
         subcategories: [
           {
             id: "measure.2.1",
             code: "MEASURE.2.1",
-            name: "Risk Analysis Methods",
-            description: "Appropriate methods for AI risk analysis are selected and applied.",
-            aisvsMapping: ["C3", "C10", "C12"]
+            name: "TEVV Documentation",
+            description: "Test sets, metrics, and details about the tools used during TEVV are documented.",
+            aisvsMapping: ["C10", "C12"]
           },
           {
             id: "measure.2.2",
             code: "MEASURE.2.2",
-            name: "Security Testing",
-            description: "AI systems undergo appropriate security testing and vulnerability assessment.",
+            name: "Human Subject Evaluations",
+            description: "Evaluations involving human subjects meet applicable requirements (including human subject protection) and are representative of the relevant population.",
+            aisvsMapping: ["C11", "C13"]
+          },
+          {
+            id: "measure.2.3",
+            code: "MEASURE.2.3",
+            name: "Performance Criteria Measurement",
+            description: "AI system performance or assurance criteria are measured qualitatively or quantitatively and demonstrated for conditions similar to deployment setting(s).",
+            aisvsMapping: ["C3", "C10", "C12"]
+          },
+          {
+            id: "measure.2.4",
+            code: "MEASURE.2.4",
+            name: "Production Monitoring",
+            description: "The functionality and behavior of the AI system and its components – as identified in the MAP function – are monitored when in production.",
+            aisvsMapping: ["C12", "C13"]
+          },
+          {
+            id: "measure.2.5",
+            code: "MEASURE.2.5",
+            name: "Validity and Reliability Demonstration",
+            description: "The AI system to be deployed is demonstrated to be valid and reliable. Limitations of the generalizability beyond the conditions under which the technology was developed are documented.",
+            aisvsMapping: ["C1", "C10", "C11"]
+          },
+          {
+            id: "measure.2.6",
+            code: "MEASURE.2.6",
+            name: "Safety Risk Evaluation",
+            description: "The AI system is evaluated regularly for safety risks – as identified in the MAP function. The AI system to be deployed is demonstrated to be safe, its residual negative risk does not exceed the risk tolerance, and it can fail safely.",
+            aisvsMapping: ["C1", "C3", "C12"]
+          },
+          {
+            id: "measure.2.7",
+            code: "MEASURE.2.7",
+            name: "Security and Resilience Evaluation",
+            description: "AI system security and resilience – as identified in the MAP function – are evaluated and documented.",
             aisvsMapping: ["C2", "C4", "C8", "C9", "C10"]
+          },
+          {
+            id: "measure.2.8",
+            code: "MEASURE.2.8",
+            name: "Transparency and Accountability Assessment",
+            description: "Risks associated with transparency and accountability – as identified in the MAP function – are examined and documented.",
+            aisvsMapping: ["C11", "C13"]
+          },
+          {
+            id: "measure.2.9",
+            code: "MEASURE.2.9",
+            name: "Model Explanation and Interpretation",
+            description: "The AI model is explained, validated, and documented, and AI system output is interpreted within its context – as identified in the MAP function – to inform responsible use and governance.",
+            aisvsMapping: ["C7", "C11", "C13"]
+          },
+          {
+            id: "measure.2.10",
+            code: "MEASURE.2.10",
+            name: "Privacy Risk Examination",
+            description: "Privacy risk of the AI system – as identified in the MAP function – is examined and documented.",
+            aisvsMapping: ["C1", "C11"]
+          },
+          {
+            id: "measure.2.11",
+            code: "MEASURE.2.11",
+            name: "Fairness and Bias Evaluation",
+            description: "Fairness and bias – as identified in the MAP function – are evaluated and results are documented.",
+            aisvsMapping: ["C1", "C11"]
+          },
+          {
+            id: "measure.2.12",
+            code: "MEASURE.2.12",
+            name: "Environmental Impact Assessment",
+            description: "Environmental impact and sustainability of AI model training and management activities – as identified in the MAP function – are assessed and documented.",
+            aisvsMapping: ["C1", "C3"]
+          },
+          {
+            id: "measure.2.13",
+            code: "MEASURE.2.13",
+            name: "TEVV Effectiveness Evaluation",
+            description: "Effectiveness of the employed TEVV metrics and processes in the MEASURE function are evaluated and documented.",
+            aisvsMapping: ["C10", "C12"]
+          }
+        ]
+      },
+      {
+        id: "measure.3",
+        code: "MEASURE.3",
+        name: "Risk Tracking Mechanisms",
+        description: "Mechanisms for tracking identified AI risks over time are in place.",
+        subcategories: [
+          {
+            id: "measure.3.1",
+            code: "MEASURE.3.1",
+            name: "Risk Identification and Tracking",
+            description: "Approaches, personnel, and documentation are in place to regularly identify and track existing, unanticipated, and emergent AI risks based on factors such as intended and actual performance in deployed contexts.",
+            aisvsMapping: ["C3", "C10", "C12"]
+          },
+          {
+            id: "measure.3.2",
+            code: "MEASURE.3.2",
+            name: "Difficult-to-Assess Risk Tracking",
+            description: "Risk tracking approaches are considered for settings where AI risks are difficult to assess using currently available measurement techniques or where metrics are not yet available.",
+            aisvsMapping: ["C3", "C10", "C12"]
+          },
+          {
+            id: "measure.3.3",
+            code: "MEASURE.3.3",
+            name: "User Feedback Processes",
+            description: "Feedback processes for end users and impacted communities to report problems and appeal system outcomes are established and integrated into AI system evaluation metrics.",
+            aisvsMapping: ["C11", "C12", "C13"]
+          }
+        ]
+      },
+      {
+        id: "measure.4",
+        code: "MEASURE.4",
+        name: "Measurement Efficacy Feedback",
+        description: "Feedback about efficacy of measurement is gathered and assessed.",
+        subcategories: [
+          {
+            id: "measure.4.1",
+            code: "MEASURE.4.1",
+            name: "Context-Connected Measurement",
+            description: "Measurement approaches for identifying AI risks are connected to deployment context(s) and informed through consultation with domain experts and other end users.",
+            aisvsMapping: ["C3", "C10", "C11", "C12"]
+          },
+          {
+            id: "measure.4.2",
+            code: "MEASURE.4.2",
+            name: "Trustworthiness Measurement Results",
+            description: "Measurement results regarding AI system trustworthiness in deployment context(s) and across the AI lifecycle are informed by input from domain experts and relevant AI actors to validate whether the system is performing consistently as intended.",
+            aisvsMapping: ["C10", "C11", "C12", "C13"]
+          },
+          {
+            id: "measure.4.3",
+            code: "MEASURE.4.3",
+            name: "Performance Improvement Measurement",
+            description: "Measurable performance improvements or declines based on consultations with relevant AI actors, including affected communities, and field data about context-relevant risks and trustworthiness characteristics are identified and documented.",
+            aisvsMapping: ["C10", "C11", "C12"]
           }
         ]
       }
@@ -268,44 +618,72 @@ const nistAIRMF: NISTFunction[] = [
       {
         id: "manage.1",
         code: "MANAGE.1",
-        name: "Risk Response",
-        description: "AI risks are responded to according to organizational risk tolerance and strategy.",
+        name: "Risk Prioritization and Response",
+        description: "AI risks based on assessments and other analytical output from the MAP and MEASURE functions are prioritized, responded to, and managed.",
         subcategories: [
           {
             id: "manage.1.1",
             code: "MANAGE.1.1",
-            name: "Risk Treatment Plans",
-            description: "Risk treatment plans for AI systems are developed and implemented.",
-            aisvsMapping: ["C1", "C2", "C3", "C4", "C5"]
+            name: "Purpose Achievement Determination",
+            description: "A determination is made as to whether the AI system achieves its intended purposes and stated objectives and whether its development or deployment should proceed.",
+            aisvsMapping: ["C1", "C3", "C12"]
           },
           {
             id: "manage.1.2",
             code: "MANAGE.1.2",
-            name: "Control Implementation",
-            description: "Appropriate controls are implemented to manage identified AI risks.",
-            aisvsMapping: ["C2", "C4", "C5", "C7", "C8", "C9"]
+            name: "Risk Treatment Prioritization",
+            description: "Treatment of documented AI risks is prioritized based on impact, likelihood, and available resources or methods.",
+            aisvsMapping: ["C3", "C12"]
+          },
+          {
+            id: "manage.1.3",
+            code: "MANAGE.1.3",
+            name: "High-Priority Risk Response",
+            description: "Responses to the AI risks deemed high priority, as identified by the MAP function, are developed, planned, and documented. Risk response options can include mitigating, transferring, avoiding, or accepting.",
+            aisvsMapping: ["C1", "C2", "C3", "C4", "C5"]
+          },
+          {
+            id: "manage.1.4",
+            code: "MANAGE.1.4",
+            name: "Residual Risk Documentation",
+            description: "Negative residual risks (defined as the sum of all unmitigated risks) to both downstream acquirers of AI systems and end users are documented.",
+            aisvsMapping: ["C1", "C3", "C12"]
           }
         ]
       },
       {
         id: "manage.2",
         code: "MANAGE.2",
-        name: "Incident Response",
-        description: "AI incidents are detected, responded to, and managed appropriately.",
+        name: "Benefit Maximization Strategies",
+        description: "Strategies to maximize AI benefits and minimize negative impacts are planned, prepared, implemented, documented, and informed by input from relevant AI actors.",
         subcategories: [
           {
             id: "manage.2.1",
             code: "MANAGE.2.1",
-            name: "Incident Detection",
-            description: "AI-related incidents and anomalies are detected and reported.",
-            aisvsMapping: ["C12", "C13"]
+            name: "Resource and Alternative Assessment",
+            description: "Resources required to manage AI risks are taken into account – along with viable non-AI alternative systems, approaches, or methods – to reduce the magnitude or likelihood of potential impacts.",
+            aisvsMapping: ["C3", "C5", "C12"]
           },
           {
             id: "manage.2.2",
             code: "MANAGE.2.2",
-            name: "Incident Response Procedures",
-            description: "Procedures for responding to AI incidents are established and maintained.",
+            name: "Value Sustainment Mechanisms",
+            description: "Mechanisms are in place and applied to sustain the value of deployed AI systems.",
+            aisvsMapping: ["C3", "C12", "C13"]
+          },
+          {
+            id: "manage.2.3",
+            code: "MANAGE.2.3",
+            name: "Unknown Risk Response",
+            description: "Procedures are followed to respond to and recover from a previously unknown risk when it is identified.",
             aisvsMapping: ["C12", "C13"]
+          },
+          {
+            id: "manage.2.4",
+            code: "MANAGE.2.4",
+            name: "System Override Mechanisms",
+            description: "Mechanisms are in place and applied, and responsibilities are assigned and understood, to supersede, disengage, or deactivate AI systems that demonstrate performance or outcomes inconsistent with intended use.",
+            aisvsMapping: ["C7", "C12", "C13"]
           }
         ]
       },
@@ -313,21 +691,50 @@ const nistAIRMF: NISTFunction[] = [
         id: "manage.3",
         code: "MANAGE.3",
         name: "Third-Party Risk Management",
-        description: "Third-party AI risks are identified and managed appropriately.",
+        description: "AI risks and benefits from third-party entities are managed.",
         subcategories: [
           {
             id: "manage.3.1",
             code: "MANAGE.3.1",
-            name: "Vendor Assessment",
-            description: "Third-party AI vendors and services are assessed for risk.",
-            aisvsMapping: ["C6"]
+            name: "Third-Party Resource Monitoring",
+            description: "AI risks and benefits from third-party resources are regularly monitored, and risk controls are applied and documented.",
+            aisvsMapping: ["C6", "C12"]
           },
           {
             id: "manage.3.2",
             code: "MANAGE.3.2",
-            name: "Supply Chain Security",
-            description: "AI supply chain risks are identified and managed.",
-            aisvsMapping: ["C6"]
+            name: "Pre-trained Model Monitoring",
+            description: "Pre-trained models which are used for development are monitored as part of AI system regular monitoring and maintenance.",
+            aisvsMapping: ["C6", "C12"]
+          }
+        ]
+      },
+      {
+        id: "manage.4",
+        code: "MANAGE.4",
+        name: "Risk Treatment and Communication",
+        description: "Risk treatments, including response and recovery, and communication plans for the identified and measured AI risks are documented and monitored regularly.",
+        subcategories: [
+          {
+            id: "manage.4.1",
+            code: "MANAGE.4.1",
+            name: "Post-Deployment Monitoring",
+            description: "Post-deployment AI system monitoring plans are implemented, including mechanisms for capturing and evaluating input from users and other relevant AI actors, appeal and override, decommissioning, incident response, recovery, and change management.",
+            aisvsMapping: ["C12", "C13"]
+          },
+          {
+            id: "manage.4.2",
+            code: "MANAGE.4.2",
+            name: "Continual Improvement Activities",
+            description: "Measurable activities for continual improvements are integrated into AI system updates and include regular engagement with interested parties, including relevant AI actors.",
+            aisvsMapping: ["C11", "C12", "C13"]
+          },
+          {
+            id: "manage.4.3",
+            code: "MANAGE.4.3",
+            name: "Incident and Error Communication",
+            description: "Incidents and errors are communicated to relevant AI actors, including affected communities. Processes for tracking, responding to, and recovering from incidents and errors are followed and documented.",
+            aisvsMapping: ["C12", "C13"]
           }
         ]
       }
@@ -336,6 +743,9 @@ const nistAIRMF: NISTFunction[] = [
 ];
 
 export const NISTMapping = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFunction, setSelectedFunction] = useState<string>("all");
   const [selectedAISVS, setSelectedAISVS] = useState<string>("all");
@@ -350,6 +760,46 @@ export const NISTMapping = () => {
 
   // Convert AISVS data for easier access
   const aisvsCategories = Object.values(aisvsData);
+
+  // Handle URL hash-based navigation
+  useEffect(() => {
+    const hash = location.hash.replace('#', '');
+    const validTabs = ['overview', 'framework-overview', 'mapping', 'detailed-mapping', 'matrix', 'compliance-matrix', 'integration-matrix', 'graph', 'interactive-graph'];
+    
+    if (hash && validTabs.includes(hash)) {
+      // Map hash aliases to actual tab values
+      const tabMapping: { [key: string]: string } = {
+        'framework-overview': 'overview',
+        'detailed-mapping': 'mapping',
+        'compliance-matrix': 'matrix',
+        'integration-matrix': 'matrix',
+        'interactive-graph': 'graph'
+      };
+      
+      const mappedTab = tabMapping[hash] || hash;
+      if (['overview', 'mapping', 'matrix', 'graph'].includes(mappedTab)) {
+        setActiveTab(mappedTab);
+      }
+    } else if (!hash) {
+      setActiveTab('overview');
+    }
+  }, [location.hash]);
+
+  // Handle tab changes and update URL
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    
+    // Map tab values to hash aliases for better URLs
+    const hashMapping: { [key: string]: string } = {
+      'overview': 'framework-overview',
+      'mapping': 'detailed-mapping', 
+      'matrix': 'integration-matrix',
+      'graph': 'interactive-graph'
+    };
+    
+    const hash = hashMapping[value] || value;
+    navigate(`${location.pathname}#${hash}`, { replace: true });
+  };
 
   // Filter NIST functions based on search and filters
   const filteredNISTFunctions = useMemo(() => {
@@ -1141,6 +1591,52 @@ export const NISTMapping = () => {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Quick Navigation */}
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5" />
+                  Quick Navigation
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <Link 
+                    to="/nist-mapping#framework-overview" 
+                    className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                    onClick={() => handleTabChange('overview')}
+                  >
+                    <Shield className="h-4 w-4 text-blue-500" />
+                    <span className="text-sm font-medium">Framework Overview</span>
+                  </Link>
+                  <Link 
+                    to="/nist-mapping#detailed-mapping" 
+                    className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                    onClick={() => handleTabChange('mapping')}
+                  >
+                    <GitBranch className="h-4 w-4 text-green-500" />
+                    <span className="text-sm font-medium">Detailed Mapping</span>
+                  </Link>
+                  <Link 
+                    to="/nist-mapping#integration-matrix" 
+                    className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                    onClick={() => handleTabChange('matrix')}
+                  >
+                    <Network className="h-4 w-4 text-purple-500" />
+                    <span className="text-sm font-medium">Integration Matrix</span>
+                  </Link>
+                  <Link 
+                    to="/nist-mapping#interactive-graph" 
+                    className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                    onClick={() => handleTabChange('graph')}
+                  >
+                    <Layers className="h-4 w-4 text-orange-500" />
+                    <span className="text-sm font-medium">Interactive Graph</span>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Filters */}
@@ -1193,7 +1689,7 @@ export const NISTMapping = () => {
           </Card>
 
           {/* Main Content Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="overview">Framework Overview</TabsTrigger>
               <TabsTrigger value="mapping">Detailed Mapping</TabsTrigger>

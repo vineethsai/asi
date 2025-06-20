@@ -5,10 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { mitigationsData, Mitigation, threatsData, aisvsData } from "../components/components/securityData";
 import SidebarNav from "../components/layout/SidebarNav";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Icon } from "@/components/ui/icon";
@@ -33,6 +33,9 @@ const aisvsIconMap = {
 };
 
 export const Controls = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  
   const controls: Mitigation[] = Object.values(mitigationsData);
   const aisvsCategories = Object.values(aisvsData);
   
@@ -47,6 +50,43 @@ export const Controls = () => {
   const allTags = Array.from(new Set(controls.flatMap(c => c.tags || [])));
   const allStatuses = Array.from(new Set(controls.map(c => c.status).filter(Boolean)));
   const allThreats = Object.values(threatsData);
+
+  // Handle URL hash-based navigation
+  useEffect(() => {
+    const hash = location.hash.replace('#', '');
+    const validTabs = ['mitigations', 'security-controls', 'aisvs', 'aisvs-requirements', 'integration', 'integration-matrix'];
+    
+    if (hash && validTabs.includes(hash)) {
+      // Map hash aliases to actual tab values
+      const tabMapping: { [key: string]: string } = {
+        'security-controls': 'mitigations',
+        'aisvs-requirements': 'aisvs',
+        'integration-matrix': 'integration'
+      };
+      
+      const mappedTab = tabMapping[hash] || hash;
+      if (['mitigations', 'aisvs', 'integration'].includes(mappedTab)) {
+        setActiveTab(mappedTab);
+      }
+    } else if (!hash) {
+      setActiveTab('mitigations');
+    }
+  }, [location.hash]);
+
+  // Handle tab changes and update URL
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    
+    // Map tab values to hash aliases for better URLs
+    const hashMapping: { [key: string]: string } = {
+      'mitigations': 'security-controls',
+      'aisvs': 'aisvs-requirements',
+      'integration': 'integration-matrix'
+    };
+    
+    const hash = hashMapping[value] || value;
+    navigate(`${location.pathname}#${hash}`, { replace: true });
+  };
 
   // Filter controls based on search and filters
   const filteredControls = useMemo(() => {
@@ -309,8 +349,46 @@ export const Controls = () => {
               </CardContent>
             </Card>
 
+            {/* Quick Navigation */}
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5" />
+                  Quick Navigation
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <Link 
+                    to="/controls#security-controls" 
+                    className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                    onClick={() => handleTabChange('mitigations')}
+                  >
+                    <Shield className="h-4 w-4 text-blue-500" />
+                    <span className="text-sm font-medium">Security Controls</span>
+                  </Link>
+                  <Link 
+                    to="/controls#aisvs-requirements" 
+                    className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                    onClick={() => handleTabChange('aisvs')}
+                  >
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span className="text-sm font-medium">AISVS Requirements</span>
+                  </Link>
+                  <Link 
+                    to="/controls#integration-matrix" 
+                    className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                    onClick={() => handleTabChange('integration')}
+                  >
+                    <Database className="h-4 w-4 text-purple-500" />
+                    <span className="text-sm font-medium">Integration Matrix</span>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Main Content Tabs */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="mitigations">Security Controls ({filteredControls.length})</TabsTrigger>
                 <TabsTrigger value="aisvs">AISVS Requirements ({filteredAISVSRequirements.length})</TabsTrigger>
