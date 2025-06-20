@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -18,9 +18,6 @@ import { Helmet } from "react-helmet";
 import { Search, Shield, AlertTriangle, CheckCircle, ExternalLink, Target, Database, Lock, Eye, Users, Cog, FileText, Activity } from "lucide-react";
 
 export const AISVS = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -30,56 +27,6 @@ export const AISVS = () => {
 
   // Convert AISVS data to array for easier processing
   const categories = Object.values(aisvsData);
-
-  // Handle URL hash-based navigation for category sections
-  useEffect(() => {
-    const hash = location.hash.replace('#', '');
-    if (hash) {
-      // Check if hash matches a category code
-      const category = categories.find(cat => 
-        cat.code.toLowerCase() === hash.toLowerCase() ||
-        cat.id === hash ||
-        hash === 'overview' ||
-        hash === 'categories' ||
-        hash === 'summary'
-      );
-      
-      if (category) {
-        setSelectedCategory(category.id);
-        // Scroll to the category section after a short delay
-        setTimeout(() => {
-          const element = document.getElementById(`category-${category.id}`);
-          if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
-        }, 100);
-      } else if (hash === 'overview') {
-        setSelectedCategory('all');
-        setTimeout(() => {
-          const element = document.getElementById('overview-section');
-          if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
-        }, 100);
-      } else if (hash === 'summary') {
-        setTimeout(() => {
-          const element = document.getElementById('summary-section');
-          if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
-        }, 100);
-      }
-    }
-  }, [location.hash, categories]);
-
-  // Handle category navigation
-  const navigateToCategory = (categoryId: string) => {
-    const category = categories.find(cat => cat.id === categoryId);
-    if (category) {
-      navigate(`${location.pathname}#${category.code.toLowerCase()}`, { replace: true });
-      setSelectedCategory(categoryId);
-    }
-  };
 
   // Filter categories based on search and filters
   const filteredCategories = useMemo(() => {
@@ -207,7 +154,7 @@ export const AISVS = () => {
             </p>
 
             {/* Progress Card */}
-            <Card className="mb-6" id="overview-section">
+            <Card className="mb-6">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CheckCircle className="h-5 w-5" />
@@ -224,76 +171,6 @@ export const AISVS = () => {
                 <p className="text-sm text-muted-foreground mt-2">
                   Track your progress implementing AISVS requirements across all categories and subcategories.
                 </p>
-              </CardContent>
-            </Card>
-
-            {/* Quick Navigation */}
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5" />
-                  Quick Navigation
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                  <Link 
-                    to="/aisvs#overview" 
-                    className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                    onClick={() => {
-                      setSelectedCategory('all');
-                      setTimeout(() => {
-                        const element = document.getElementById('overview-section');
-                        if (element) element.scrollIntoView({ behavior: 'smooth' });
-                      }, 100);
-                    }}
-                  >
-                    <CheckCircle className="h-4 w-4 text-blue-500" />
-                    <span className="text-sm font-medium">Overview</span>
-                  </Link>
-                  <Link 
-                    to="/aisvs#c1" 
-                    className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                    onClick={() => navigateToCategory('c1')}
-                  >
-                    <Database className="h-4 w-4 text-green-500" />
-                    <span className="text-sm font-medium">Training Data</span>
-                  </Link>
-                  <Link 
-                    to="/aisvs#c2" 
-                    className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                    onClick={() => navigateToCategory('c2')}
-                  >
-                    <Shield className="h-4 w-4 text-purple-500" />
-                    <span className="text-sm font-medium">User Input</span>
-                  </Link>
-                  <Link 
-                    to="/aisvs#summary" 
-                    className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                    onClick={() => {
-                      setTimeout(() => {
-                        const element = document.getElementById('summary-section');
-                        if (element) element.scrollIntoView({ behavior: 'smooth' });
-                      }, 100);
-                    }}
-                  >
-                    <Activity className="h-4 w-4 text-orange-500" />
-                    <span className="text-sm font-medium">Summary</span>
-                  </Link>
-                </div>
-                <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-                  {categories.slice(0, 6).map((category) => (
-                    <Link
-                      key={category.id}
-                      to={`/aisvs#${category.code.toLowerCase()}`}
-                      className="flex items-center gap-1 p-2 text-xs border rounded hover:bg-muted/50 transition-colors"
-                      onClick={() => navigateToCategory(category.id)}
-                    >
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: category.color }}></div>
-                      <span className="font-medium">{category.code}</span>
-                    </Link>
-                  ))}
-                </div>
               </CardContent>
             </Card>
           </div>
@@ -314,7 +191,7 @@ export const AISVS = () => {
                 <SelectTrigger className="w-full sm:w-[200px]">
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[9999] bg-white border shadow-lg">
                   <SelectItem value="all">All Categories</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
@@ -327,7 +204,7 @@ export const AISVS = () => {
                 <SelectTrigger className="w-full sm:w-[150px]">
                   <SelectValue placeholder="All Levels" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[9999] bg-white border shadow-lg">
                   <SelectItem value="all">All Levels</SelectItem>
                   <SelectItem value="1">Level 1</SelectItem>
                   <SelectItem value="2">Level 2</SelectItem>
@@ -353,7 +230,7 @@ export const AISVS = () => {
               const categoryPercentage = categoryTotal > 0 ? (categoryProgress / categoryTotal) * 100 : 0;
 
               return (
-                <Card key={category.id} className="overflow-hidden" id={`category-${category.id}`}>
+                <Card key={category.id} className="overflow-hidden">
                   <Accordion type="single" collapsible className="w-full">
                     <AccordionItem value={category.id}>
                       <AccordionTrigger className="px-6 py-4 hover:no-underline">
@@ -456,7 +333,7 @@ export const AISVS = () => {
           </div>
 
           {/* Summary Section */}
-          <Card className="mt-8" id="summary-section">
+          <Card className="mt-8">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />

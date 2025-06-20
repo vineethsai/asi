@@ -109,6 +109,7 @@ export const Controls = () => {
       category.subCategories?.flatMap(subCat => 
         subCat.requirements.map(req => ({ 
           ...req, 
+          categoryId: category.id,
           categoryName: category.name, 
           categoryColor: category.color,
           subCategoryName: subCat.name 
@@ -123,7 +124,7 @@ export const Controls = () => {
         requirement.categoryName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         requirement.subCategoryName.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesCategory = selectedCategory === "all" || requirement.category === selectedCategory;
+      const matchesCategory = selectedCategory === "all" || requirement.categoryId === selectedCategory;
       
       const matchesLevel = selectedLevel === "all" || requirement.level.toString() === selectedLevel;
 
