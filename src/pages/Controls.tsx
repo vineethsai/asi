@@ -304,7 +304,7 @@ export const Controls = () => {
                       <SelectTrigger>
                         <SelectValue placeholder="All Categories" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[9999] bg-white border shadow-lg">
                         <SelectItem value="all">All Categories</SelectItem>
                         {aisvsCategories.map(category => (
                           <SelectItem key={category.id} value={category.id}>
@@ -321,7 +321,7 @@ export const Controls = () => {
                       <SelectTrigger>
                         <SelectValue placeholder="All Threats" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[9999] bg-white border shadow-lg">
                         <SelectItem value="all">All Threats</SelectItem>
                         {allThreats.map(threat => (
                           <SelectItem key={threat.id} value={threat.id}>
@@ -338,7 +338,7 @@ export const Controls = () => {
                       <SelectTrigger>
                         <SelectValue placeholder="All Levels" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[9999] bg-white border shadow-lg">
                         <SelectItem value="all">All Levels</SelectItem>
                         <SelectItem value="1">Level 1</SelectItem>
                         <SelectItem value="2">Level 2</SelectItem>

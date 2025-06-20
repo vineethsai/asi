@@ -1662,7 +1662,7 @@ export const NISTMapping = () => {
                   <SelectTrigger>
                     <SelectValue placeholder="All NIST Functions" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[9999] bg-white border shadow-lg">
                     <SelectItem value="all">All NIST Functions</SelectItem>
                     {nistAIRMF.map((func) => (
                       <SelectItem key={func.id} value={func.id}>
@@ -1675,7 +1675,7 @@ export const NISTMapping = () => {
                   <SelectTrigger>
                     <SelectValue placeholder="All AISVS Categories" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[9999] bg-white border shadow-lg">
                     <SelectItem value="all">All AISVS Categories</SelectItem>
                     {aisvsCategories.map((cat) => (
                       <SelectItem key={cat.id} value={cat.code}>
