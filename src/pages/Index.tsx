@@ -5,8 +5,15 @@ import ArchitectureShowcase from "@/components/home/ArchitectureShowcase";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Helmet } from "react-helmet";
+import { usePageTracking } from "@/hooks/useAnalytics";
 
 const Index = () => {
+  // Track this page with custom name and metadata
+  usePageTracking("Homepage - AI Agents Security Guide", {
+    page_type: "homepage",
+    content_category: "ai_security"
+  });
+
   return (
     <>
       <Helmet>

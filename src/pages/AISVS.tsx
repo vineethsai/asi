@@ -15,9 +15,16 @@ import { aisvsData } from "../components/components/securityData";
 import SidebarNav from "../components/layout/SidebarNav";
 import { Icon } from "@/components/ui/icon";
 import { Helmet } from "react-helmet";
+import { usePageTracking } from "@/hooks/useAnalytics";
 import { Search, Shield, AlertTriangle, CheckCircle, ExternalLink, Target, Database, Lock, Eye, Users, Cog, FileText, Activity } from "lucide-react";
 
 export const AISVS = () => {
+  // Track AISVS page views
+  usePageTracking("AISVS - AI Security Verification Standard", {
+    page_type: "aisvs",
+    content_category: "security_standards"
+  });
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
