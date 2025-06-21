@@ -8,9 +8,9 @@ const Assessment = () => {
   return (
     <>
       <Helmet>
-        <title>AI Security Assessment Tool | OWASP Securing Agentic Applications Guide</title>
-        <meta name="description" content="Interactive security assessment tool for agentic AI systems. Evaluate risks, identify threats, and get tailored security recommendations for your AI architecture." />
-        <meta name="keywords" content="AI security assessment, OWASP assessment tool, AI risk evaluation, agentic systems security, LLM security assessment, AI threat analysis, security audit tool" />
+        <title>AI Agent Security Assessment Tool | AI Security Risk Evaluation</title>
+        <meta name="description" content="Interactive AI agent security assessment tool for evaluating risks in agentic systems. Comprehensive security evaluation for AI agents with OWASP best practices, threat analysis, and secure development recommendations." />
+        <meta name="keywords" content="AI agent security assessment, AI security assessment, agent security evaluation, AI risk assessment, agentic systems security, secure AI development, AI security audit, AI agent risk evaluation, LLM security assessment, artificial intelligence security tool" />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://agenticsecurity.info/assessment" />
         <meta property="og:title" content="AI Security Assessment Tool | OWASP Guide" />

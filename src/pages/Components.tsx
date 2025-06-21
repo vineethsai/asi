@@ -65,9 +65,9 @@ const Components = () => {
   return (
     <>
       <Helmet>
-        <title>AI Security Components | OWASP Securing Agentic Applications Guide</title>
-        <meta name="description" content="Explore the 6 key components of agentic AI systems: Language Models, Orchestration, Reasoning/Planning, Memory, Tool Integration, and Operational Environment. Learn security best practices for each component." />
-        <meta name="keywords" content="AI components, LLM security, agentic systems, AI orchestration, memory modules, tool integration, operational environment, AI security framework, OWASP AI" />
+        <title>AI Agent Components & Security Architecture | Secure AI Development</title>
+        <meta name="description" content="Comprehensive guide to AI agent components and security architecture for agentic systems. Explore Language Models, Orchestration, Reasoning/Planning, Memory, Tool Integration, and Operational Environment with security best practices for secure AI development." />
+        <meta name="keywords" content="AI agent components, AI security architecture, agent architectures, secure AI development, AI components security, agentic systems components, LLM security, AI orchestration security, memory modules security, tool integration security, AI agent design" />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://agenticsecurity.info/components" />
         <meta property="og:title" content="AI Security Components | OWASP Guide" />

@@ -89,10 +89,10 @@ export const AISVS = () => {
   return (
     <>
       <Helmet>
-        <title>OWASP AISVS - AI Security Verification Standard | Agentic Security Hub</title>
-        <meta name="description" content="Interactive OWASP AI Security Verification Standard (AISVS) with comprehensive controls mapped to security threats. Verify AI system security across 13 categories with detailed subcategories and requirements." />
-        <meta name="keywords" content="OWASP AISVS, AI security verification, AI security controls, machine learning security, AI governance, security requirements, training data governance, user input validation, model lifecycle management" />
-        <link rel="canonical" href="https://agenticsecurity.info/#/aisvs" />
+        <title>OWASP AISVS - AI Agents Security Verification Standard | AI Security Controls</title>
+        <meta name="description" content="Interactive OWASP AI Security Verification Standard (AISVS) for AI agents with comprehensive security controls, verification requirements, and secure development practices for agentic systems and LLM applications." />
+        <meta name="keywords" content="OWASP AISVS, AI agents security verification, AI security controls, AI agent security standards, secure AI development, AI security requirements, agentic systems security, LLM security verification, AI governance controls, machine learning security, AI risk management" />
+        <link rel="canonical" href="https://agenticsecurity.info/aisvs" />
         
         {/* Open Graph */}
         <meta property="og:title" content="OWASP AISVS - AI Security Verification Standard" />

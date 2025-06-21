@@ -8,6 +8,9 @@ import { ThreatModeler } from '@/components/interactive/ThreatModeler';
 import { SecurityQuiz } from '@/components/interactive/SecurityQuiz';
 import { SecurityChecklist } from '@/components/interactive/SecurityChecklist';
 import { ThreatModelDiagram } from '@/components/visual/ThreatModelDiagram';
+import { Helmet } from 'react-helmet';
+import Header from '@/components/layout/Header';
+import Footer from '@/components/layout/Footer';
 import { 
   Brain, 
   Shield, 
@@ -86,7 +89,23 @@ export default function Interactive() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
+    <>
+      <Helmet>
+        <title>Interactive AI Security Tools | AI Agent Security Training & Assessment</title>
+        <meta name="description" content="Interactive AI security tools for hands-on learning and assessment. Threat modeling, security quizzes, implementation checklists, and visual threat diagrams for AI agents and agentic systems with OWASP AISVS integration." />
+        <meta name="keywords" content="interactive AI security, AI security training, AI agent security tools, threat modeling, AI security assessment, secure AI development, OWASP AISVS, agentic systems security, AI security quiz, security checklist" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://agenticsecurity.info/interactive" />
+        <meta property="og:title" content="Interactive AI Security Tools | AI Agent Security Training" />
+        <meta property="og:description" content="Master AI security with interactive tools for threat modeling, security assessment, and implementation guidance." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://agenticsecurity.info/interactive" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Interactive AI Security Tools | AI Agent Security Training" />
+        <meta name="twitter:description" content="Master AI security with interactive tools for threat modeling, security assessment, and implementation guidance." />
+      </Helmet>
+      <Header />
+      <div className="container mx-auto px-4 py-8 space-y-8">
       {/* Hero Section */}
       <div className="text-center space-y-6">
         <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium">
@@ -334,5 +353,7 @@ export default function Interactive() {
         </TabsContent>
       </Tabs>
     </div>
+    <Footer />
+    </>
   );
 } 

@@ -157,9 +157,9 @@ export const Controls = () => {
   return (
     <>
       <Helmet>
-        <title>Controls & Mitigations with AISVS Integration | OWASP Securing Agentic Applications Guide</title>
-        <meta name="description" content="Comprehensive security controls and mitigations for agentic AI systems, integrated with OWASP AISVS (AI Security Verification Standard) requirements and best practices." />
-        <meta name="keywords" content="AI security, OWASP AISVS, security controls, mitigations, agentic systems, LLM security, agent security, AI verification, security requirements" />
+        <title>AI Security Controls & Agent Security Mitigations | OWASP AISVS Integration</title>
+        <meta name="description" content="Comprehensive AI security controls and mitigations for AI agents and agentic systems. Integrated with OWASP AISVS requirements, NIST AI RMF mapping, and secure development practices for artificial intelligence applications." />
+        <meta name="keywords" content="AI security controls, agent security, AI agents security, security mitigations, OWASP AISVS, agentic systems security, LLM security controls, AI security requirements, secure AI development, AI risk management, agent architectures security, artificial intelligence security" />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://agenticsecurity.info/controls" />
         

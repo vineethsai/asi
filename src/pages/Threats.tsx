@@ -61,9 +61,9 @@ export const Threats = () => {
   return (
     <>
       <Helmet>
-        <title>Threats | OWASP Securing Agentic Applications Guide</title>
-        <meta name="description" content="Explore key threats to agentic AI systems, including prompt injection, memory poisoning, and more. Learn how to secure your AI applications." />
-        <meta name="keywords" content="AI security, OWASP, agentic threats, prompt injection, memory poisoning, AI risks, LLM security, agent security" />
+        <title>AI Agent Threats & Security Risks | AI Security Threat Analysis</title>
+        <meta name="description" content="Comprehensive analysis of AI agent threats and security risks for agentic systems. Learn about prompt injection, memory poisoning, and other critical threats to AI agents and LLM applications with mitigation strategies." />
+        <meta name="keywords" content="AI agent threats, AI security risks, agent security threats, agentic threats, prompt injection, memory poisoning, AI risks, LLM security threats, artificial intelligence threats, AI agent vulnerabilities, secure AI development" />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://agenticsecurity.info/threats" />
         <meta property="og:url" content="https://agenticsecurity.info/threats" />

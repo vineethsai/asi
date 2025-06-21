@@ -53,9 +53,9 @@ const Architectures = () => {
   return (
     <>
       <Helmet>
-        <title>Architectures | OWASP Securing Agentic Applications Guide</title>
-        <meta name="description" content="Explore agentic AI system architectures, their security implications, and best practices for secure design." />
-        <meta name="keywords" content="AI security, OWASP, agentic architectures, security patterns, AI best practices, LLM security, agent security" />
+        <title>Agent Architectures & AI Security Patterns | Secure AI Agent Development</title>
+        <meta name="description" content="Comprehensive guide to agent architectures and AI security patterns for agentic systems. Explore secure design patterns, architectural best practices, and security implications for AI agents and LLM-based applications." />
+        <meta name="keywords" content="agent architectures, AI security patterns, agentic architectures, secure AI development, AI agent design, agent security, AI security architecture, LLM architectures, artificial intelligence patterns, secure agent development, AI system design" />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://agenticsecurity.info/architectures" />
         <meta property="og:url" content="https://agenticsecurity.info/architectures" />

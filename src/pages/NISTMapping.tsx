@@ -1552,10 +1552,10 @@ export const NISTMapping = () => {
   return (
     <>
       <Helmet>
-        <title>NIST AI RMF to AISVS Mapping | Agentic Security Hub</title>
-        <meta name="description" content="Comprehensive visual mapping between NIST AI Risk Management Framework (AI RMF) and OWASP AISVS categories, showing alignment and complementary coverage." />
-        <meta name="keywords" content="NIST AI RMF, OWASP AISVS, AI risk management, AI security framework, AI governance, compliance mapping" />
-        <link rel="canonical" href="https://agenticsecurity.info/#/nist-mapping" />
+        <title>NIST AI RMF Mapping to AI Agents | Interactive AI Security Framework Visualization</title>
+        <meta name="description" content="Interactive NIST AI Risk Management Framework mapping for AI agents and agentic systems. Comprehensive D3.js visualization connecting NIST AI RMF to OWASP AISVS controls, agent security requirements, and secure AI development practices." />
+        <meta name="keywords" content="NIST AI RMF mapping to AI agent, AI agents security, NIST AI Risk Management Framework, AI security framework, agent architectures, secure AI development, OWASP AISVS mapping, interactive AI governance, AI risk management, agentic systems compliance, artificial intelligence security standards" />
+        <link rel="canonical" href="https://agenticsecurity.info/nist-mapping" />
 
         {/* Open Graph */}
         <meta property="og:title" content="NIST AI RMF to AISVS Mapping" />
