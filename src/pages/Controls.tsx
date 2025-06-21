@@ -215,7 +215,7 @@ export const Controls = () => {
             {/* Header */}
             <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
               <div className="space-y-2 max-w-4xl">
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+                <h1 className="text-3xl font-bold tracking-tighter">
                   Security Controls & AISVS Integration
                 </h1>
                 <p className="text-muted-foreground md:text-xl">

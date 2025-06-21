@@ -350,17 +350,7 @@ export const ControlDetail = () => {
     // Otherwise, split prose and code
     const parts = splitProseAndCode(content);
     if (parts.length === 1 && parts[0].type === 'prose') {
-      return (
-        <div className="prose prose-sm max-w-none text-muted-foreground">
-          <div className="space-y-2">
-            {parts[0].value.trim().split('\n').map((line, i) => (
-              <p key={i} className="mb-2 leading-relaxed">
-                {enhanceTextWithInteractivity(line)}
-              </p>
-            ))}
-          </div>
-        </div>
-      );
+      return formatProseContent(parts[0].value, sectionId);
     }
     
     // If multiple code blocks, use tabs with enhanced code rendering
@@ -384,19 +374,13 @@ export const ControlDetail = () => {
       );
     }
     
-    // Otherwise, render prose and code blocks sequentially
+    // Otherwise, render prose and code blocks sequentially with enhanced formatting
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         {parts.map((part, i) =>
           part.type === 'prose' ? (
-            <div key={i} className="prose prose-sm max-w-none text-muted-foreground">
-              <div className="space-y-2">
-                {part.value.trim().split('\n').map((line, j) => (
-                  <p key={j} className="mb-2 leading-relaxed">
-                    {enhanceTextWithInteractivity(line)}
-                  </p>
-                ))}
-              </div>
+            <div key={i}>
+              {formatProseContent(part.value, `${sectionId}-${i}`)}
             </div>
           ) : (
             <div key={i}>
@@ -405,6 +389,201 @@ export const ControlDetail = () => {
           )
         )}
       </div>
+    );
+  }
+
+  // Enhanced prose formatting function
+  function formatProseContent(content: string, sectionId: string): JSX.Element {
+    const lines = content.trim().split('\n');
+    const elements: JSX.Element[] = [];
+    let currentList: JSX.Element[] = [];
+    let currentListType: 'bullet' | 'numbered' | null = null;
+    let inSubSection = false;
+    let currentSubSectionItems: JSX.Element[] = [];
+
+    const flushList = () => {
+      if (currentList.length > 0) {
+        if (currentListType === 'bullet') {
+          elements.push(
+            <ul key={`list-${elements.length}`} className="space-y-3 ml-0 my-4">
+              {currentList}
+            </ul>
+          );
+        } else if (currentListType === 'numbered') {
+          elements.push(
+            <ol key={`list-${elements.length}`} className="space-y-3 ml-0 my-4 list-decimal list-inside">
+              {currentList}
+            </ol>
+          );
+        }
+        currentList = [];
+        currentListType = null;
+      }
+    };
+
+    const flushSubSection = () => {
+      if (currentSubSectionItems.length > 0) {
+        elements.push(
+          <div key={`subsection-${elements.length}`} className="ml-4 space-y-3 border-l-2 border-blue-200 dark:border-blue-700 pl-4 my-4 bg-blue-50/30 dark:bg-blue-950/30 rounded-r-lg py-3">
+            {currentSubSectionItems}
+          </div>
+        );
+        currentSubSectionItems = [];
+        inSubSection = false;
+      }
+    };
+
+    lines.forEach((line, index) => {
+      const trimmedLine = line.trim();
+      
+      if (!trimmedLine) {
+        // Empty line - flush any current list or subsection
+        flushList();
+        flushSubSection();
+        return;
+      }
+
+      // Main headings (starting with **)
+      if (trimmedLine.match(/^\*\*([^*]+)\*\*:?\s*$/)) {
+        flushList();
+        flushSubSection();
+        const headingText = trimmedLine.replace(/^\*\*([^*]+)\*\*:?\s*$/, '$1');
+        elements.push(
+          <h3 key={`heading-${index}`} className="text-lg font-semibold text-foreground mb-4 mt-6 flex items-center gap-3 pb-2 border-b border-border/50">
+            <div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full"></div>
+            <span className="bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">{headingText}</span>
+          </h3>
+        );
+        return;
+      }
+
+      // Sub-headings (starting with ** but with content after)
+      if (trimmedLine.startsWith('**') && trimmedLine.includes(':**')) {
+        flushList();
+        const headingMatch = trimmedLine.match(/^\*\*([^*]+)\*\*:\s*(.*)$/);
+        if (headingMatch) {
+          const [, heading, content] = headingMatch;
+          elements.push(
+            <div key={`subheading-${index}`} className="mt-5 mb-3">
+              <h4 className="text-base font-semibold text-foreground mb-2 flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-primary/70"></div>
+                {heading}
+              </h4>
+              {content.trim() && (
+                <p className="text-muted-foreground leading-relaxed ml-4 text-sm">
+                  {enhanceTextWithInteractivity(content)}
+                </p>
+              )}
+            </div>
+          );
+          inSubSection = true;
+          return;
+        }
+      }
+
+      // Bullet points (starting with -)
+      if (trimmedLine.startsWith('- ')) {
+        flushSubSection();
+        const content = trimmedLine.substring(2).trim();
+        
+        // Check if this is a sub-bullet (indented)
+        const isSubBullet = line.startsWith('  - ') || line.startsWith('    - ');
+        const indentLevel = line.match(/^(\s*)/)?.[1]?.length || 0;
+        
+        if (currentListType !== 'bullet') {
+          flushList();
+          currentListType = 'bullet';
+        }
+
+        const bulletContent = formatBulletContent(content);
+        currentList.push(
+          <li key={`bullet-${index}`} className={`flex items-start gap-3 ${isSubBullet ? 'ml-6' : ''} p-2 rounded-lg hover:bg-muted/30 transition-colors group`}>
+            <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-2 transition-all group-hover:scale-110 ${
+              isSubBullet 
+                ? 'bg-blue-400 dark:bg-blue-500' 
+                : 'bg-primary shadow-sm'
+            }`}></div>
+            <div className="flex-1 leading-relaxed text-muted-foreground">
+              {bulletContent}
+            </div>
+          </li>
+        );
+        return;
+      }
+
+      // Numbered points (starting with number.)
+      if (trimmedLine.match(/^\d+\.\s/)) {
+        flushSubSection();
+        const content = trimmedLine.replace(/^\d+\.\s/, '');
+        
+        if (currentListType !== 'numbered') {
+          flushList();
+          currentListType = 'numbered';
+        }
+
+        const bulletContent = formatBulletContent(content);
+        currentList.push(
+          <li key={`numbered-${index}`} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
+            <div className="flex-1 leading-relaxed text-muted-foreground">
+              {bulletContent}
+            </div>
+          </li>
+        );
+        return;
+      }
+
+      // Regular paragraph
+      flushList();
+      
+      if (inSubSection) {
+        currentSubSectionItems.push(
+          <p key={`subsection-p-${index}`} className="leading-relaxed text-muted-foreground text-sm">
+            {enhanceTextWithInteractivity(trimmedLine)}
+          </p>
+        );
+      } else {
+        flushSubSection();
+        elements.push(
+          <p key={`paragraph-${index}`} className="leading-relaxed text-muted-foreground mb-3 text-sm">
+            {enhanceTextWithInteractivity(trimmedLine)}
+          </p>
+        );
+      }
+    });
+
+    // Flush any remaining items
+    flushList();
+    flushSubSection();
+
+    return <div className="space-y-2">{elements}</div>;
+  }
+
+  // Enhanced bullet content formatting
+  function formatBulletContent(content: string): JSX.Element {
+    // Check for bold text patterns
+    const boldPattern = /\*\*([^*]+)\*\*/g;
+    const parts = content.split(boldPattern);
+    
+    return (
+      <span className="text-sm">
+        {parts.map((part, index) => {
+          if (index % 2 === 1) {
+            // This is bold text
+            return (
+              <span key={index} className="font-semibold text-foreground">
+                {enhanceTextWithInteractivity(part)}
+              </span>
+            );
+          } else {
+            // Regular text
+            return (
+              <span key={index}>
+                {enhanceTextWithInteractivity(part)}
+              </span>
+            );
+          }
+        })}
+      </span>
     );
   }
 
@@ -564,17 +743,17 @@ export const ControlDetail = () => {
                 <Accordion type="multiple" defaultValue={["design-phase", "threats"]} className="w-full">
                   {/* Design Phase */}
                   {mitigation.implementationDetail.design && mitigation.implementationDetail.design.trim() && (
-                    <AccordionItem value="design-phase" className="border border-blue-200 dark:border-blue-800 rounded-lg bg-card">
-                      <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                        <div className="flex items-center gap-3">
-                          <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                    <AccordionItem value="design-phase" className="border border-blue-200 dark:border-blue-800 rounded-lg bg-card shadow-sm">
+                      <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-blue-50/50 dark:hover:bg-blue-950/50 transition-colors rounded-t-lg">
+                        <div className="flex items-center gap-3 w-full">
+                          <div className="w-3 h-3 rounded-full bg-blue-500 shadow-sm"></div>
                           <span className="text-base font-semibold text-blue-700 dark:text-blue-300">Design Phase</span>
-                          <Badge variant="outline" className="ml-auto mr-4">
+                          <Badge variant="outline" className="ml-auto mr-4 bg-blue-50 dark:bg-blue-950 border-blue-300 dark:border-blue-700">
                             {mitigation.implementationDetail.design.split('\n').filter(l => l.trim().startsWith('- ')).length} items
                           </Badge>
                         </div>
                       </AccordionTrigger>
-                      <AccordionContent className="px-4 pb-4">
+                      <AccordionContent className="px-6 pb-6 pt-2 bg-gradient-to-b from-blue-50/20 to-transparent dark:from-blue-950/20">
                         {renderSectionContent(mitigation.implementationDetail.design, "design-phase")}
                       </AccordionContent>
                     </AccordionItem>
@@ -582,17 +761,17 @@ export const ControlDetail = () => {
 
                   {/* Build Phase */}
                   {mitigation.implementationDetail.build && mitigation.implementationDetail.build.trim() && (
-                    <AccordionItem value="build-phase" className="border border-yellow-200 dark:border-yellow-800 rounded-lg bg-card">
-                      <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                        <div className="flex items-center gap-3">
-                          <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                    <AccordionItem value="build-phase" className="border border-yellow-200 dark:border-yellow-800 rounded-lg bg-card shadow-sm">
+                      <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-yellow-50/50 dark:hover:bg-yellow-950/50 transition-colors rounded-t-lg">
+                        <div className="flex items-center gap-3 w-full">
+                          <div className="w-3 h-3 rounded-full bg-yellow-500 shadow-sm"></div>
                           <span className="text-base font-semibold text-yellow-700 dark:text-yellow-300">Build Phase</span>
-                          <Badge variant="outline" className="ml-auto mr-4">
+                          <Badge variant="outline" className="ml-auto mr-4 bg-yellow-50 dark:bg-yellow-950 border-yellow-300 dark:border-yellow-700">
                             {mitigation.implementationDetail.build.split('\n').filter(l => l.trim().startsWith('- ')).length} items
                           </Badge>
                         </div>
                       </AccordionTrigger>
-                      <AccordionContent className="px-4 pb-4">
+                      <AccordionContent className="px-6 pb-6 pt-2 bg-gradient-to-b from-yellow-50/20 to-transparent dark:from-yellow-950/20">
                         {renderSectionContent(mitigation.implementationDetail.build, "build-phase")}
                       </AccordionContent>
                     </AccordionItem>
@@ -600,17 +779,17 @@ export const ControlDetail = () => {
 
                   {/* Operation Phase */}
                   {mitigation.implementationDetail.operations && mitigation.implementationDetail.operations.trim() && (
-                    <AccordionItem value="operation-phase" className="border border-green-200 dark:border-green-800 rounded-lg bg-card">
-                      <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                        <div className="flex items-center gap-3">
-                          <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                    <AccordionItem value="operation-phase" className="border border-green-200 dark:border-green-800 rounded-lg bg-card shadow-sm">
+                      <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-green-50/50 dark:hover:bg-green-950/50 transition-colors rounded-t-lg">
+                        <div className="flex items-center gap-3 w-full">
+                          <div className="w-3 h-3 rounded-full bg-green-500 shadow-sm"></div>
                           <span className="text-base font-semibold text-green-700 dark:text-green-300">Operation Phase</span>
-                          <Badge variant="outline" className="ml-auto mr-4">
+                          <Badge variant="outline" className="ml-auto mr-4 bg-green-50 dark:bg-green-950 border-green-300 dark:border-green-700">
                             {mitigation.implementationDetail.operations.split('\n').filter(l => l.trim().startsWith('- ')).length} items
                           </Badge>
                         </div>
                       </AccordionTrigger>
-                      <AccordionContent className="px-4 pb-4">
+                      <AccordionContent className="px-6 pb-6 pt-2 bg-gradient-to-b from-green-50/20 to-transparent dark:from-green-950/20">
                         {renderSectionContent(mitigation.implementationDetail.operations, "operation-phase")}
                       </AccordionContent>
                     </AccordionItem>
@@ -618,34 +797,34 @@ export const ControlDetail = () => {
 
                   {/* Tools & Frameworks */}
                   {mitigation.implementationDetail.toolsAndFrameworks && mitigation.implementationDetail.toolsAndFrameworks.trim() && (
-                    <AccordionItem value="tools-frameworks" className="border border-purple-200 dark:border-purple-800 rounded-lg bg-card">
-                      <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                        <div className="flex items-center gap-3">
-                          <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                    <AccordionItem value="tools-frameworks" className="border border-purple-200 dark:border-purple-800 rounded-lg bg-card shadow-sm">
+                      <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-purple-50/50 dark:hover:bg-purple-950/50 transition-colors rounded-t-lg">
+                        <div className="flex items-center gap-3 w-full">
+                          <div className="w-3 h-3 rounded-full bg-purple-500 shadow-sm"></div>
                           <span className="text-base font-semibold text-purple-700 dark:text-purple-300">Tools & Frameworks</span>
-                          <Badge variant="outline" className="ml-auto mr-4">
+                          <Badge variant="outline" className="ml-auto mr-4 bg-purple-50 dark:bg-purple-950 border-purple-300 dark:border-purple-700">
                             {mitigation.implementationDetail.toolsAndFrameworks.split('\n').filter(l => l.trim().startsWith('- ')).length} items
                           </Badge>
                         </div>
                       </AccordionTrigger>
-                      <AccordionContent className="px-4 pb-4">
+                      <AccordionContent className="px-6 pb-6 pt-2 bg-gradient-to-b from-purple-50/20 to-transparent dark:from-purple-950/20">
                         {renderSectionContent(mitigation.implementationDetail.toolsAndFrameworks, "tools-frameworks")}
                       </AccordionContent>
                     </AccordionItem>
                   )}
 
                   {/* Mitigates Threats */}
-                  <AccordionItem value="threats" className="border border-red-200 dark:border-red-800 rounded-lg bg-card">
-                    <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                      <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <AccordionItem value="threats" className="border border-red-200 dark:border-red-800 rounded-lg bg-card shadow-sm">
+                    <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-red-50/50 dark:hover:bg-red-950/50 transition-colors rounded-t-lg">
+                      <div className="flex items-center gap-3 w-full">
+                        <div className="w-3 h-3 rounded-full bg-red-500 shadow-sm"></div>
                         <span className="text-base font-semibold text-red-700 dark:text-red-300">Mitigates Threats</span>
-                        <Badge variant="outline" className="ml-auto mr-4">
+                        <Badge variant="outline" className="ml-auto mr-4 bg-red-50 dark:bg-red-950 border-red-300 dark:border-red-700">
                           {threats.length} threats
                         </Badge>
                       </div>
                     </AccordionTrigger>
-                    <AccordionContent className="px-4 pb-4">
+                    <AccordionContent className="px-6 pb-6 pt-2 bg-gradient-to-b from-red-50/20 to-transparent dark:from-red-950/20">
                       {threats.length > 0 ? (
                         <div className="grid gap-3">
                           {threats.map(threat => (

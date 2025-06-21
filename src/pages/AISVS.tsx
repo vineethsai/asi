@@ -142,7 +142,7 @@ export const AISVS = () => {
                 <Shield className="h-8 w-8 text-primary" />
               </div>
               <div>
-                <h1 className="text-4xl font-bold">OWASP AISVS</h1>
+                <h1 className="text-3xl font-bold">OWASP AISVS</h1>
                 <p className="text-xl text-muted-foreground">AI Security Verification Standard</p>
               </div>
             </div>

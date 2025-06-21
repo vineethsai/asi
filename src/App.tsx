@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import Assessment from "./pages/Assessment";
 import Components from "./pages/Components";
 import ComponentDetail from "./pages/ComponentDetail";
 import Threats from "./pages/Threats";
@@ -30,7 +29,6 @@ const App = () => (
         <ScrollToTop />
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/assessment" element={<Assessment />} />
           <Route path="/components" element={<Components />} />
           <Route path="/components/:componentId" element={<ComponentDetail />} />
           <Route path="/threats" element={<Threats />} />

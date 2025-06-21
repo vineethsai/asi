@@ -11,7 +11,7 @@ export const ArchitectureGraphSection = () => {
             <Network className="h-4 w-4 mr-2" />
             Interactive Visualization
           </Badge>
-          <h2 className="text-2xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Architecture Explorer & NIST Mapping
           </h2>
           <p className="mt-4 text-lg text-muted-foreground max-w-3xl mx-auto">

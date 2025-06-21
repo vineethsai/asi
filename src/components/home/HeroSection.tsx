@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, CheckCircle, ShieldCheck, Network, Target, Zap, BookOpen, Users, Globe, Sparkles, Brain, Shield } from "lucide-react";
+import { ArrowRight, CheckCircle, ShieldCheck, Network, Target, Zap, BookOpen, Users, Globe, Sparkles, Brain, Shield, Play } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { Text, Heading, Container, Flex, Box, Grid, Button as RadixButton, Badge as RadixBadge } from '@radix-ui/themes';
 
 export const HeroSection = () => {
   const features = [
@@ -22,18 +23,18 @@ export const HeroSection = () => {
       link: "/aisvs"
     },
     {
-      icon: Target,
-      title: "Interactive Assessment",
-      description: "Dynamic security assessment tool for AI systems with personalized recommendations",
-      color: "bg-purple-500",
-      link: "/assessment"
-    },
-    {
       icon: Brain,
       title: "Component Framework",
       description: "Six key components of agentic systems with detailed threat analysis",
       color: "bg-orange-500",
       link: "/components"
+    },
+    {
+      icon: Target,
+      title: "Security Controls",
+      description: "Comprehensive security controls and mitigations for AI agentic systems",
+      color: "bg-purple-500",
+      link: "/controls"
     }
   ];
 
@@ -67,14 +68,14 @@ export const HeroSection = () => {
             {/* Badge */}
             <div className="flex justify-center lg:justify-start">
               <Badge variant="secondary" className="px-4 py-2 text-sm font-medium">
-                <Sparkles className="h-4 w-4 mr-2" />
-                Latest: NIST AI RMF Integration
+                <Network className="h-4 w-4 mr-2" />
+                NIST AI RMF Integration
               </Badge>
             </div>
 
             {/* Main heading */}
-            <div className="space-y-6 text-center lg:text-left">
-              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
+            <Box className="space-y-6 text-center lg:text-left">
+              <Heading size="9" className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary via-primary to-secondary">
                   Secure Your
                 </span>
@@ -84,39 +85,40 @@ export const HeroSection = () => {
                 </span>
                 <br />
                 <span className="text-foreground">Applications</span>
-              </h1>
-              <p className="text-lg text-muted-foreground md:text-xl leading-relaxed">
+              </Heading>
+              <Text size="5" className="text-lg text-muted-foreground md:text-xl leading-relaxed">
                 The most comprehensive OWASP guide for securing AI agentic systems. 
-                Features interactive NIST AI RMF mapping, advanced threat analysis, 
+                Features NIST AI RMF mapping, advanced threat analysis, 
                 and cutting-edge security frameworks.
-              </p>
-            </div>
+              </Text>
+            </Box>
             
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <Link to="/nist-mapping" className="w-full sm:w-auto">
                 <Button size="lg" className="w-full gap-2 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white font-semibold shadow-lg">
                   <Network className="h-5 w-5" />
-                  Explore NIST Mapping
+                  NIST Mapping
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
-              <Link to="/assessment" className="w-full sm:w-auto">
+              <Link to="/aisvs" className="w-full sm:w-auto">
                 <Button variant="outline" size="lg" className="w-full border-2 hover:bg-primary/5">
-                  Start Assessment
+                  <ShieldCheck className="h-4 w-4 mr-2" />
+                  AISVS Standards
                 </Button>
               </Link>
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4">
+            <Grid columns="4" gap="3" className="pt-4">
               {stats.map((stat, i) => (
-                <div key={i} className="text-center p-3 rounded-lg bg-muted/30 backdrop-blur-sm">
-                  <div className={`text-2xl font-bold ${stat.color}`}>{stat.number}</div>
-                  <div className="text-sm text-muted-foreground">{stat.label}</div>
-                </div>
+                <Box key={i} className="text-center p-3 rounded-lg bg-muted/30 backdrop-blur-sm">
+                  <Text size="6" weight="bold" className={stat.color}>{stat.number}</Text>
+                  <Text size="2" className="text-muted-foreground">{stat.label}</Text>
+                </Box>
               ))}
-            </div>
+            </Grid>
           </div>
           
           {/* Right column - Feature showcase */}
@@ -156,19 +158,18 @@ export const HeroSection = () => {
 
 
         {/* Quick navigation */}
-        <div className="mt-16 lg:mt-20">
-          <div className="text-center mb-8">
-            <h3 className="text-xl font-semibold mb-2">Quick Navigation</h3>
-            <p className="text-muted-foreground">Jump directly to the tools and resources you need</p>
-          </div>
+        <Box className="mt-16 lg:mt-20">
+          <Box className="text-center mb-8">
+            <Heading size="5" className="mb-2">Quick Navigation</Heading>
+            <Text className="text-muted-foreground">Jump directly to the tools and resources you need</Text>
+          </Box>
           
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <Grid columns="5" gap="3">
             {[
               { label: "NIST Mapping", link: "/nist-mapping", icon: Network },
               { label: "Threats", link: "/threats", icon: Shield },
               { label: "Controls", link: "/controls", icon: CheckCircle },
               { label: "AISVS", link: "/aisvs", icon: ShieldCheck },
-              { label: "Architectures", link: "/architectures", icon: Globe },
               { label: "Components", link: "/components", icon: Brain }
             ].map((item, i) => (
               <Link key={i} to={item.link}>
@@ -181,8 +182,8 @@ export const HeroSection = () => {
                 </Button>
               </Link>
             ))}
-          </div>
-        </div>
+          </Grid>
+        </Box>
       </div>
     </section>
   );

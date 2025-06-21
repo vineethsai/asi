@@ -1,8 +1,7 @@
 import HeroSection from "@/components/home/HeroSection";
-import FeaturesSection from "@/components/home/FeaturesSection";
 import ComponentsSection from "@/components/home/ComponentsSection"; 
-import ArchitectureSection from "@/components/home/ArchitectureSection";
 import ArchitectureGraphSection from "@/components/home/ArchitectureGraphSection";
+import ArchitectureShowcase from "@/components/home/ArchitectureShowcase";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Helmet } from "react-helmet";
@@ -48,9 +47,8 @@ const Index = () => {
       <Header />
       <main>
         <HeroSection />
-        <FeaturesSection />
+        <ArchitectureShowcase />
         <ArchitectureGraphSection />
-        <ArchitectureSection />
         <ComponentsSection />
       </main>
       <Footer />

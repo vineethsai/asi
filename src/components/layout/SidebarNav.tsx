@@ -72,8 +72,7 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ type, activeId, isOpen, onClose
     { name: "Threats", path: "/threats" },
     { name: "Controls", path: "/controls" },
     { name: "AISVS", path: "/aisvs" },
-    { name: "NIST Mapping", path: "/nist-mapping" },
-    { name: "Assessment", path: "/assessment" }
+    { name: "NIST Mapping", path: "/nist-mapping" }
   ];
 
   // Helper function to check if nav item is active

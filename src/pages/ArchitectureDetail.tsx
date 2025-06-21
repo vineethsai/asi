@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Icon } from "@/components/ui/icon";
 import { useState } from "react";
 import { Helmet } from "react-helmet";
+import ArchitectureDiagram from '@/components/visual/ArchitectureDiagrams';
 
 // Helper to get component description from frameworkData
 const getComponentDescription = (id: string): string => {
@@ -173,95 +174,7 @@ const ArchitectureDetail = () => {
     );
   }
 
-  // Visual diagram for sequential pattern
-  const renderDiagram = () => {
-    if (architecture.id === "sequential") {
-      return (
-        <div className="flex justify-center mb-10">
-          <svg width="420" height="80" viewBox="0 0 420 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="10" y="20" width="80" height="40" rx="8" fill="#e0e7ff" stroke="#6366f1" strokeWidth="2" />
-            <rect x="120" y="20" width="80" height="40" rx="8" fill="#e0e7ff" stroke="#6366f1" strokeWidth="2" />
-            <rect x="230" y="20" width="80" height="40" rx="8" fill="#e0e7ff" stroke="#6366f1" strokeWidth="2" />
-            <rect x="340" y="20" width="70" height="40" rx="8" fill="#e0e7ff" stroke="#6366f1" strokeWidth="2" />
-            <text x="50" y="45" textAnchor="middle" alignmentBaseline="middle" fontSize="15" fill="#3730a3">Step 1</text>
-            <text x="160" y="45" textAnchor="middle" alignmentBaseline="middle" fontSize="15" fill="#3730a3">Step 2</text>
-            <text x="270" y="45" textAnchor="middle" alignmentBaseline="middle" fontSize="15" fill="#3730a3">Step 3</text>
-            <text x="375" y="45" textAnchor="middle" alignmentBaseline="middle" fontSize="15" fill="#3730a3">Output</text>
-            <polygon points="90,40 120,40 110,35 110,45" fill="#6366f1" />
-            <polygon points="200,40 230,40 220,35 220,45" fill="#6366f1" />
-            <polygon points="310,40 340,40 330,35 330,45" fill="#6366f1" />
-          </svg>
-        </div>
-      );
-    }
-    
-    if (architecture.id === "hierarchical") {
-      return (
-        <div className="flex justify-center mb-10">
-          <svg width="420" height="200" viewBox="0 0 420 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-            {/* Orchestrator */}
-            <rect x="160" y="20" width="100" height="40" rx="8" fill="#dcfce7" stroke="#22c55e" strokeWidth="2" />
-            <text x="210" y="45" textAnchor="middle" alignmentBaseline="middle" fontSize="14" fill="#15803d">Orchestrator</text>
-            
-            {/* Sub-agents */}
-            <rect x="20" y="120" width="80" height="40" rx="8" fill="#dcfce7" stroke="#22c55e" strokeWidth="2" />
-            <rect x="120" y="120" width="80" height="40" rx="8" fill="#dcfce7" stroke="#22c55e" strokeWidth="2" />
-            <rect x="220" y="120" width="80" height="40" rx="8" fill="#dcfce7" stroke="#22c55e" strokeWidth="2" />
-            <rect x="320" y="120" width="80" height="40" rx="8" fill="#dcfce7" stroke="#22c55e" strokeWidth="2" />
-            
-            <text x="60" y="145" textAnchor="middle" alignmentBaseline="middle" fontSize="12" fill="#15803d">Agent A</text>
-            <text x="160" y="145" textAnchor="middle" alignmentBaseline="middle" fontSize="12" fill="#15803d">Agent B</text>
-            <text x="260" y="145" textAnchor="middle" alignmentBaseline="middle" fontSize="12" fill="#15803d">Agent C</text>
-            <text x="360" y="145" textAnchor="middle" alignmentBaseline="middle" fontSize="12" fill="#15803d">Agent D</text>
-            
-            {/* Arrows */}
-            <line x1="185" y1="60" x2="80" y2="120" stroke="#22c55e" strokeWidth="2" markerEnd="url(#arrowhead)" />
-            <line x1="200" y1="60" x2="160" y2="120" stroke="#22c55e" strokeWidth="2" markerEnd="url(#arrowhead)" />
-            <line x1="215" y1="60" x2="260" y2="120" stroke="#22c55e" strokeWidth="2" markerEnd="url(#arrowhead)" />
-            <line x1="235" y1="60" x2="340" y2="120" stroke="#22c55e" strokeWidth="2" markerEnd="url(#arrowhead)" />
-            
-            {/* Arrow marker */}
-            <defs>
-              <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                <polygon points="0 0, 10 3.5, 0 7" fill="#22c55e" />
-              </marker>
-            </defs>
-          </svg>
-        </div>
-      );
-    }
-    
-    if (architecture.id === "collaborative" || architecture.id === "swarm") {
-      return (
-        <div className="flex justify-center mb-10">
-          <svg width="420" height="200" viewBox="0 0 420 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-            {/* Swarm agents */}
-            <circle cx="100" cy="60" r="30" fill="#fef3c7" stroke="#f59e0b" strokeWidth="2" />
-            <circle cx="320" cy="60" r="30" fill="#fef3c7" stroke="#f59e0b" strokeWidth="2" />
-            <circle cx="100" cy="140" r="30" fill="#fef3c7" stroke="#f59e0b" strokeWidth="2" />
-            <circle cx="320" cy="140" r="30" fill="#fef3c7" stroke="#f59e0b" strokeWidth="2" />
-            <circle cx="210" cy="100" r="30" fill="#fef3c7" stroke="#f59e0b" strokeWidth="2" />
-            
-            <text x="100" y="67" textAnchor="middle" alignmentBaseline="middle" fontSize="12" fill="#92400e">Agent 1</text>
-            <text x="320" y="67" textAnchor="middle" alignmentBaseline="middle" fontSize="12" fill="#92400e">Agent 2</text>
-            <text x="100" y="147" textAnchor="middle" alignmentBaseline="middle" fontSize="12" fill="#92400e">Agent 3</text>
-            <text x="320" y="147" textAnchor="middle" alignmentBaseline="middle" fontSize="12" fill="#92400e">Agent 4</text>
-            <text x="210" y="107" textAnchor="middle" alignmentBaseline="middle" fontSize="12" fill="#92400e">Agent 5</text>
-            
-            {/* Communication lines */}
-            <line x1="130" y1="60" x2="180" y2="100" stroke="#f59e0b" strokeWidth="2" strokeDasharray="5,5" />
-            <line x1="290" y1="60" x2="240" y2="100" stroke="#f59e0b" strokeWidth="2" strokeDasharray="5,5" />
-            <line x1="130" y1="140" x2="180" y2="100" stroke="#f59e0b" strokeWidth="2" strokeDasharray="5,5" />
-            <line x1="290" y1="140" x2="240" y2="100" stroke="#f59e0b" strokeWidth="2" strokeDasharray="5,5" />
-            <line x1="130" y1="70" x2="290" y2="130" stroke="#f59e0b" strokeWidth="2" strokeDasharray="5,5" />
-            <line x1="130" y1="130" x2="290" y2="70" stroke="#f59e0b" strokeWidth="2" strokeDasharray="5,5" />
-          </svg>
-        </div>
-      );
-    }
-    
-    return null;
-  };
+
 
   return (
     <>
@@ -373,14 +286,12 @@ const ArchitectureDetail = () => {
               {/* Grid for the rest of the cards */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Visual Diagram */}
-                {renderDiagram() && (
-                  <Card className="border border-border bg-background">
-                    <CardContent className="p-4">
-                      <h2 className="text-base font-semibold mb-2 text-foreground">Visual Diagram</h2>
-                      {renderDiagram()}
-                    </CardContent>
-                  </Card>
-                )}
+                <Card className="border border-border bg-background">
+                  <CardContent className="p-4">
+                    <h2 className="text-base font-semibold mb-2 text-foreground">Visual Diagram</h2>
+                    <ArchitectureDiagram architectureId={architecture.id} className="w-full h-64" />
+                  </CardContent>
+                </Card>
                 {/* Real-world Examples */}
                 {realWorldExamples[architecture.id] && (
                   <Card className="border border-border bg-background">

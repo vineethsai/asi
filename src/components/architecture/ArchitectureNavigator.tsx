@@ -542,7 +542,11 @@ const ArchitectureNavigator: React.FC = () => {
         }
       })
       .attr('font-weight', d => d.type === 'architecture' ? 'bold' : 'normal')
-      .attr('fill', '#374151')
+      .attr('fill', () => {
+        // Check if dark mode is active
+        const isDarkMode = document.documentElement.classList.contains('dark');
+        return isDarkMode ? '#e5e7eb' : '#374151'; // Light gray for dark mode, dark gray for light mode
+      })
       .text(d => {
         const maxLength = d.type === 'architecture' ? 20 : 15;
         return d.name.length > maxLength ? d.name.substring(0, maxLength) + '...' : d.name;

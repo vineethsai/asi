@@ -147,7 +147,7 @@ export const ComponentsSection = () => {
       <div className="container px-4 md:px-6">
         <div className="flex flex-col items-center justify-center space-y-4 text-center">
           <div className="space-y-2 max-w-3xl">
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Key Components</h2>
+            <h2 className="text-3xl font-bold tracking-tighter">Key Components</h2>
             <p className="text-muted-foreground md:text-xl">
               Agentic systems comprise six key components, each introducing unique security challenges
             </p>

@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { aisvsData } from "../components/components/securityData";
 import SidebarNav from "../components/layout/SidebarNav";
 import { Helmet } from "react-helmet";
-import { Search, Shield, Target, ExternalLink, GitBranch, ArrowRight, CheckCircle, AlertTriangle, BookOpen, Network, Layers } from "lucide-react";
+import { Search, Shield, Target, ExternalLink, GitBranch, ArrowRight, CheckCircle, AlertTriangle, BookOpen, Network, Layers, RotateCcw, Maximize } from "lucide-react";
 
 // NIST AI RMF Framework Structure
 interface NISTFunction {
@@ -761,6 +761,15 @@ export const NISTMapping = () => {
   // Convert AISVS data for easier access
   const aisvsCategories = Object.values(aisvsData);
 
+  // Reset graph state on component mount
+  useEffect(() => {
+    // Reset graph state when component mounts
+    setExpandedNodes(new Set());
+    setSelectedNode(null);
+    setSelectedNodeData(null);
+    setFocusMode(false);
+  }, []); // Empty dependency array means this runs only on mount
+
   // Handle URL hash-based navigation
   useEffect(() => {
     const hash = location.hash.replace('#', '');
@@ -1307,8 +1316,12 @@ export const NISTMapping = () => {
           .attr("text-anchor", "middle")
           .attr("dy", "50px")
           .attr("font-size", "10px")
-          .attr("fill", "currentColor")
-          .attr("opacity", 0.7)
+          .attr("fill", () => {
+            // Check if dark mode is active
+            const isDarkMode = document.documentElement.classList.contains('dark');
+            return isDarkMode ? '#e5e7eb' : '#374151'; // Light gray for dark mode, dark gray for light mode
+          })
+          .attr("opacity", 0.9)
           .text(d.description);
       }
     });
@@ -1394,8 +1407,18 @@ export const NISTMapping = () => {
         .attr("width", 200)
         .attr("height", 40)
         .attr("rx", 5)
-        .attr("fill", "black")
-        .attr("opacity", 0.8);
+        .attr("fill", () => {
+          // Check if dark mode is active
+          const isDarkMode = document.documentElement.classList.contains('dark');
+          return isDarkMode ? '#111827' : '#000000'; // Very dark gray for dark mode, black for light mode
+        })
+        .attr("opacity", 0.9)
+        .attr("stroke", () => {
+          // Check if dark mode is active
+          const isDarkMode = document.documentElement.classList.contains('dark');
+          return isDarkMode ? '#374151' : '#ffffff'; // Border for better visibility
+        })
+        .attr("stroke-width", 1);
         
       tooltip.append("text")
         .attr("x", 10)
@@ -1444,9 +1467,17 @@ export const NISTMapping = () => {
       .attr("width", 300)
       .attr("height", 120)
       .attr("rx", 8)
-      .attr("fill", "white")
-      .attr("opacity", 0.9)
-      .attr("stroke", "currentColor")
+      .attr("fill", () => {
+        // Check if dark mode is active
+        const isDarkMode = document.documentElement.classList.contains('dark');
+        return isDarkMode ? '#1f2937' : '#ffffff'; // Dark gray for dark mode, white for light mode
+      })
+      .attr("opacity", 0.95)
+      .attr("stroke", () => {
+        // Check if dark mode is active
+        const isDarkMode = document.documentElement.classList.contains('dark');
+        return isDarkMode ? '#374151' : '#d1d5db'; // Darker border for dark mode, light border for light mode
+      })
       .attr("stroke-width", 1);
       
     legend.append("text")
@@ -1454,7 +1485,11 @@ export const NISTMapping = () => {
       .attr("y", 20)
       .attr("font-size", "14px")
       .attr("font-weight", "bold")
-      .attr("fill", "currentColor")
+      .attr("fill", () => {
+        // Check if dark mode is active
+        const isDarkMode = document.documentElement.classList.contains('dark');
+        return isDarkMode ? '#e5e7eb' : '#374151'; // Light gray for dark mode, dark gray for light mode
+      })
       .text("Interactive Legend");
       
     // Legend items
@@ -1499,7 +1534,11 @@ export const NISTMapping = () => {
         .attr("x", 40)
         .attr("y", y + 4)
         .attr("font-size", "11px")
-        .attr("fill", "currentColor")
+        .attr("fill", () => {
+          // Check if dark mode is active
+          const isDarkMode = document.documentElement.classList.contains('dark');
+          return isDarkMode ? '#e5e7eb' : '#374151'; // Light gray for dark mode, dark gray for light mode
+        })
         .text(item.text);
     });
 
@@ -1542,8 +1581,8 @@ export const NISTMapping = () => {
                 <GitBranch className="h-8 w-8 text-primary" />
               </div>
               <div>
-                <h1 className="text-4xl font-bold">NIST AI RMF to AISVS Mapping</h1>
-                <p className="text-xl text-muted-foreground">Framework Alignment & Compliance Coverage</p>
+                            <h1 className="text-3xl font-bold">NIST AI RMF to AISVS Mapping</h1>
+            <p className="text-lg text-muted-foreground">Framework Alignment & Compliance Coverage</p>
               </div>
             </div>
 
@@ -1561,7 +1600,7 @@ export const NISTMapping = () => {
                     <Shield className="h-5 w-5 text-blue-500" />
                     <div>
                       <p className="text-sm font-medium">NIST Functions</p>
-                      <p className="text-2xl font-bold">{nistAIRMF.length}</p>
+                      <p className="text-xl font-bold">{nistAIRMF.length}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -1573,7 +1612,7 @@ export const NISTMapping = () => {
                     <Target className="h-5 w-5 text-green-500" />
                     <div>
                       <p className="text-sm font-medium">NIST Subcategories</p>
-                      <p className="text-2xl font-bold">{mappingStats.totalNISTSubcategories}</p>
+                      <p className="text-xl font-bold">{mappingStats.totalNISTSubcategories}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -1585,7 +1624,7 @@ export const NISTMapping = () => {
                     <CheckCircle className="h-5 w-5 text-purple-500" />
                     <div>
                       <p className="text-sm font-medium">AISVS Categories</p>
-                      <p className="text-2xl font-bold">{aisvsCategories.length}</p>
+                      <p className="text-xl font-bold">{aisvsCategories.length}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -1639,47 +1678,68 @@ export const NISTMapping = () => {
             </Card>
           </div>
 
-          {/* Filters */}
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Search className="h-5 w-5" />
-                Search & Filter Mappings
+          {/* Modern Filters */}
+          <Card className="mb-8 border-border/50 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-secondary/5 via-secondary/10 to-primary/5 border-b border-border/50">
+              <CardTitle className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-secondary/10 border border-secondary/20">
+                  <Search className="h-5 w-5 text-secondary" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent">
+                    Search & Filter Mappings
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Find specific NIST functions and their AISVS mappings
+                  </p>
+                </div>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="relative group">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 group-focus-within:text-primary transition-colors" />
                   <Input
                     placeholder="Search NIST functions, categories, or subcategories..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 border-border/50 focus:border-primary/50 bg-background/50 focus:bg-background transition-all duration-200"
                   />
                 </div>
                 <Select value={selectedFunction} onValueChange={setSelectedFunction}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All NIST Functions" />
+                  <SelectTrigger className="border-border/50 focus:border-primary/50 bg-background/50 focus:bg-background transition-all duration-200">
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-blue-500" />
+                      <SelectValue placeholder="All NIST Functions" />
+                    </div>
                   </SelectTrigger>
-                  <SelectContent className="z-[9999] bg-white border shadow-lg">
+                  <SelectContent className="z-[9999] bg-background border border-border shadow-lg">
                     <SelectItem value="all">All NIST Functions</SelectItem>
                     {nistAIRMF.map((func) => (
                       <SelectItem key={func.id} value={func.id}>
-                        {func.code} - {func.name}
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: func.color }}></div>
+                          {func.code} - {func.name}
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <Select value={selectedAISVS} onValueChange={setSelectedAISVS}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All AISVS Categories" />
+                  <SelectTrigger className="border-border/50 focus:border-primary/50 bg-background/50 focus:bg-background transition-all duration-200">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <SelectValue placeholder="All AISVS Categories" />
+                    </div>
                   </SelectTrigger>
-                  <SelectContent className="z-[9999] bg-white border shadow-lg">
+                  <SelectContent className="z-[9999] bg-background border border-border shadow-lg">
                     <SelectItem value="all">All AISVS Categories</SelectItem>
                     {aisvsCategories.map((cat) => (
                       <SelectItem key={cat.id} value={cat.code}>
-                        {cat.code} - {cat.name.split(' &')[0]}
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }}></div>
+                          {cat.code} - {cat.name.split(' &')[0]}
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1690,11 +1750,47 @@ export const NISTMapping = () => {
 
           {/* Main Content Tabs */}
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="overview">Framework Overview</TabsTrigger>
-              <TabsTrigger value="mapping">Detailed Mapping</TabsTrigger>
-              <TabsTrigger value="matrix">Compliance Matrix</TabsTrigger>
-              <TabsTrigger value="graph">Interactive Graph</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4 bg-muted/50 p-1 rounded-xl border border-border/50">
+              <TabsTrigger 
+                value="overview" 
+                className="data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/50 rounded-lg transition-all duration-200"
+              >
+                <div className="flex items-center gap-2">
+                  <BookOpen className="h-4 w-4" />
+                  <span className="hidden sm:inline">Framework Overview</span>
+                  <span className="sm:hidden">Overview</span>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="mapping" 
+                className="data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/50 rounded-lg transition-all duration-200"
+              >
+                <div className="flex items-center gap-2">
+                  <Layers className="h-4 w-4" />
+                  <span className="hidden sm:inline">Detailed Mapping</span>
+                  <span className="sm:hidden">Mapping</span>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="matrix" 
+                className="data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/50 rounded-lg transition-all duration-200"
+              >
+                <div className="flex items-center gap-2">
+                  <GitBranch className="h-4 w-4" />
+                  <span className="hidden sm:inline">Compliance Matrix</span>
+                  <span className="sm:hidden">Matrix</span>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="graph" 
+                className="data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/50 rounded-lg transition-all duration-200"
+              >
+                <div className="flex items-center gap-2">
+                  <Network className="h-4 w-4" />
+                  <span className="hidden sm:inline">Interactive Graph</span>
+                  <span className="sm:hidden">Graph</span>
+                </div>
+              </TabsTrigger>
             </TabsList>
 
             {/* Framework Overview Tab */}
@@ -1772,7 +1868,7 @@ export const NISTMapping = () => {
                           <Shield className="h-6 w-6" style={{ color: func.color }} />
                         </div>
                         <div>
-                          <h3 className="text-xl font-bold" style={{ color: func.color }}>
+                          <h3 className="text-lg font-bold" style={{ color: func.color }}>
                             {func.code}: {func.name}
                           </h3>
                           <p className="text-muted-foreground text-sm mt-1">
@@ -1928,88 +2024,169 @@ export const NISTMapping = () => {
 
             {/* Interactive Graph Tab */}
             <TabsContent value="graph" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Network className="h-5 w-5" />
-                    Interactive D3.js Mapping Graph
+              <Card className="border-border/50 shadow-lg">
+                <CardHeader className="bg-gradient-to-r from-primary/5 via-primary/10 to-secondary/5 border-b border-border/50">
+                  <CardTitle className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                      <Network className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                        Interactive D3.js Mapping Graph
+                      </h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Advanced visualization with expandable nodes and intelligent focus modes
+                      </p>
+                    </div>
                   </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Advanced D3.js visualization with expandable nodes. Click NIST function nodes to expand and explore hierarchical mappings. Drag nodes to rearrange the layout.
-                  </p>
+                  <div className="flex items-center gap-4 mt-4 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                      <span>Click nodes to expand</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                      <span>Drag to rearrange</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                      <span>Use focus mode for clarity</span>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="relative w-full h-[800px] border rounded-lg bg-gradient-to-br from-background to-muted/20 overflow-hidden">
+                  <div className="relative w-full h-[800px] border border-border/50 rounded-xl bg-gradient-to-br from-background via-background/95 to-muted/30 overflow-hidden shadow-inner">
+                    {/* Background Pattern */}
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent opacity-50"></div>
+                    
                     <svg 
                       ref={svgRef}
                       width="100%" 
                       height="100%" 
-                      className="absolute inset-0"
+                      className="absolute inset-0 z-10"
                     />
                     
-                    {/* Interactive Controls */}
-                    <div className="absolute top-4 right-4 flex flex-col gap-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => {
-                          setExpandedNodes(new Set());
-                          setSelectedNode(null);
-                          setSelectedNodeData(null);
-                          setFocusMode(false);
-                        }}
-                        className="bg-white/90 hover:bg-white text-xs"
-                      >
-                        Reset Graph
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => {
-                          const newExpanded = new Set<string>();
-                          nistAIRMF.forEach(func => {
-                            newExpanded.add(func.id);
-                            func.categories.forEach(cat => {
-                              newExpanded.add(`${func.id}-${cat.id}`);
-                            });
-                          });
-                          setExpandedNodes(newExpanded);
-                        }}
-                        className="bg-white/90 hover:bg-white text-xs"
-                      >
-                        Expand All
-                      </Button>
-                      <Button
-                        variant={focusMode ? "default" : "secondary"}
-                        size="sm"
-                        onClick={() => {
-                          setFocusMode(!focusMode);
-                          if (!focusMode && !selectedNode) {
-                            // If enabling focus mode but no node selected, show message
-                            return;
-                          }
-                        }}
-                        className={`text-xs ${focusMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-white/90 hover:bg-white'}`}
-                        disabled={!selectedNode}
-                      >
-                        {focusMode ? "Exit Focus" : "Focus Mode"}
-                      </Button>
-                      <div className="bg-white/90 rounded p-2 text-xs">
-                        <div className="font-medium mb-1">Status:</div>
+                    {/* Modern Interactive Controls */}
+                    <div className="absolute top-4 right-4 flex flex-col gap-3 z-50">
+                      {/* Control Panel */}
+                      <div className="bg-background/95 dark:bg-background/95 backdrop-blur-sm border border-border/50 rounded-xl p-4 shadow-lg z-50">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+                          <span className="text-xs font-semibold text-foreground">Graph Controls</span>
+                        </div>
+                        
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setExpandedNodes(new Set());
+                              setSelectedNode(null);
+                              setSelectedNodeData(null);
+                              setFocusMode(false);
+                            }}
+                            className="text-xs h-8 bg-background hover:bg-accent border text-foreground hover:text-accent-foreground transition-all duration-200 cursor-pointer select-none"
+                            style={{ pointerEvents: 'auto' }}
+                          >
+                            <RotateCcw className="h-3 w-3 mr-1" />
+                            Reset Graph
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const newExpanded = new Set<string>();
+                              nistAIRMF.forEach(func => {
+                                newExpanded.add(func.id);
+                                func.categories.forEach(cat => {
+                                  newExpanded.add(`${func.id}-${cat.id}`);
+                                });
+                              });
+                              setExpandedNodes(newExpanded);
+                            }}
+                            className="text-xs h-8 bg-background hover:bg-accent border text-foreground hover:text-accent-foreground transition-all duration-200 cursor-pointer select-none"
+                            style={{ pointerEvents: 'auto' }}
+                          >
+                            <Maximize className="h-3 w-3 mr-1" />
+                            Expand All
+                          </Button>
+                          
+                          <Button
+                            variant={focusMode ? "default" : "outline"}
+                            size="sm"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setFocusMode(!focusMode);
+                              if (!focusMode && !selectedNode) {
+                                return;
+                              }
+                            }}
+                            disabled={!selectedNode}
+                            className={`text-xs h-8 transition-all duration-200 cursor-pointer select-none ${
+                              focusMode 
+                                ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-md' 
+                                : 'bg-background hover:bg-accent border text-foreground hover:text-accent-foreground'
+                            } ${!selectedNode ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            style={{ pointerEvents: 'auto' }}
+                          >
+                            <Target className="h-3 w-3 mr-1" />
+                            {focusMode ? "Exit Focus" : "Focus Mode"}
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {/* Status Panel */}
+                      <div className="bg-background/95 dark:bg-background/95 backdrop-blur-sm border border-border/50 rounded-xl p-4 shadow-lg z-50">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                          <span className="text-xs font-semibold text-foreground">Graph Status</span>
+                        </div>
+                        
                         {focusMode && (
-                          <div className="text-blue-600 font-medium mb-1">
-                            🎯 Focus Mode Active
+                          <div className="flex items-center gap-2 mb-3 p-2 bg-primary/10 rounded-lg border border-primary/20">
+                            <Target className="h-3 w-3 text-primary" />
+                            <span className="text-xs font-medium text-primary">Focus Mode Active</span>
                           </div>
                         )}
-                        <div className="text-muted-foreground">
-                          {expandedNodes.size} nodes expanded
-                        </div>
-                        <div className="text-muted-foreground">
-                          {graphData.nodes.filter(n => n.visible).length} nodes visible
-                        </div>
-                        <div className="text-muted-foreground">
-                          {graphData.links.filter(l => l.visible).length} connections
-                        </div>
+                        
+                                                 <div className="space-y-2 text-xs">
+                           <div className="flex items-center justify-between">
+                             <span className="text-muted-foreground">Expanded:</span>
+                             <span className="font-medium text-foreground">{expandedNodes.size}</span>
+                           </div>
+                           <div className="flex items-center justify-between">
+                             <span className="text-muted-foreground">Visible:</span>
+                             <span className="font-medium text-foreground">{graphData.nodes.filter(n => n.visible).length}</span>
+                           </div>
+                           <div className="flex items-center justify-between">
+                             <span className="text-muted-foreground">Links:</span>
+                             <span className="font-medium text-foreground">{graphData.links.filter(l => l.visible).length}</span>
+                           </div>
+                         </div>
+                         
+                         {/* Quick Tips */}
+                         <div className="mt-4 pt-3 border-t border-border/30">
+                           <div className="text-xs text-muted-foreground space-y-1">
+                             <div className="flex items-center gap-2">
+                               <div className="w-1 h-1 rounded-full bg-blue-500"></div>
+                               <span>Click nodes to expand/collapse</span>
+                             </div>
+                             <div className="flex items-center gap-2">
+                               <div className="w-1 h-1 rounded-full bg-green-500"></div>
+                               <span>Drag nodes to reposition</span>
+                             </div>
+                             <div className="flex items-center gap-2">
+                               <div className="w-1 h-1 rounded-full bg-purple-500"></div>
+                               <span>Select node for focus mode</span>
+                             </div>
+                           </div>
+                         </div>
                       </div>
                     </div>
                   </div>
