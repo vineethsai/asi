@@ -19,6 +19,7 @@ import NISTMapping from "./pages/NISTMapping";
 import TestNavigator from "./pages/TestNavigator";
 import Assessment from "./pages/Assessment";
 import Interactive from "./pages/Interactive";
+import References from "./pages/References";
 import ScrollToTop from "@/components/layout/ScrollToTop";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const AppWithAnalytics = () => {
       <Route path="/nist-mapping" element={<NISTMapping />} />
       <Route path="/assessment" element={<Assessment />} />
       <Route path="/interactive" element={<Interactive />} />
+      <Route path="/references" element={<References />} />
       <Route path="/test-navigator" element={<TestNavigator />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
