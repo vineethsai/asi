@@ -278,9 +278,10 @@ const ArchitectureNavigator: React.FC = () => {
     const updateDimensions = () => {
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
+        const isMobile = window.innerWidth < 768; // md breakpoint
         setDimensions({
           width: rect.width,
-          height: Math.max(600, rect.height)
+          height: isMobile ? Math.max(400, rect.height) : Math.max(600, rect.height)
         });
       }
     };
@@ -334,31 +335,38 @@ const ArchitectureNavigator: React.FC = () => {
     });
 
     // Create simulation with improved forces
+    const isMobile = dimensions.width < 768;
+    const mobileScale = isMobile ? 0.6 : 1; // Scale down for mobile
+    
     const simulation = d3.forceSimulation<GraphNode>(filteredData.nodes)
       .force('link', d3.forceLink<GraphNode, GraphLink>(filteredData.links)
         .id(d => d.id)
         .distance(d => {
-          switch (d.type) {
-            case 'arch-comp': return 120;
-            case 'comp-threat': return 80;
-            case 'threat-mitigation': return 60;
-            default: return 80;
-          }
+          const baseDistance = {
+            'arch-comp': 120,
+            'comp-threat': 80,
+            'threat-mitigation': 60,
+            default: 80
+          };
+          const distance = baseDistance[d.type] || baseDistance.default;
+          return distance * mobileScale;
         })
         .strength(d => d.strength * 0.8))
       .force('charge', d3.forceManyBody<GraphNode>()
         .strength(d => {
-          switch (d.type) {
-            case 'architecture': return -1500;
-            case 'component': return -800;
-            case 'threat': return -600;
-            case 'mitigation': return -400;
-            default: return -600;
-          }
+          const baseStrength = {
+            'architecture': -1500,
+            'component': -800,
+            'threat': -600,
+            'mitigation': -400,
+            default: -600
+          };
+          const strength = baseStrength[d.type] || baseStrength.default;
+          return strength * mobileScale;
         }))
       .force('center', d3.forceCenter(dimensions.width / 2, dimensions.height / 2))
       .force('collision', d3.forceCollide<GraphNode>()
-        .radius(d => d.size + 15)
+        .radius(d => (d.size + 15) * mobileScale)
         .strength(0.8))
       .force('x', d3.forceX(dimensions.width / 2).strength(0.05))
       .force('y', d3.forceY(dimensions.height / 2).strength(0.05));
@@ -511,7 +519,7 @@ const ArchitectureNavigator: React.FC = () => {
 
     // Add circles
     node.append('circle')
-      .attr('r', d => d.size)
+      .attr('r', d => d.size * mobileScale)
       .attr('fill', d => d.color)
       .attr('stroke', '#fff')
       .attr('stroke-width', 2);
@@ -519,7 +527,7 @@ const ArchitectureNavigator: React.FC = () => {
     // Add risk indicators for threats
     node.filter(d => d.type === 'threat' && d.riskScore && d.riskScore > 0)
       .append('circle')
-      .attr('r', d => d.size + 5)
+      .attr('r', d => (d.size + 5) * mobileScale)
       .attr('fill', 'none')
       .attr('stroke', d => {
         const risk = d.riskScore || 0;
@@ -531,15 +539,17 @@ const ArchitectureNavigator: React.FC = () => {
     // Add labels
     node.append('text')
       .attr('text-anchor', 'middle')
-      .attr('dy', d => d.size + 20)
+      .attr('dy', d => (d.size + 20) * mobileScale)
       .attr('font-size', d => {
-        switch (d.type) {
-          case 'architecture': return '14px';
-          case 'component': return '12px';
-          case 'threat': return '10px';
-          case 'mitigation': return '9px';
-          default: return '10px';
-        }
+        const baseSizes = {
+          'architecture': 14,
+          'component': 12,
+          'threat': 10,
+          'mitigation': 9,
+          default: 10
+        };
+        const size = baseSizes[d.type] || baseSizes.default;
+        return `${size * mobileScale}px`;
       })
       .attr('font-weight', d => d.type === 'architecture' ? 'bold' : 'normal')
       .attr('fill', () => {
@@ -548,7 +558,7 @@ const ArchitectureNavigator: React.FC = () => {
         return isDarkMode ? '#e5e7eb' : '#374151'; // Light gray for dark mode, dark gray for light mode
       })
       .text(d => {
-        const maxLength = d.type === 'architecture' ? 20 : 15;
+        const maxLength = isMobile ? (d.type === 'architecture' ? 15 : 10) : (d.type === 'architecture' ? 20 : 15);
         return d.name.length > maxLength ? d.name.substring(0, maxLength) + '...' : d.name;
       });
 

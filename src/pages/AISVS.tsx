@@ -26,6 +26,7 @@ export const AISVS = () => {
   });
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedLevel, setSelectedLevel] = useState<string>("all");
@@ -61,7 +62,13 @@ export const AISVS = () => {
     });
   }, [categories, searchTerm, selectedCategory, selectedLevel]);
 
+  const handleMobileMenuToggle = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
 
+  const handleMobileMenuClose = () => {
+    setIsMobileMenuOpen(false);
+  };
 
   // Toggle requirement check
   const toggleRequirement = (requirementId: string) => {
@@ -134,11 +141,16 @@ export const AISVS = () => {
       </Helmet>
 
       <div className="min-h-screen bg-background">
-        <Header />
+        <Header 
+          onMobileMenuToggle={handleMobileMenuToggle} 
+          isMobileMenuOpen={isMobileMenuOpen} 
+        />
+        
+        {/* Mobile Navigation Sidebar */}
         <SidebarNav 
           type="controls" 
-          isOpen={isSidebarOpen} 
-          onClose={() => setIsSidebarOpen(false)} 
+          isOpen={isMobileMenuOpen} 
+          onClose={handleMobileMenuClose} 
         />
 
         <main className="container mx-auto px-4 py-8">

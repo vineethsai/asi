@@ -26,7 +26,7 @@ export const ArchitectureGraphSection = () => {
             <div className="relative bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 shadow-lg overflow-hidden" 
                  style={{ 
                    height: 'calc(100vh - 300px)', 
-                   minHeight: '600px',
+                   minHeight: window.innerWidth < 768 ? '400px' : '600px',
                    background: 'radial-gradient(circle at center, rgba(99, 102, 241, 0.1) 0%, rgba(0, 0, 0, 0) 70%)'
                  }}>
               <div className="absolute inset-0">

@@ -37,6 +37,7 @@ const Components = () => {
   const [tagFilter, setTagFilter] = useState("");
   const [sortBy, setSortBy] = useState("name");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const allTags = useMemo(() => getAllTags(frameworkData), []);
 
@@ -61,6 +62,14 @@ const Components = () => {
     }
     return comps;
   }, [tagFilter, sortBy, searchQuery]);
+
+  const handleMobileMenuToggle = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const handleMobileMenuClose = () => {
+    setIsMobileMenuOpen(false);
+  };
 
   return (
     <>
@@ -101,10 +110,17 @@ const Components = () => {
           })}
         </script>
       </Helmet>
-      <Header />
+      <Header 
+        onMobileMenuToggle={handleMobileMenuToggle} 
+        isMobileMenuOpen={isMobileMenuOpen} 
+      />
       
-      {/* Floating sidebar controlled by toggle button */}
-      <SidebarNav type="components" isOpen={false} onClose={() => {}} />
+      {/* Mobile Navigation Sidebar */}
+      <SidebarNav 
+        type="components" 
+        isOpen={isMobileMenuOpen} 
+        onClose={handleMobileMenuClose} 
+      />
       
       <main className="py-16 bg-secondary/50">
         <div className="container px-4 md:px-6">

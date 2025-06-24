@@ -3,10 +3,15 @@ import { Link, useLocation } from 'react-router-dom';
 import ThemeToggle from "./ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Menu } from "lucide-react";
+import { Search, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export const Header = () => {
+interface HeaderProps {
+  onMobileMenuToggle?: () => void;
+  isMobileMenuOpen?: boolean;
+}
+
+export const Header = ({ onMobileMenuToggle, isMobileMenuOpen = false }: HeaderProps) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const location = useLocation();
 
@@ -36,7 +41,7 @@ export const Header = () => {
               </div>
             </div>
             <span className="font-bold text-lg hidden sm:inline-block">Agentic Security Hub</span>
-            <span className="font-bold text-lg sm:hidden">OWASP</span>
+            <span className="font-bold text-lg sm:hidden">Agentic Security Hub</span>
           </Link>
         </div>
 
@@ -64,6 +69,17 @@ export const Header = () => {
         </nav>
 
         <div className="flex items-center gap-2">
+          {/* Mobile Menu Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onMobileMenuToggle}
+            className="md:hidden"
+            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+          >
+            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+          
           <div className={cn(
             "transition-all duration-300", 
             isSearchOpen ? "w-64" : "w-0 md:w-auto"

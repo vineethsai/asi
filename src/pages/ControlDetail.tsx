@@ -32,6 +32,17 @@ export const ControlDetail = () => {
   const [copiedCode, setCopiedCode] = useState<{[key: string]: boolean}>({});
   const [expandedSections, setExpandedSections] = useState<{[key: string]: boolean}>({});
   
+  // Mobile navigation state
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const handleMobileMenuToggle = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const handleMobileMenuClose = () => {
+    setIsMobileMenuOpen(false);
+  };
+  
   useEffect(() => {
     const checkTheme = () => {
       const isDark = document.documentElement.classList.contains("dark");
@@ -671,11 +682,22 @@ export const ControlDetail = () => {
           })}
         </script>
       </Helmet>
-      <Header />
+      <Header 
+        onMobileMenuToggle={handleMobileMenuToggle} 
+        isMobileMenuOpen={isMobileMenuOpen} 
+      />
+      
+      {/* Mobile Navigation Sidebar */}
+      <SidebarNav 
+        type="controls" 
+        activeId={mitigation.id} 
+        isOpen={isMobileMenuOpen} 
+        onClose={handleMobileMenuClose} 
+      />
+      
       <section className="py-12 bg-secondary/50 min-h-screen">
         <div className="container px-4 md:px-6">
           <div className="flex flex-col lg:flex-row gap-6">
-            <SidebarNav type="controls" activeId={mitigation.id} isOpen={false} onClose={() => {}} />
             <div className="flex-1">
               <Link to="/controls" className="inline-flex items-center text-muted-foreground hover:text-foreground mb-4">
                 &larr; Back to Controls

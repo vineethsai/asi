@@ -162,6 +162,15 @@ const ArchitectureDetail = () => {
   }
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const handleMobileMenuToggle = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const handleMobileMenuClose = () => {
+    setIsMobileMenuOpen(false);
+  };
 
   if (!architecture) {
     return (
@@ -221,14 +230,17 @@ const ArchitectureDetail = () => {
           })}
         </script>
       </Helmet>
-      <Header />
+      <Header 
+        onMobileMenuToggle={handleMobileMenuToggle} 
+        isMobileMenuOpen={isMobileMenuOpen} 
+      />
       
-      {/* Sidebar Navigation */}
+      {/* Mobile Navigation Sidebar */}
       <SidebarNav 
         type="architectures" 
         activeId={architecture.id} 
-        isOpen={false} 
-        onClose={() => {}} 
+        isOpen={isMobileMenuOpen} 
+        onClose={handleMobileMenuClose} 
       />
       
       <section className="py-12 bg-secondary/50 min-h-screen">

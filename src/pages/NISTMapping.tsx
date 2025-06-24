@@ -745,6 +745,7 @@ const nistAIRMF: NISTFunction[] = [
 export const NISTMapping = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFunction, setSelectedFunction] = useState<string>("all");
@@ -808,6 +809,14 @@ export const NISTMapping = () => {
     
     const hash = hashMapping[value] || value;
     navigate(`${location.pathname}#${hash}`, { replace: true });
+  };
+
+  const handleMobileMenuToggle = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const handleMobileMenuClose = () => {
+    setIsMobileMenuOpen(false);
   };
 
   // Filter NIST functions based on search and filters
@@ -1570,8 +1579,17 @@ export const NISTMapping = () => {
       </Helmet>
 
       <div className="min-h-screen bg-background">
-        <Header />
-        <SidebarNav type="controls" isOpen={false} onClose={() => {}} />
+        <Header 
+          onMobileMenuToggle={handleMobileMenuToggle} 
+          isMobileMenuOpen={isMobileMenuOpen} 
+        />
+        
+        {/* Mobile Navigation Sidebar */}
+        <SidebarNav 
+          type="controls" 
+          isOpen={isMobileMenuOpen} 
+          onClose={handleMobileMenuClose} 
+        />
 
         <main className="container mx-auto px-4 py-8">
           {/* Header Section */}
@@ -2032,7 +2050,7 @@ export const NISTMapping = () => {
                     </div>
                     <div>
                       <h3 className="text-lg font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                        Interactive D3.js Mapping Graph
+                        NIST Controls to AISVS Mapping
                       </h3>
                       <p className="text-sm text-muted-foreground mt-1">
                         Advanced visualization with expandable nodes and intelligent focus modes
@@ -2046,7 +2064,7 @@ export const NISTMapping = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                      <span>Drag to rearrange</span>
+                      <span>Hit Reset to start the visualization</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-purple-500"></div>

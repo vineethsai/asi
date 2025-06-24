@@ -1,18 +1,30 @@
+import { useState } from "react";
 import HeroSection from "@/components/home/HeroSection";
 import ComponentsSection from "@/components/home/ComponentsSection"; 
 import ArchitectureGraphSection from "@/components/home/ArchitectureGraphSection";
 import ArchitectureShowcase from "@/components/home/ArchitectureShowcase";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import SidebarNav from "@/components/layout/SidebarNav";
 import { Helmet } from "react-helmet";
 import { usePageTracking } from "@/hooks/useAnalytics";
 
 const Index = () => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
   // Track this page with custom name and metadata
   usePageTracking("Homepage - AI Agents Security Guide", {
     page_type: "homepage",
     content_category: "ai_security"
   });
+
+  const handleMobileMenuToggle = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const handleMobileMenuClose = () => {
+    setIsMobileMenuOpen(false);
+  };
 
   return (
     <>
@@ -76,7 +88,18 @@ const Index = () => {
           })}
         </script>
       </Helmet>
-      <Header />
+      <Header 
+        onMobileMenuToggle={handleMobileMenuToggle} 
+        isMobileMenuOpen={isMobileMenuOpen} 
+      />
+      
+      {/* Mobile Navigation Sidebar */}
+      <SidebarNav 
+        type="components" 
+        isOpen={isMobileMenuOpen} 
+        onClose={handleMobileMenuClose} 
+      />
+      
       <main>
         <HeroSection />
         <ArchitectureShowcase />

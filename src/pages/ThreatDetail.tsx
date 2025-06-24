@@ -1,4 +1,5 @@
 import { useParams, Link } from "react-router-dom";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { threatsData, mitigationsData, Threat, Mitigation } from "../components/components/securityData";
@@ -15,6 +16,16 @@ export const ThreatDetail = () => {
   const mitigations: Mitigation[] = threat
     ? Object.values(mitigationsData).filter(m => m.threatIds.includes(threat.id))
     : [];
+
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const handleMobileMenuToggle = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const handleMobileMenuClose = () => {
+    setIsMobileMenuOpen(false);
+  };
 
 
 
@@ -79,11 +90,22 @@ export const ThreatDetail = () => {
           })}
         </script>
       </Helmet>
-      <Header />
+      <Header 
+        onMobileMenuToggle={handleMobileMenuToggle} 
+        isMobileMenuOpen={isMobileMenuOpen} 
+      />
+      
+      {/* Mobile Navigation Sidebar */}
+      <SidebarNav 
+        type="threats" 
+        activeId={threat.id} 
+        isOpen={isMobileMenuOpen} 
+        onClose={handleMobileMenuClose} 
+      />
+      
       <section className="py-12 bg-secondary/50 min-h-screen">
         <div className="container px-4 md:px-6">
           <div className="flex flex-col lg:flex-row gap-6">
-            <SidebarNav type="threats" activeId={threat.id} isOpen={false} onClose={() => {}} />
             <div className="flex-1">
               <Link to="/threats" className="inline-flex items-center text-muted-foreground hover:text-foreground mb-4">
                 &larr; Back to Threats

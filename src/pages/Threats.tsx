@@ -19,6 +19,8 @@ const componentIdToName: Record<string, string> = Object.fromEntries(
 
 export const Threats = () => {
   const threats: Threat[] = Object.values(threatsData);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
   // Collect all tags and statuses
   const allTags = Array.from(new Set(threats.flatMap(t => t.tags || [])));
   const allStatuses = Array.from(new Set(threats.map(t => t.status).filter(Boolean)));
@@ -58,6 +60,14 @@ export const Threats = () => {
     return tagMap;
   }, [threats]);
 
+  const handleMobileMenuToggle = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const handleMobileMenuClose = () => {
+    setIsMobileMenuOpen(false);
+  };
+
   return (
     <>
       <Helmet>
@@ -69,10 +79,17 @@ export const Threats = () => {
         <meta property="og:url" content="https://agenticsecurity.info/threats" />
         <meta name="twitter:url" content="https://agenticsecurity.info/threats" />
       </Helmet>
-      <Header />
+      <Header 
+        onMobileMenuToggle={handleMobileMenuToggle} 
+        isMobileMenuOpen={isMobileMenuOpen} 
+      />
       
-      {/* Floating sidebar controlled by toggle button */}
-      <SidebarNav type="threats" isOpen={false} onClose={() => {}} />
+      {/* Mobile Navigation Sidebar */}
+      <SidebarNav 
+        type="threats" 
+        isOpen={isMobileMenuOpen} 
+        onClose={handleMobileMenuClose} 
+      />
       
       <section className="py-16 bg-secondary/50">
         <div className="container px-4 md:px-6">

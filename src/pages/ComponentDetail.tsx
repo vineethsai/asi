@@ -282,6 +282,7 @@ const componentsData: Record<string, Component> = {
 const ComponentDetail = () => {
   const { componentId } = useParams<{ componentId: string }>();
   const [activeTab, setActiveTab] = useState<"overview" | "threats" | "mitigations" | "architectures">("overview");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Normalize component ID (handle both dash and dot notation)
   const normalizedComponentId = componentId?.replace(/\./g, '-');
@@ -316,6 +317,14 @@ const ComponentDetail = () => {
         relatedThreats.some((threat: Threat) => mitigation.threatIds.includes(threat.id)))
     : [];
 
+  const handleMobileMenuToggle = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const handleMobileMenuClose = () => {
+    setIsMobileMenuOpen(false);
+  };
+
   // Icons for subcomponents based on component type
   const getSubcomponentIcon = (componentId: string) => {
     switch(componentId) {
@@ -336,7 +345,18 @@ const ComponentDetail = () => {
   if (!component || (isSubComponent && !subComponent)) {
     return (
       <>
-        <Header />
+        <Header 
+          onMobileMenuToggle={handleMobileMenuToggle} 
+          isMobileMenuOpen={isMobileMenuOpen} 
+        />
+        
+        {/* Mobile Navigation Sidebar */}
+        <SidebarNav 
+          type="components" 
+          isOpen={isMobileMenuOpen} 
+          onClose={handleMobileMenuClose} 
+        />
+        
         <main className="container py-12">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-3xl font-bold mb-4">
@@ -408,14 +428,17 @@ const ComponentDetail = () => {
           })}
         </script>
       </Helmet>
-      <Header />
+      <Header 
+        onMobileMenuToggle={handleMobileMenuToggle} 
+        isMobileMenuOpen={isMobileMenuOpen} 
+      />
       
-      {/* Sidebar Navigation */}
+      {/* Mobile Navigation Sidebar */}
       <SidebarNav 
         type="components" 
         activeId={componentId} 
-        isOpen={false} 
-        onClose={() => {}} 
+        isOpen={isMobileMenuOpen} 
+        onClose={handleMobileMenuClose} 
       />
       
       <main className="container py-12">

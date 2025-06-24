@@ -12,6 +12,8 @@ import { Helmet } from "react-helmet";
 
 const Architectures = () => {
   const architectures: Architecture[] = Object.values(architecturesData);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
   // Collect all tags and statuses
   const allTags = Array.from(new Set(architectures.flatMap(a => a.tags || [])));
   const allStatuses = Array.from(new Set(architectures.map(a => a.status).filter(Boolean)));
@@ -50,6 +52,14 @@ const Architectures = () => {
     return Object.entries(counts).sort((a, b) => b[1] - a[1]);
   }, [architectures]);
 
+  const handleMobileMenuToggle = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const handleMobileMenuClose = () => {
+    setIsMobileMenuOpen(false);
+  };
+
   return (
     <>
       <Helmet>
@@ -61,10 +71,17 @@ const Architectures = () => {
         <meta property="og:url" content="https://agenticsecurity.info/architectures" />
         <meta name="twitter:url" content="https://agenticsecurity.info/architectures" />
       </Helmet>
-      <Header />
+      <Header 
+        onMobileMenuToggle={handleMobileMenuToggle} 
+        isMobileMenuOpen={isMobileMenuOpen} 
+      />
       
-      {/* Floating sidebar controlled by toggle button */}
-      <SidebarNav type="architectures" isOpen={false} onClose={() => {}} />
+      {/* Mobile Navigation Sidebar */}
+      <SidebarNav 
+        type="architectures" 
+        isOpen={isMobileMenuOpen} 
+        onClose={handleMobileMenuClose} 
+      />
       
       <section className="py-16 bg-secondary/50">
         <div className="container px-4 md:px-6">

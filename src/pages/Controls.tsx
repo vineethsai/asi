@@ -45,6 +45,7 @@ export const Controls = () => {
   const [selectedThreat, setSelectedThreat] = useState<string>("all");
   const [selectedLevel, setSelectedLevel] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("mitigations");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Get all unique values for filters
   const allTags = Array.from(new Set(controls.flatMap(c => c.tags || [])));
@@ -86,6 +87,14 @@ export const Controls = () => {
     
     const hash = hashMapping[value] || value;
     navigate(`${location.pathname}#${hash}`, { replace: true });
+  };
+
+  const handleMobileMenuToggle = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const handleMobileMenuClose = () => {
+    setIsMobileMenuOpen(false);
   };
 
   // Filter controls based on search and filters
@@ -199,15 +208,24 @@ export const Controls = () => {
               {
                 "@type": "Thing", 
                 "name": "OWASP AISVS",
-                "description": "AI Security Verification Standard"
+                "description": "OWASP AI Security Verification Standard"
               }
             ]
           })}
         </script>
       </Helmet>
       
-      <Header />
-      <SidebarNav type="controls" isOpen={false} onClose={() => {}} />
+      <Header 
+        onMobileMenuToggle={handleMobileMenuToggle} 
+        isMobileMenuOpen={isMobileMenuOpen} 
+      />
+      
+      {/* Mobile Navigation Sidebar */}
+      <SidebarNav 
+        type="controls" 
+        isOpen={isMobileMenuOpen} 
+        onClose={handleMobileMenuClose} 
+      />
       
       <section className="py-16 bg-secondary/50">
         <div className="container px-4 md:px-6">
