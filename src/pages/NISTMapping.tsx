@@ -750,7 +750,7 @@ export const NISTMapping = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFunction, setSelectedFunction] = useState<string>("all");
   const [selectedAISVS, setSelectedAISVS] = useState<string>("all");
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("graph");
   
   // D3 Graph State
   const svgRef = useRef<SVGSVGElement>(null);
@@ -791,7 +791,7 @@ export const NISTMapping = () => {
         setActiveTab(mappedTab);
       }
     } else if (!hash) {
-      setActiveTab('overview');
+      setActiveTab('graph'); // Default to graph instead of overview
     }
   }, [location.hash]);
 
@@ -1770,6 +1770,16 @@ export const NISTMapping = () => {
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="grid w-full grid-cols-4 bg-muted/50 p-1 rounded-xl border border-border/50">
               <TabsTrigger 
+                value="graph" 
+                className="data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/50 rounded-lg transition-all duration-200"
+              >
+                <div className="flex items-center gap-2">
+                  <Network className="h-4 w-4" />
+                  <span className="hidden sm:inline">Interactive Graph</span>
+                  <span className="sm:hidden">Graph</span>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger 
                 value="overview" 
                 className="data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/50 rounded-lg transition-all duration-200"
               >
@@ -1797,16 +1807,6 @@ export const NISTMapping = () => {
                   <GitBranch className="h-4 w-4" />
                   <span className="hidden sm:inline">Compliance Matrix</span>
                   <span className="sm:hidden">Matrix</span>
-                </div>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="graph" 
-                className="data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/50 rounded-lg transition-all duration-200"
-              >
-                <div className="flex items-center gap-2">
-                  <Network className="h-4 w-4" />
-                  <span className="hidden sm:inline">Interactive Graph</span>
-                  <span className="sm:hidden">Graph</span>
                 </div>
               </TabsTrigger>
             </TabsList>
