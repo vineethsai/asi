@@ -1,0 +1,107 @@
+name: Validate Vulnerability Files
+
+on:
+  push:
+    paths:
+      - 'src/data/vulnerabilities/*.md'
+  pull_request:
+    paths:
+      - 'src/data/vulnerabilities/*.md'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Validate vulnerability files
+      run: |
+        echo "🔍 Validating vulnerability files..."
+        
+        # Find all vulnerability markdown files (excluding README)
+        VULN_FILES=$(find src/data/vulnerabilities -name "*.md" -not -name "README.md")
+        
+        if [ -z "$VULN_FILES" ]; then
+          echo "❌ No vulnerability files found!"
+          exit 1
+        fi
+        
+        VALID_COUNT=0
+        INVALID_COUNT=0
+        
+        for file in $VULN_FILES; do
+          echo "Validating: $file"
+          
+          # Check if file has frontmatter
+          if ! head -1 "$file" | grep -q "^---$"; then
+            echo "❌ $file: Missing frontmatter delimiter"
+            INVALID_COUNT=$((INVALID_COUNT + 1))
+            continue
+          fi
+          
+          # Extract frontmatter (everything between first --- and second ---)
+          FRONTMATTER=$(sed -n '/^---$/,/^---$/p' "$file" | sed '1d;$d')
+          
+          # Check required fields
+          REQUIRED_FIELDS="id title description severity cvss_score disclosure_date discovered_by"
+          MISSING_FIELDS=""
+          
+          for field in $REQUIRED_FIELDS; do
+            if ! echo "$FRONTMATTER" | grep -q "^$field:"; then
+              MISSING_FIELDS="$MISSING_FIELDS $field"
+            fi
+          done
+          
+          if [ -n "$MISSING_FIELDS" ]; then
+            echo "❌ $file: Missing required fields:$MISSING_FIELDS"
+            INVALID_COUNT=$((INVALID_COUNT + 1))
+          else
+            echo "✅ $file: Valid"
+            VALID_COUNT=$((VALID_COUNT + 1))
+          fi
+        done
+        
+        echo ""
+        echo "📊 Validation Summary:"
+        echo "✅ Valid files: $VALID_COUNT"
+        echo "❌ Invalid files: $INVALID_COUNT"
+        
+        if [ $INVALID_COUNT -gt 0 ]; then
+          echo "❌ Validation failed! Please fix the invalid files."
+          exit 1
+        else
+          echo "🎉 All vulnerability files are valid!"
+        fi
+        
+    - name: Test build with new vulnerabilities
+      run: |
+        echo "🔨 Testing build with vulnerability files..."
+        npm run build
+        echo "✅ Build successful with current vulnerability files!"
+        
+    - name: Generate vulnerability report
+      run: |
+        echo "📋 Vulnerability Database Report"
+        echo "================================="
+        
+        TOTAL_VULNS=$(find src/data/vulnerabilities -name "*.md" -not -name "README.md" | wc -l)
+        echo "Total vulnerabilities: $TOTAL_VULNS"
+        
+        echo ""
+        echo "Recent vulnerabilities:"
+        find src/data/vulnerabilities -name "*.md" -not -name "README.md" -exec basename {} .md \; | sort -r | head -5
+        
+        echo ""
+        echo "Files modified in this PR/push:"
+        git diff --name-only HEAD~1 HEAD | grep "src/data/vulnerabilities" || echo "No vulnerability files modified" 

@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { architecturesData, Architecture } from "../components/architecturesData";
 import { threatsData, Threat, mitigationsData, Mitigation } from "../components/securityData";
 import { frameworkData } from "../components/frameworkData";
-import vulnerabilityData from "../../data/vulnerabilities.json";
+import { vulnerabilities } from "../../lib/vulnerabilityLoader";
 import { cn } from "@/lib/utils";
 import { X, Menu, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -65,7 +65,7 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ type, activeId, isOpen, onClose
     addComponentsRecursively(frameworkData, 0);
     items = componentItems;
   } else if (type === "vulnerabilities") {
-    items = (vulnerabilityData as any[]).map((v) => ({
+    items = vulnerabilities.map((v) => ({
       id: v.id,
       label: `${v.id} - ${v.title}`,
       path: `/vulnerabilities/${v.id}`

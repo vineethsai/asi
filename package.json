@@ -10,7 +10,9 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "postbuild": "cp docs/index.html docs/404.html"
+    "postbuild": "cp docs/index.html docs/404.html",
+    "create-vuln": "node scripts/create-vulnerability.js",
+    "test-vulns": "node scripts/test-vulnerabilities.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -72,7 +74,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",
-    "@tailwindcss/typography": "^0.5.15",
+    "@tailwindcss/typography": "^0.5.16",
     "@types/d3": "^7.4.3",
     "@types/node": "^22.5.5",
     "@types/react": "^18.3.3",
