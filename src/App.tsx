@@ -20,6 +20,9 @@ import TestNavigator from "./pages/TestNavigator";
 import Assessment from "./pages/Assessment";
 import Interactive from "./pages/Interactive";
 import References from "./pages/References";
+import VulnerabilityDatabase from "./pages/VulnerabilityDatabase";
+import VulnerabilityDetail from "./pages/VulnerabilityDetail";
+
 import ScrollToTop from "@/components/layout/ScrollToTop";
 
 const queryClient = new QueryClient();
@@ -42,8 +45,11 @@ const AppWithAnalytics = () => {
       <Route path="/aisvs" element={<AISVS />} />
       <Route path="/nist-mapping" element={<NISTMapping />} />
       <Route path="/assessment" element={<Assessment />} />
-      <Route path="/interactive" element={<Interactive />} />
-      <Route path="/references" element={<References />} />
+                  <Route path="/interactive" element={<Interactive />} />
+            <Route path="/references" element={<References />} />
+            <Route path="/vulnerabilities" element={<VulnerabilityDatabase />} />
+            <Route path="/vulnerabilities/:vulnId" element={<VulnerabilityDetail />} />
+      
       <Route path="/test-navigator" element={<TestNavigator />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />

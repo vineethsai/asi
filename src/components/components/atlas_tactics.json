@@ -1,0 +1,241 @@
+[
+  {
+    "id": "AML.TA0002",
+    "code": "TA0002",
+    "name": "Reconnaissance",
+    "description": "The adversary is trying to gather information about the AI system they can use to plan future operations.\n\nReconnaissance consists of techniques that involve adversaries actively or passively gathering information that can be used to support targeting.\nSuch information may include details of the victim organizations' AI capabilities and research efforts.\nThis information can be leveraged by the adversary to aid in other phases of the adversary lifecycle, such as using gathered information to obtain relevant AI artifacts, targeting AI capabilities used by the victim, tailoring attacks to the particular models used by the victim, or to drive and lead further Reconnaissance efforts.",
+    "techniques": [
+      "AML.T0000",
+      "AML.T0001",
+      "AML.T0003",
+      "AML.T0004",
+      "AML.T0006",
+      "AML.T0064"
+    ],
+    "color": "#3b82f6",
+    "icon": "search",
+    "displayOrder": 1
+  },
+  {
+    "id": "AML.TA0003",
+    "code": "TA0003",
+    "name": "Resource Development",
+    "description": "The adversary is trying to establish resources they can use to support operations.\n\nResource Development consists of techniques that involve adversaries creating,\npurchasing, or compromising/stealing resources that can be used to support targeting.\nSuch resources include AI artifacts, infrastructure, accounts, or capabilities.\nThese resources can be leveraged by the adversary to aid in other phases of the adversary lifecycle, such as [AI Attack Staging](/tactics/AML.TA0001).",
+    "techniques": [
+      "AML.T0002",
+      "AML.T0016",
+      "AML.T0017",
+      "AML.T0008",
+      "AML.T0019",
+      "AML.T0020",
+      "AML.T0021",
+      "AML.T0058",
+      "AML.T0060",
+      "AML.T0065",
+      "AML.T0066",
+      "AML.T0079"
+    ],
+    "color": "#10b981",
+    "icon": "build",
+    "displayOrder": 2
+  },
+  {
+    "id": "AML.TA0004",
+    "code": "TA0004",
+    "name": "Initial Access",
+    "description": "The adversary is trying to gain access to the AI system.\n\nThe target system could be a network, mobile device, or an edge device such as a sensor platform.\nThe AI capabilities used by the system could be local with onboard or cloud-enabled AI capabilities.\n\nInitial Access consists of techniques that use various entry vectors to gain their initial foothold within the system.",
+    "techniques": [
+      "AML.T0010",
+      "AML.T0012",
+      "AML.T0015",
+      "AML.T0049",
+      "AML.T0052",
+      "AML.T0078"
+    ],
+    "color": "#f59e0b",
+    "icon": "login",
+    "displayOrder": 3
+  },
+  {
+    "id": "AML.TA0000",
+    "code": "TA0000",
+    "name": "AI Model Access",
+    "description": "The adversary is attempting to gain some level of access to an AI model.\n\nAI Model Access enables techniques that use various types of access to the AI model that can be used by the adversary to gain information, develop attacks, and as a means to input data to the model.\nThe level of access can range from the full knowledge of the internals of the model to access to the physical environment where data is collected for use in the AI model.\nThe adversary may use varying levels of model access during the course of their attack, from staging the attack to impacting the target system.\n\nAccess to an AI model may require access to the system housing the model, the model may be publically accessible via an API, or it may be accessed indirectly via interaction with a product or service that utilizes AI as part of its processes.",
+    "techniques": [
+      "AML.T0040",
+      "AML.T0047",
+      "AML.T0041",
+      "AML.T0044"
+    ],
+    "color": "#6b7280",
+    "icon": "circle",
+    "displayOrder": 99
+  },
+  {
+    "id": "AML.TA0005",
+    "code": "TA0005",
+    "name": "Execution",
+    "description": "The adversary is trying to run malicious code embedded in AI artifacts or software.\n\nExecution consists of techniques that result in adversary-controlled code running on a local or remote system.\nTechniques that run malicious code are often paired with techniques from all other tactics to achieve broader goals, like exploring a network or stealing data.\nFor example, an adversary might use a remote access tool to run a PowerShell script that does [Remote System Discovery](https://attack.mitre.org/techniques/T1018/).",
+    "techniques": [
+      "AML.T0011",
+      "AML.T0050",
+      "AML.T0051",
+      "AML.T0053"
+    ],
+    "color": "#8b5cf6",
+    "icon": "database",
+    "displayOrder": 4
+  },
+  {
+    "id": "AML.TA0006",
+    "code": "TA0006",
+    "name": "Persistence",
+    "description": "The adversary is trying to maintain their foothold via AI artifacts or software.\n\nPersistence consists of techniques that adversaries use to keep access to systems across restarts, changed credentials, and other interruptions that could cut off their access.\nTechniques used for persistence often involve leaving behind modified ML artifacts such as poisoned training data or manipulated AI models.",
+    "techniques": [
+      "AML.T0020",
+      "AML.T0018",
+      "AML.T0061",
+      "AML.T0070"
+    ],
+    "color": "#ef4444",
+    "icon": "play",
+    "displayOrder": 5
+  },
+  {
+    "id": "AML.TA0012",
+    "code": "TA0012",
+    "name": "Privilege Escalation",
+    "description": "The adversary is trying to gain higher-level permissions.\n\nPrivilege Escalation consists of techniques that adversaries use to gain higher-level permissions on a system or network. Adversaries can often enter and explore a network with unprivileged access but require elevated permissions to follow through on their objectives. Common approaches are to take advantage of system weaknesses, misconfigurations, and vulnerabilities. Examples of elevated access include:\n- SYSTEM/root level\n- local administrator\n- user account with admin-like access\n- user accounts with access to specific system or perform specific function\n\nThese techniques often overlap with Persistence techniques, as OS features that let an adversary persist can execute in an elevated context.\n",
+    "techniques": [
+      "AML.T0053",
+      "AML.T0054"
+    ],
+    "color": "#14b8a6",
+    "icon": "download",
+    "displayOrder": 11
+  },
+  {
+    "id": "AML.TA0007",
+    "code": "TA0007",
+    "name": "Defense Evasion",
+    "description": "The adversary is trying to avoid being detected by AI-enabled security software.\n\nDefense Evasion consists of techniques that adversaries use to avoid detection throughout their compromise.\nTechniques used for defense evasion include evading AI-enabled security software such as malware detectors.",
+    "techniques": [
+      "AML.T0015",
+      "AML.T0054",
+      "AML.T0067",
+      "AML.T0068",
+      "AML.T0071",
+      "AML.T0073",
+      "AML.T0074",
+      "AML.T0076"
+    ],
+    "color": "#06b6d4",
+    "icon": "refresh",
+    "displayOrder": 6
+  },
+  {
+    "id": "AML.TA0013",
+    "code": "TA0013",
+    "name": "Credential Access",
+    "description": "The adversary is trying to steal account names and passwords.\n\nCredential Access consists of techniques for stealing credentials like account names and passwords. Techniques used to get credentials include keylogging or credential dumping. Using legitimate credentials can give adversaries access to systems, make them harder to detect, and provide the opportunity to create more accounts to help achieve their goals.\n",
+    "techniques": [
+      "AML.T0055"
+    ],
+    "color": "#a855f7",
+    "icon": "target",
+    "displayOrder": 12
+  },
+  {
+    "id": "AML.TA0008",
+    "code": "TA0008",
+    "name": "Discovery",
+    "description": "The adversary is trying to figure out your AI environment.\n\nDiscovery consists of techniques an adversary may use to gain knowledge about the system and internal network.\nThese techniques help adversaries observe the environment and orient themselves before deciding how to act.\nThey also allow adversaries to explore what they can control and what's around their entry point in order to discover how it could benefit their current objective.\nNative operating system tools are often used toward this post-compromise information-gathering objective.",
+    "techniques": [
+      "AML.T0013",
+      "AML.T0014",
+      "AML.T0007",
+      "AML.T0062",
+      "AML.T0063",
+      "AML.T0069",
+      "AML.T0075"
+    ],
+    "color": "#f97316",
+    "icon": "trending-up",
+    "displayOrder": 7
+  },
+  {
+    "id": "AML.TA0009",
+    "code": "TA0009",
+    "name": "Collection",
+    "description": "The adversary is trying to gather AI artifacts and other related information relevant to their goal.\n\nCollection consists of techniques adversaries may use to gather information and the sources information is collected from that are relevant to following through on the adversary's objectives.\nFrequently, the next goal after collecting data is to steal (exfiltrate) the AI artifacts, or use the collected information to stage future operations.\nCommon target sources include software repositories, container registries, model repositories, and object stores.",
+    "techniques": [
+      "AML.T0035",
+      "AML.T0036",
+      "AML.T0037"
+    ],
+    "color": "#84cc16",
+    "icon": "shield",
+    "displayOrder": 8
+  },
+  {
+    "id": "AML.TA0001",
+    "code": "TA0001",
+    "name": "AI Attack Staging",
+    "description": "The adversary is leveraging their knowledge of and access to the target system to tailor the attack.\n\nAI Attack Staging consists of techniques adversaries use to prepare their attack on the target AI model.\nTechniques can include training proxy models, poisoning the target model, and crafting adversarial data to feed the target model.\nSome of these techniques can be performed in an offline manner and are thus difficult to mitigate.\nThese techniques are often used to achieve the adversary's end goal.",
+    "techniques": [
+      "AML.T0005",
+      "AML.T0018",
+      "AML.T0042",
+      "AML.T0043"
+    ],
+    "color": "#6b7280",
+    "icon": "circle",
+    "displayOrder": 99
+  },
+  {
+    "id": "AML.TA0014",
+    "code": "TA0014",
+    "name": "Command and Control",
+    "description": "The adversary is trying to communicate with compromised AI systems to control them.\n\nCommand and Control consists of techniques that adversaries may use to communicate with systems under their control within a victim network. Adversaries commonly attempt to mimic normal, expected traffic to avoid detection. There are many ways an adversary can establish command and control with various levels of stealth depending on the victim's network structure and defenses.",
+    "techniques": [
+      "AML.T0072"
+    ],
+    "color": "#f43f5e",
+    "icon": "upload",
+    "displayOrder": 13
+  },
+  {
+    "id": "AML.TA0010",
+    "code": "TA0010",
+    "name": "Exfiltration",
+    "description": "The adversary is trying to steal AI artifacts or other information about the AI system.\n\nExfiltration consists of techniques that adversaries may use to steal data from your network.\nData may be stolen for its valuable intellectual property, or for use in staging future operations.\n\nTechniques for getting data out of a target network typically include transferring it over their command and control channel or an alternate channel and may also include putting size limits on the transmission.",
+    "techniques": [
+      "AML.T0024",
+      "AML.T0025",
+      "AML.T0056",
+      "AML.T0057",
+      "AML.T0077"
+    ],
+    "color": "#6366f1",
+    "icon": "key",
+    "displayOrder": 9
+  },
+  {
+    "id": "AML.TA0011",
+    "code": "TA0011",
+    "name": "Impact",
+    "description": "The adversary is trying to manipulate, interrupt, erode confidence in, or destroy your AI systems and data.\n\nImpact consists of techniques that adversaries use to disrupt availability or compromise integrity by manipulating business and operational processes.\nTechniques used for impact can include destroying or tampering with data.\nIn some cases, business processes can look fine, but may have been altered to benefit the adversaries' goals.\nThese techniques might be used by adversaries to follow through on their end goal or to provide cover for a confidentiality breach.",
+    "techniques": [
+      "AML.T0015",
+      "AML.T0029",
+      "AML.T0046",
+      "AML.T0031",
+      "AML.T0034",
+      "AML.T0048",
+      "AML.T0059"
+    ],
+    "color": "#ec4899",
+    "icon": "eye",
+    "displayOrder": 10
+  }
+]

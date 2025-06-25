@@ -1,0 +1,202 @@
+[
+  {
+    "id": "AVD-2024-003",
+    "title": "Hugging Face Model Repository Supply Chain Attack",
+    "description": "Malicious actors created fake organization accounts on Hugging Face impersonating real companies, leading to employees uploading sensitive models to attacker-controlled repositories.",
+    "severity": "critical",
+    "cvss_score": 9.1,
+    "cve_id": null,
+    "disclosure_date": "2024-06-20",
+    "discovered_by": "threlfall_hax",
+    "affected_systems": [
+      "Hugging Face Model Hub",
+      "AI model deployment pipelines",
+      "Corporate AI development workflows"
+    ],
+    "vulnerability_type": "supply_chain_attack",
+    "attack_vector": "social_engineering",
+    "impact": {
+      "confidentiality": true,
+      "integrity": true,
+      "availability": true
+    },
+    "technical_details": {
+      "attack_method": "Creation of legitimate-looking organization accounts to trick employees into joining and uploading proprietary models",
+      "exploitation_complexity": "low",
+      "user_interaction": "required",
+      "scope": "changed"
+    },
+    "threat_mapping": [
+      "t13",
+      "t1"
+    ],
+    "mitigation_mapping": [
+      "m16",
+      "m14",
+      "m6"
+    ],
+    "proof_of_concept": {
+      "available": true,
+      "description": "Demonstrated ability to embed malware in AI models and gain access to victim environments"
+    },
+    "remediation": {
+      "vendor_response": "Hugging Face improved organization verification processes",
+      "workarounds": [
+        "Verify organization authenticity before joining",
+        "Use private repositories for sensitive models",
+        "Implement model scanning before deployment"
+      ],
+      "patch_status": "mitigated"
+    },
+    "references": [
+      {
+        "title": "Hugging Face Supply Chain Attack Research",
+        "url": "https://5stars217.github.io/",
+        "type": "research_blog"
+      }
+    ],
+    "tags": [
+      "supply_chain",
+      "social_engineering",
+      "model_theft",
+      "impersonation"
+    ],
+    "status": "disclosed",
+    "last_updated": "2024-06-20"
+  },
+  {
+    "id": "AVD-2024-002",
+    "title": "Microsoft 365 Copilot RAG Poisoning Attack",
+    "description": "Attackers can poison Copilot's RAG database by sending emails with malicious content that gets ingested and retrieved during user queries, leading to misinformation and potential financial fraud.",
+    "severity": "high",
+    "cvss_score": 8.1,
+    "cve_id": null,
+    "disclosure_date": "2024-08-08",
+    "discovered_by": "Zenity Security Research",
+    "affected_systems": [
+      "Microsoft 365 Copilot",
+      "Microsoft Outlook",
+      "Microsoft Teams"
+    ],
+    "vulnerability_type": "rag_poisoning",
+    "attack_vector": "email_based_injection",
+    "impact": {
+      "confidentiality": false,
+      "integrity": true,
+      "availability": false
+    },
+    "technical_details": {
+      "attack_method": "Malicious emails with crafted content designed to be retrieved by RAG system and manipulate responses",
+      "exploitation_complexity": "low",
+      "user_interaction": "required",
+      "scope": "changed"
+    },
+    "threat_mapping": [
+      "t1",
+      "t12"
+    ],
+    "mitigation_mapping": [
+      "m1",
+      "m11",
+      "m6"
+    ],
+    "proof_of_concept": {
+      "available": true,
+      "description": "Demonstrated wire transfer fraud by poisoning banking information in Copilot responses"
+    },
+    "remediation": {
+      "vendor_response": "Microsoft is investigating and improving safety mechanisms",
+      "workarounds": [
+        "Verify all financial information independently",
+        "Implement email content filtering",
+        "Use manual approval for financial transactions"
+      ],
+      "patch_status": "under_investigation"
+    },
+    "references": [
+      {
+        "title": "Living off Microsoft Copilot: Financial transaction hijacking",
+        "url": "https://youtu.be/Z9jvzFxhayA",
+        "type": "conference_talk"
+      },
+      {
+        "title": "Microsoft responds to Copilot vulnerabilities",
+        "url": "https://www.theregister.com/2024/08/08/copilot_black_hat_vulns/",
+        "type": "news_article"
+      }
+    ],
+    "tags": [
+      "rag_poisoning",
+      "email_injection",
+      "financial_fraud",
+      "copilot"
+    ],
+    "status": "disclosed",
+    "last_updated": "2024-08-08"
+  },
+  {
+    "id": "AVD-2024-001",
+    "title": "ChatGPT Plugin Prompt Injection via Indirect Input",
+    "description": "Attackers can inject malicious prompts through external content (documents, websites) that manipulate ChatGPT's behavior when accessed via plugins, leading to data exfiltration and unauthorized actions.",
+    "severity": "high",
+    "cvss_score": 7.5,
+    "cve_id": null,
+    "disclosure_date": "2024-03-15",
+    "discovered_by": "Embrace the Red",
+    "affected_systems": [
+      "OpenAI ChatGPT",
+      "ChatGPT Plugins",
+      "GPT-4 with browsing"
+    ],
+    "vulnerability_type": "prompt_injection",
+    "attack_vector": "indirect_prompt_injection",
+    "impact": {
+      "confidentiality": true,
+      "integrity": true,
+      "availability": false
+    },
+    "technical_details": {
+      "attack_method": "Malicious prompts embedded in external content (PDFs, websites, documents) that are processed by ChatGPT plugins",
+      "exploitation_complexity": "medium",
+      "user_interaction": "required",
+      "scope": "changed"
+    },
+    "threat_mapping": [
+      "t1",
+      "t6"
+    ],
+    "mitigation_mapping": [
+      "m4",
+      "m11",
+      "m1"
+    ],
+    "proof_of_concept": {
+      "available": true,
+      "description": "Demonstrated data exfiltration via image markdown rendering with embedded conversation data in URLs"
+    },
+    "remediation": {
+      "vendor_response": "OpenAI implemented content filtering and URL validation",
+      "workarounds": [
+        "Disable plugin access to external content",
+        "Implement content sanitization",
+        "Use allowlist for trusted domains"
+      ],
+      "patch_status": "partially_fixed"
+    },
+    "references": [
+      {
+        "title": "ChatGPT Data Exfiltration via Indirect Prompt Injection",
+        "url": "https://embracethered.com/blog/posts/2023/chatgpt-data-exfiltration-via-indirect-prompt-injection/",
+        "type": "blog_post"
+      }
+    ],
+    "tags": [
+      "prompt_injection",
+      "data_exfiltration",
+      "plugins",
+      "llm"
+    ],
+    "status": "disclosed",
+    "last_updated": "2024-03-15"
+  }
+]

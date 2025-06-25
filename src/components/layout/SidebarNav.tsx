@@ -3,12 +3,13 @@ import { Link, useLocation } from "react-router-dom";
 import { architecturesData, Architecture } from "../components/architecturesData";
 import { threatsData, Threat, mitigationsData, Mitigation } from "../components/securityData";
 import { frameworkData } from "../components/frameworkData";
+import vulnerabilityData from "../../data/vulnerabilities.json";
 import { cn } from "@/lib/utils";
 import { X, Menu, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface SidebarNavProps {
-  type: "architectures" | "threats" | "controls" | "components";
+  type: "architectures" | "threats" | "controls" | "components" | "vulnerabilities";
   activeId?: string;
   isOpen: boolean;
   onClose: () => void;
@@ -63,6 +64,12 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ type, activeId, isOpen, onClose
     
     addComponentsRecursively(frameworkData, 0);
     items = componentItems;
+  } else if (type === "vulnerabilities") {
+    items = (vulnerabilityData as any[]).map((v) => ({
+      id: v.id,
+      label: `${v.id} - ${v.title}`,
+      path: `/vulnerabilities/${v.id}`
+    }));
   }
 
   // Main navigation items for mobile
@@ -72,7 +79,8 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ type, activeId, isOpen, onClose
     { name: "Threats", path: "/threats" },
     { name: "Controls", path: "/controls" },
     { name: "AISVS", path: "/aisvs" },
-    { name: "NIST Mapping", path: "/nist-mapping" }
+    { name: "NIST Mapping", path: "/nist-mapping" },
+    { name: "Vulnerabilities", path: "/vulnerabilities" }
   ];
 
   // Helper function to check if nav item is active

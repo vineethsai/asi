@@ -3,12 +3,14 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { threatsData, mitigationsData, Threat, Mitigation } from "../components/components/securityData";
+
 import Header from "@/components/layout/Header";
 import SidebarNav from "../components/layout/SidebarNav";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Icon } from "@/components/ui/icon";
 import { Helmet } from "react-helmet";
+import { Shield, ExternalLink } from "lucide-react";
 
 export const ThreatDetail = () => {
   const { threatId } = useParams<{ threatId: string }>();
@@ -16,6 +18,7 @@ export const ThreatDetail = () => {
   const mitigations: Mitigation[] = threat
     ? Object.values(mitigationsData).filter(m => m.threatIds.includes(threat.id))
     : [];
+
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -310,6 +313,8 @@ export const ThreatDetail = () => {
                     )}
                   </CardContent>
                 </Card>
+
+
                 {/* Mitigation */}
                 <Card className="border border-control/20">
                   <CardContent className="p-4">

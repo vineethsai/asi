@@ -21,7 +21,8 @@ export const Header = ({ onMobileMenuToggle, isMobileMenuOpen = false }: HeaderP
     { name: "Threats", path: "/threats" },
     { name: "Controls", path: "/controls" },
     { name: "AISVS", path: "/aisvs" },
-    { name: "NIST Mapping", path: "/nist-mapping" }
+    { name: "NIST Mapping", path: "/nist-mapping" },
+    { name: "Vulnerabilities", path: "/vulnerabilities" }
   ];
 
   // Helper function to check if nav item is active
