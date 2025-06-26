@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { frameworkData } from "../components/frameworkData";
+import { frameworkData, type ComponentNode } from "../components/frameworkData";
 import { threatsData, mitigationsData, type Threat as SecurityThreat, type Mitigation as SecurityMitigation } from "../components/securityData";
 
 // Import proper UI components
@@ -56,7 +56,7 @@ export interface HierarchicalComponentOption {
 
 // Convert frameworkData to hierarchical component data
 const convertFrameworkDataToHierarchical = (): HierarchicalComponentOption[] => {
-  const convertNode = (node: any): HierarchicalComponentOption => {
+  const convertNode = (node: ComponentNode): HierarchicalComponentOption => {
     return {
       id: node.id,
       name: node.title,
@@ -364,7 +364,7 @@ export const AssessmentTool = () => {
         if (priorityA !== priorityB) return priorityA - priorityB;
         return b.coverage - a.coverage;
       });
-  }, [getRelevantThreats, selectedMitigations, isComponentFamilySelected, selectedComponents]);
+  }, [getRelevantThreats, selectedMitigations]);
   
   const calculateSecurityScore = useCallback(() => {
     const threatsAssessments = getRelevantThreats();

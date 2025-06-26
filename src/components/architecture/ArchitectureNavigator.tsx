@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import * as d3 from 'd3';
 import { architecturesData, Architecture } from '../components/architecturesData';
-import { frameworkData } from '../components/frameworkData';
+import { frameworkData, type ComponentNode } from '../components/frameworkData';
 import { threatsData, mitigationsData } from '../components/securityData';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -91,7 +91,7 @@ const getComponentDataById = (id: string) => {
   }
   
   // Fallback to searching in framework data
-  const searchInFramework = (nodes: any[]): any => {
+  const searchInFramework = (nodes: ComponentNode[]): ComponentNode | null => {
     for (const node of nodes) {
       if (node.id === id || node.id.replace(/-/g, '.') === id) return node;
       if (node.children) {
@@ -610,6 +610,7 @@ const ArchitectureNavigator: React.FC = () => {
   const zoomIn = useCallback(() => {
     if (svgRef.current) {
       d3.select(svgRef.current).transition().call(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         d3.zoom<SVGSVGElement, unknown>().scaleBy as any, 1.5
       );
     }
@@ -618,6 +619,7 @@ const ArchitectureNavigator: React.FC = () => {
   const zoomOut = useCallback(() => {
     if (svgRef.current) {
       d3.select(svgRef.current).transition().call(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         d3.zoom<SVGSVGElement, unknown>().scaleBy as any, 1 / 1.5
       );
     }
@@ -626,6 +628,7 @@ const ArchitectureNavigator: React.FC = () => {
   const resetZoom = useCallback(() => {
     if (svgRef.current) {
       d3.select(svgRef.current).transition().call(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         d3.zoom<SVGSVGElement, unknown>().transform as any,
         d3.zoomIdentity
       );
@@ -661,6 +664,7 @@ const ArchitectureNavigator: React.FC = () => {
 
         svg.transition()
           .duration(750)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .call(d3.zoom<SVGSVGElement, unknown>().transform as any,
             d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
       }

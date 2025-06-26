@@ -170,14 +170,40 @@ function normalizeId(id: string): string {
   return id.replace(/-/g, '.').toLowerCase(); // Normalize to dot notation and lowercase for matching
 }
 
-function populateComponentMap(components: any[], map: Map<string, MyComponentData>) {
+interface ParsedComponent {
+  id: string;
+  title: string;
+  description: string;
+  threatIds?: string[];
+  color?: string;
+  subComponents?: ParsedSubComponent[];
+}
+
+interface ParsedSubComponent {
+  id: string;
+  title: string;
+  description: string;
+  threatIds?: string[];
+  color?: string;
+  subSubComponents?: ParsedSubSubComponent[];
+}
+
+interface ParsedSubSubComponent {
+  id: string;
+  title: string;
+  description: string;
+  threatIds?: string[];
+  color?: string;
+}
+
+function populateComponentMap(components: ParsedComponent[], map: Map<string, MyComponentData>) {
   components.forEach(comp => {
     const children: MyComponentData[] = [];
     if (comp.subComponents) {
-      comp.subComponents.forEach((sc: any) => {
+      comp.subComponents.forEach((sc: ParsedSubComponent) => {
         const grandChildren: MyComponentData[] = [];
         if (sc.subSubComponents) {
-            sc.subSubComponents.forEach((ssc: any) => {
+            sc.subSubComponents.forEach((ssc: ParsedSubSubComponent) => {
                 grandChildren.push({
                     id: ssc.id,
                     title: ssc.title,
@@ -434,6 +460,7 @@ function updateUserNode(userNode: ComponentNode): void {
     if (myData.threatIds && myData.threatIds.length > 0) {
       userNode.threatCategories = myData.threatIds.map(tid => threatIdToTitleMap[tid] || tid);
     } else if (userNode.threatCategories && userNode.threatCategories.length > 0) {
+      // Keep existing threat categories if they exist
     } else {
         userNode.threatCategories = [];
     }
