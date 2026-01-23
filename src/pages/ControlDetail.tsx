@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { mitigationsData, threatsData, Mitigation, Threat } from "../components/components/securityData";
 import Header from "@/components/layout/Header";
@@ -14,9 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Icon } from "@/components/ui/icon";
 import { Helmet } from "react-helmet";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CheckCircle2, Circle, Copy, Check, Play, Eye, EyeOff, Info, ExternalLink, Lightbulb, AlertTriangle, Target } from "lucide-react";
+import { CheckCircle2, Circle, Copy, Check, ExternalLink, AlertTriangle, Target, Shield, Hammer, Settings, Wrench, ArrowRight, Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 
@@ -26,11 +25,11 @@ export const ControlDetail = () => {
   
   // Theme detection
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
   
   // Interactive state management
   const [checkedItems, setCheckedItems] = useState<{[key: string]: boolean}>({});
   const [copiedCode, setCopiedCode] = useState<{[key: string]: boolean}>({});
-  const [expandedSections, setExpandedSections] = useState<{[key: string]: boolean}>({});
   
   // Mobile navigation state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -88,18 +87,13 @@ export const ControlDetail = () => {
       setCopiedCode({ ...copiedCode, [codeId]: false });
     }, 2000);
   };
+  
   const threats: Threat[] = mitigation
     ? mitigation.threatIds.map(id => threatsData[id]).filter(Boolean)
     : [];
 
-  // Helper to map component IDs to names
-  const componentIdToName: Record<string, string> = Object.fromEntries(
-    frameworkData.map((c) => [c.id, c.title])
-  );
-
   // Helper to extract code blocks and prose from a section
   function splitProseAndCode(content: string) {
-    // Only split on triple-backtick code blocks
     const codeBlockRegex = /```([\w]*)\n([\s\S]*?)```/g;
     let parts: { type: 'code' | 'prose', value: string, lang?: string }[] = [];
     let lastIndex = 0;
@@ -125,7 +119,6 @@ export const ControlDetail = () => {
       return <span>{text}</span>;
     }
 
-    // Define technical terms and their explanations
     const technicalTerms: Record<string, { definition: string; icon: JSX.Element }> = {
       'containerization': {
         definition: 'A lightweight form of virtualization that packages applications with their dependencies into containers',
@@ -153,7 +146,7 @@ export const ControlDetail = () => {
       },
       'WASM': {
         definition: 'WebAssembly - a binary instruction format for a stack-based virtual machine',
-        icon: <Lightbulb className="h-3 w-3" />
+        icon: <Info className="h-3 w-3" />
       },
       'QEMU': {
         definition: 'Quick Emulator - a generic and open source machine emulator and virtualizer',
@@ -169,7 +162,7 @@ export const ControlDetail = () => {
       },
       'microVM': {
         definition: 'Lightweight virtual machines optimized for serverless computing workloads',
-        icon: <Lightbulb className="h-3 w-3" />
+        icon: <Info className="h-3 w-3" />
       },
       'cgroups': {
         definition: 'Control groups - a Linux kernel feature that limits and isolates resource usage',
@@ -185,15 +178,6 @@ export const ControlDetail = () => {
       }
     };
 
-    // Risk level indicators
-    const riskLevels: Record<string, { color: string; icon: JSX.Element }> = {
-      'LOW RISK': { color: 'text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900', icon: <CheckCircle2 className="h-3 w-3" /> },
-      'MEDIUM RISK': { color: 'text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900', icon: <AlertTriangle className="h-3 w-3" /> },
-      'HIGH RISK': { color: 'text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900', icon: <AlertTriangle className="h-3 w-3" /> },
-      'CRITICAL RISK': { color: 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900', icon: <AlertTriangle className="h-3 w-3" /> }
-    };
-
-    // Simple approach: split by words and process each
     const words = text.split(/(\s+)/);
     const elements: JSX.Element[] = [];
 
@@ -201,10 +185,6 @@ export const ControlDetail = () => {
       const cleanWord = word.replace(/[^\w]/g, '').toLowerCase();
       const techTerm = Object.keys(technicalTerms).find(term => 
         term.toLowerCase() === cleanWord
-      );
-      
-      const riskLevel = Object.keys(riskLevels).find(level => 
-        text.toUpperCase().includes(level)
       );
 
       if (techTerm && word.toLowerCase().includes(techTerm.toLowerCase())) {
@@ -223,14 +203,6 @@ export const ControlDetail = () => {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        );
-      } else if (riskLevel && word.toUpperCase().includes(riskLevel)) {
-        const levelInfo = riskLevels[riskLevel];
-        elements.push(
-          <span key={`risk-${index}`} className={`inline-flex items-center gap-1 px-2 py-1 mx-1 rounded-full text-xs font-medium ${levelInfo.color}`}>
-            {levelInfo.icon}
-            {word.trim()}
-          </span>
         );
       } else {
         elements.push(<span key={`text-${index}`}>{word}</span>);
@@ -251,11 +223,13 @@ export const ControlDetail = () => {
       
       return (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Progress: {completedCount}/{items.length}</span>
-            <span className="text-sm text-muted-foreground">{Math.round(progressPercentage)}%</span>
-          </div>
-          <Progress value={progressPercentage} className="h-2" />
+          {items.length > 5 && (
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-muted-foreground">Progress: {completedCount}/{items.length}</span>
+              <span className="text-sm text-muted-foreground">{Math.round(progressPercentage)}%</span>
+            </div>
+          )}
+          {items.length > 5 && <Progress value={progressPercentage} className="h-2 mb-4" />}
           <div className="space-y-3">
             {items.map((item, i) => {
               const itemId = `${sectionId}-${i}`;
@@ -270,13 +244,13 @@ export const ControlDetail = () => {
                   />
                   <label 
                     htmlFor={itemId} 
-                    className={`text-sm cursor-pointer transition-all ${
+                    className={`text-sm cursor-pointer transition-all flex-1 ${
                       isChecked ? 'line-through text-muted-foreground' : 'text-foreground'
                     }`}
                   >
                     {enhanceTextWithInteractivity(item)}
                   </label>
-                  {isChecked && <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />}
+                  {isChecked && <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />}
                 </div>
               );
             })}
@@ -324,7 +298,7 @@ export const ControlDetail = () => {
             borderRadius: 8, 
             fontSize: 13, 
             padding: 16,
-            paddingTop: 40 // Make room for buttons
+            paddingTop: 40
           }}
         >
           {code}
@@ -336,12 +310,10 @@ export const ControlDetail = () => {
   function renderSectionContent(content: string, sectionId: string) {
     const lines = content.split("\n").filter(l => l.trim() !== "");
     
-    // If all lines start with '-', render as interactive checklist
     if (lines.length > 1 && lines.every(l => l.trim().startsWith("- "))) {
       return renderInteractiveChecklist(content, sectionId);
     }
     
-    // If a single line contains multiple ' - ', render as enhanced list
     if (lines.length === 1 && (content.match(/ - /g) || []).length > 1) {
       const items = content.split(/ - /).map(s => s.trim()).filter(Boolean);
       return (
@@ -358,13 +330,11 @@ export const ControlDetail = () => {
       );
     }
     
-    // Otherwise, split prose and code
     const parts = splitProseAndCode(content);
     if (parts.length === 1 && parts[0].type === 'prose') {
       return formatProseContent(parts[0].value, sectionId);
     }
     
-    // If multiple code blocks, use tabs with enhanced code rendering
     const codeBlocks = parts.filter(p => p.type === 'code');
     if (codeBlocks.length > 1) {
       return (
@@ -385,7 +355,6 @@ export const ControlDetail = () => {
       );
     }
     
-    // Otherwise, render prose and code blocks sequentially with enhanced formatting
     return (
       <div className="space-y-6">
         {parts.map((part, i) =>
@@ -409,20 +378,18 @@ export const ControlDetail = () => {
     const elements: JSX.Element[] = [];
     let currentList: JSX.Element[] = [];
     let currentListType: 'bullet' | 'numbered' | null = null;
-    let inSubSection = false;
-    let currentSubSectionItems: JSX.Element[] = [];
 
     const flushList = () => {
       if (currentList.length > 0) {
         if (currentListType === 'bullet') {
           elements.push(
-            <ul key={`list-${elements.length}`} className="space-y-3 ml-0 my-4">
+            <ul key={`list-${elements.length}`} className="space-y-2 ml-0 my-4">
               {currentList}
             </ul>
           );
         } else if (currentListType === 'numbered') {
           elements.push(
-            <ol key={`list-${elements.length}`} className="space-y-3 ml-0 my-4 list-decimal list-inside">
+            <ol key={`list-${elements.length}`} className="space-y-2 ml-0 my-4 list-decimal list-inside">
               {currentList}
             </ol>
           );
@@ -432,50 +399,33 @@ export const ControlDetail = () => {
       }
     };
 
-    const flushSubSection = () => {
-      if (currentSubSectionItems.length > 0) {
-        elements.push(
-          <div key={`subsection-${elements.length}`} className="ml-4 space-y-3 border-l-2 border-blue-200 dark:border-blue-700 pl-4 my-4 bg-blue-50/30 dark:bg-blue-950/30 rounded-r-lg py-3">
-            {currentSubSectionItems}
-          </div>
-        );
-        currentSubSectionItems = [];
-        inSubSection = false;
-      }
-    };
-
     lines.forEach((line, index) => {
       const trimmedLine = line.trim();
       
       if (!trimmedLine) {
-        // Empty line - flush any current list or subsection
         flushList();
-        flushSubSection();
         return;
       }
 
-      // Main headings (starting with **)
       if (trimmedLine.match(/^\*\*([^*]+)\*\*:?\s*$/)) {
         flushList();
-        flushSubSection();
         const headingText = trimmedLine.replace(/^\*\*([^*]+)\*\*:?\s*$/, '$1');
         elements.push(
-          <h3 key={`heading-${index}`} className="text-lg font-semibold text-foreground mb-4 mt-6 flex items-center gap-3 pb-2 border-b border-border/50">
+          <h3 key={`heading-${index}`} className="text-lg font-semibold text-foreground mb-3 mt-6 flex items-center gap-3 pb-2 border-b border-border/50">
             <div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full"></div>
-            <span className="bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">{headingText}</span>
+            <span>{headingText}</span>
           </h3>
         );
         return;
       }
 
-      // Sub-headings (starting with ** but with content after)
       if (trimmedLine.startsWith('**') && trimmedLine.includes(':**')) {
         flushList();
         const headingMatch = trimmedLine.match(/^\*\*([^*]+)\*\*:\s*(.*)$/);
         if (headingMatch) {
           const [, heading, content] = headingMatch;
           elements.push(
-            <div key={`subheading-${index}`} className="mt-5 mb-3">
+            <div key={`subheading-${index}`} className="mt-4 mb-3">
               <h4 className="text-base font-semibold text-foreground mb-2 flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-primary/70"></div>
                 {heading}
@@ -487,19 +437,13 @@ export const ControlDetail = () => {
               )}
             </div>
           );
-          inSubSection = true;
           return;
         }
       }
 
-      // Bullet points (starting with -)
       if (trimmedLine.startsWith('- ')) {
-        flushSubSection();
         const content = trimmedLine.substring(2).trim();
-        
-        // Check if this is a sub-bullet (indented)
         const isSubBullet = line.startsWith('  - ') || line.startsWith('    - ');
-        const indentLevel = line.match(/^(\s*)/)?.[1]?.length || 0;
         
         if (currentListType !== 'bullet') {
           flushList();
@@ -514,7 +458,7 @@ export const ControlDetail = () => {
                 ? 'bg-blue-400 dark:bg-blue-500' 
                 : 'bg-primary shadow-sm'
             }`}></div>
-            <div className="flex-1 leading-relaxed text-muted-foreground">
+            <div className="flex-1 leading-relaxed text-muted-foreground text-sm">
               {bulletContent}
             </div>
           </li>
@@ -522,9 +466,7 @@ export const ControlDetail = () => {
         return;
       }
 
-      // Numbered points (starting with number.)
       if (trimmedLine.match(/^\d+\.\s/)) {
-        flushSubSection();
         const content = trimmedLine.replace(/^\d+\.\s/, '');
         
         if (currentListType !== 'numbered') {
@@ -535,7 +477,7 @@ export const ControlDetail = () => {
         const bulletContent = formatBulletContent(content);
         currentList.push(
           <li key={`numbered-${index}`} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
-            <div className="flex-1 leading-relaxed text-muted-foreground">
+            <div className="flex-1 leading-relaxed text-muted-foreground text-sm">
               {bulletContent}
             </div>
           </li>
@@ -543,35 +485,19 @@ export const ControlDetail = () => {
         return;
       }
 
-      // Regular paragraph
       flushList();
-      
-      if (inSubSection) {
-        currentSubSectionItems.push(
-          <p key={`subsection-p-${index}`} className="leading-relaxed text-muted-foreground text-sm">
-            {enhanceTextWithInteractivity(trimmedLine)}
-          </p>
-        );
-      } else {
-        flushSubSection();
-        elements.push(
-          <p key={`paragraph-${index}`} className="leading-relaxed text-muted-foreground mb-3 text-sm">
-            {enhanceTextWithInteractivity(trimmedLine)}
-          </p>
-        );
-      }
+      elements.push(
+        <p key={`paragraph-${index}`} className="leading-relaxed text-muted-foreground mb-3 text-sm">
+          {enhanceTextWithInteractivity(trimmedLine)}
+        </p>
+      );
     });
 
-    // Flush any remaining items
     flushList();
-    flushSubSection();
-
     return <div className="space-y-2">{elements}</div>;
   }
 
-  // Enhanced bullet content formatting
   function formatBulletContent(content: string): JSX.Element {
-    // Check for bold text patterns
     const boldPattern = /\*\*([^*]+)\*\*/g;
     const parts = content.split(boldPattern);
     
@@ -579,14 +505,12 @@ export const ControlDetail = () => {
       <span className="text-sm">
         {parts.map((part, index) => {
           if (index % 2 === 1) {
-            // This is bold text
             return (
               <span key={index} className="font-semibold text-foreground">
                 {enhanceTextWithInteractivity(part)}
               </span>
             );
           } else {
-            // Regular text
             return (
               <span key={index}>
                 {enhanceTextWithInteractivity(part)}
@@ -608,11 +532,6 @@ export const ControlDetail = () => {
       </div>
     );
   }
-
-  // Analytics for threats/tags/phases
-  const threatCount = mitigation.threatIds?.length || 0;
-  const tagCount = (mitigation.tags || []).length;
-  const phaseCount = [mitigation.designPhase, mitigation.buildPhase, mitigation.operationPhase].filter(Boolean).length;
 
   // Calculate overall progress
   const getAllChecklistItems = () => {
@@ -637,57 +556,23 @@ export const ControlDetail = () => {
   const completedItems = getCompletedItems();
   const overallProgress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
 
+  // Determine which phases are available
+  const hasDesign = mitigation.implementationDetail.design && mitigation.implementationDetail.design.trim();
+  const hasBuild = mitigation.implementationDetail.build && mitigation.implementationDetail.build.trim();
+  const hasOperations = mitigation.implementationDetail.operations && mitigation.implementationDetail.operations.trim();
+  const hasTools = mitigation.implementationDetail.toolsAndFrameworks && mitigation.implementationDetail.toolsAndFrameworks.trim();
+
   return (
     <>
       <Helmet>
         <title>{mitigation.name} | OWASP Securing Agentic Applications Guide</title>
         <meta name="description" content={`${mitigation.description} Learn how to implement this AI security control to mitigate threats in agentic systems.`} />
-        <meta name="keywords" content={`${mitigation.name}, AI security control, OWASP, agentic systems, ${mitigation.tags?.join(', ') || ''}, AI mitigations, security controls`} />
-        <meta name="robots" content="index, follow" />
-        <link rel="canonical" href={`https://agenticsecurity.info/controls/${mitigation.id}`} />
-        <meta property="og:title" content={`${mitigation.name} | OWASP Guide`} />
-        <meta property="og:description" content={mitigation.description} />
-        <meta property="og:type" content="article" />
-        <meta property="og:url" content={`https://agenticsecurity.info/controls/${mitigation.id}`} />
-        <meta property="og:site_name" content="OWASP Securing Agentic Applications Guide" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={`${mitigation.name} | OWASP Guide`} />
-        <meta name="twitter:description" content={mitigation.description} />
-        <meta name="twitter:url" content={`https://agenticsecurity.info/controls/${mitigation.id}`} />
-        <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "TechArticle",
-            "headline": mitigation.name,
-            "description": mitigation.description,
-            "url": `https://agenticsecurity.info/controls/${mitigation.id}`,
-            "datePublished": new Date().toISOString(),
-            "dateModified": new Date().toISOString(),
-            "author": {
-              "@type": "Organization",
-              "name": "OWASP"
-            },
-            "publisher": {
-              "@type": "Organization",
-              "name": "OWASP",
-              "url": "https://owasp.org"
-            },
-            "about": "AI Security Control",
-            "keywords": mitigation.tags?.join(', ') || '',
-            "isPartOf": {
-              "@type": "WebSite",
-              "name": "OWASP Securing Agentic Applications Guide",
-              "url": "https://agenticsecurity.info"
-            }
-          })}
-        </script>
       </Helmet>
       <Header 
         onMobileMenuToggle={handleMobileMenuToggle} 
         isMobileMenuOpen={isMobileMenuOpen} 
       />
       
-      {/* Mobile Navigation Sidebar */}
       <SidebarNav 
         type="controls" 
         activeId={mitigation.id} 
@@ -695,225 +580,345 @@ export const ControlDetail = () => {
         onClose={handleMobileMenuClose} 
       />
       
-      <section className="py-12 bg-secondary/50 min-h-screen">
-        <div className="container px-4 md:px-6">
-          <div className="flex flex-col lg:flex-row gap-6">
-            <div className="flex-1">
-              <Link to="/controls" className="inline-flex items-center text-muted-foreground hover:text-foreground mb-4">
-                &larr; Back to Controls
-              </Link>
-              {/* Overview/Metadata Card */}
-              <Card className="mb-4 border border-control/20">
+      <section className="py-8 bg-background min-h-screen">
+        <div className="container px-4 md:px-6 max-w-7xl">
+          {/* Breadcrumb */}
+          <Link to="/controls" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6">
+            <ArrowRight className="h-4 w-4 mr-2 rotate-180" />
+            Back to Controls
+          </Link>
+
+          {/* Header Section */}
+          <div className="mb-8">
+            <div className="flex items-start gap-4 mb-4">
+              {mitigation.icon && (
+                <div className="p-3 rounded-lg bg-primary/10">
+                  <Icon name={mitigation.icon} color={mitigation.color} size={32} />
+                </div>
+              )}
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <h1 className="text-3xl font-bold text-foreground">{mitigation.name}</h1>
+                  {mitigation.status && (
+                    <Badge variant="outline" className="capitalize">
+                      {mitigation.status}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-muted-foreground text-lg leading-relaxed mb-4">
+                  {enhanceTextWithInteractivity(mitigation.description)}
+                </p>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {(mitigation.tags || []).map(tag => (
+                    <Badge key={tag} variant="secondary" className="text-xs">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Version {mitigation.version || "-"} • Updated {mitigation.lastUpdated || "-"} • By {mitigation.updatedBy || "-"}
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+              <Card>
                 <CardContent className="p-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    {mitigation.icon && <Icon name={mitigation.icon} color={mitigation.color} size={32} />}
-                    <h1 className="text-2xl font-bold text-foreground">{mitigation.name}</h1>
-                    {mitigation.status && <Badge variant="outline" className="capitalize ml-2">{mitigation.status}</Badge>}
+                  <div className="flex items-center gap-2 mb-1">
+                    <AlertTriangle className="h-4 w-4 text-red-500" />
+                    <span className="text-xs text-muted-foreground">Mitigates</span>
                   </div>
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {(mitigation.tags || []).map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
-                  </div>
-                  <div className="text-xs text-muted-foreground mb-1">Version: {mitigation.version || "-"} | Last Updated: {mitigation.lastUpdated || "-"} | Updated By: {mitigation.updatedBy || "-"}</div>
-                  {mitigation.references && mitigation.references.length > 0 && <div className="text-xs mt-1">{mitigation.references.map(ref => <a key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80 mr-2">{ref.title}</a>)}</div>}
-                  <div className="text-muted-foreground mt-4 leading-relaxed">
-                    {enhanceTextWithInteractivity(mitigation.description)}
-                  </div>
-                  {/* Analytics widgets */}
-                  <div className="flex flex-wrap gap-4 mt-4">
-                    <div className="bg-muted rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
-                      <div className="text-xs text-muted-foreground mb-1">Threats</div>
-                      <span className="font-bold text-lg text-threat">{threatCount}</span>
-                    </div>
-                    <div className="bg-muted rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
-                      <div className="text-xs text-muted-foreground mb-1">Tags</div>
-                      <span className="font-bold text-lg text-yellow-600 dark:text-yellow-400">{tagCount}</span>
-                    </div>
-                    <div className="bg-muted rounded-lg border p-2 flex flex-col items-center min-w-[100px]">
-                      <div className="text-xs text-muted-foreground mb-1">Phases</div>
-                      <span className="font-bold text-lg text-blue-600 dark:text-blue-400">{phaseCount}</span>
-                    </div>
-                  </div>
+                  <div className="text-2xl font-bold">{threats.length}</div>
+                  <div className="text-xs text-muted-foreground">Threats</div>
                 </CardContent>
               </Card>
-
-              {/* Implementation Progress Card */}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Shield className="h-4 w-4 text-blue-500" />
+                    <span className="text-xs text-muted-foreground">Phases</span>
+                  </div>
+                  <div className="text-2xl font-bold">
+                    {[hasDesign, hasBuild, hasOperations].filter(Boolean).length}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Active</div>
+                </CardContent>
+              </Card>
               {totalItems > 0 && (
-                <Card className="mb-4 border border-green-200 dark:border-green-800">
+                <Card>
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h2 className="text-lg font-semibold text-green-700 dark:text-green-300">Implementation Progress</h2>
-                      <Badge variant={overallProgress === 100 ? "default" : "secondary"} className="text-sm">
-                        {Math.round(overallProgress)}% Complete
-                      </Badge>
+                    <div className="flex items-center gap-2 mb-1">
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      <span className="text-xs text-muted-foreground">Progress</span>
                     </div>
-                    <Progress value={overallProgress} className="h-3 mb-3" />
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <span>{completedItems} of {totalItems} tasks completed</span>
-                      {overallProgress === 100 && (
-                        <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                          <CheckCircle2 className="h-4 w-4" />
-                          <span className="font-medium">All Done!</span>
-                        </div>
-                      )}
+                    <div className="text-2xl font-bold">{Math.round(overallProgress)}%</div>
+                    <div className="text-xs text-muted-foreground">{completedItems}/{totalItems} tasks</div>
+                  </CardContent>
+                </Card>
+              )}
+              {mitigation.references && mitigation.references.length > 0 && (
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <ExternalLink className="h-4 w-4 text-purple-500" />
+                      <span className="text-xs text-muted-foreground">References</span>
+                    </div>
+                    <div className="text-2xl font-bold">{mitigation.references.length}</div>
+                    <div className="text-xs text-muted-foreground">Resources</div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+
+          {/* Main Content Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 mb-6">
+              <TabsTrigger value="overview" className="flex items-center gap-2">
+                <Info className="h-4 w-4" />
+                <span className="hidden sm:inline">Overview</span>
+              </TabsTrigger>
+              {hasDesign && (
+                <TabsTrigger value="design" className="flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  <span className="hidden sm:inline">Design</span>
+                </TabsTrigger>
+              )}
+              {hasBuild && (
+                <TabsTrigger value="build" className="flex items-center gap-2">
+                  <Hammer className="h-4 w-4" />
+                  <span className="hidden sm:inline">Build</span>
+                </TabsTrigger>
+              )}
+              {hasOperations && (
+                <TabsTrigger value="operations" className="flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  <span className="hidden sm:inline">Operations</span>
+                </TabsTrigger>
+              )}
+              {hasTools && (
+                <TabsTrigger value="tools" className="flex items-center gap-2">
+                  <Wrench className="h-4 w-4" />
+                  <span className="hidden sm:inline">Tools</span>
+                </TabsTrigger>
+              )}
+            </TabsList>
+
+            {/* Overview Tab */}
+            <TabsContent value="overview" className="space-y-6">
+              {/* Threats Section */}
+              {threats.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-red-500" />
+                      Mitigates Threats
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-3">
+                      {threats.map(threat => (
+                        <Link 
+                          key={threat.id}
+                          to={`/threats/${threat.id}`}
+                          className="flex items-start gap-4 p-4 rounded-lg border hover:bg-muted/50 transition-colors group"
+                        >
+                          <div className="w-2 h-2 rounded-full bg-red-500 mt-2 group-hover:scale-125 transition-transform flex-shrink-0"></div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-foreground group-hover:text-primary transition-colors mb-1">
+                              {threat.code} - {threat.name}
+                            </div>
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {threat.description}
+                            </p>
+                            {threat.impactLevel && (
+                              <Badge 
+                                variant={threat.impactLevel === 'high' ? 'destructive' : threat.impactLevel === 'medium' ? 'secondary' : 'outline'}
+                                className="mt-2 text-xs"
+                              >
+                                {threat.impactLevel} impact
+                              </Badge>
+                            )}
+                          </div>
+                          <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 mt-1" />
+                        </Link>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
               )}
 
-              {/* Implementation Details with Accordion */}
-              <div className="space-y-4">
-                <Accordion type="multiple" defaultValue={["design-phase", "threats"]} className="w-full">
-                  {/* Design Phase */}
-                  {mitigation.implementationDetail.design && mitigation.implementationDetail.design.trim() && (
-                    <AccordionItem value="design-phase" className="border border-blue-200 dark:border-blue-800 rounded-lg bg-card shadow-sm">
-                      <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-blue-50/50 dark:hover:bg-blue-950/50 transition-colors rounded-t-lg">
-                        <div className="flex items-center gap-3 w-full">
-                          <div className="w-3 h-3 rounded-full bg-blue-500 shadow-sm"></div>
-                          <span className="text-base font-semibold text-blue-700 dark:text-blue-300">Design Phase</span>
-                          <Badge variant="outline" className="ml-auto mr-4 bg-blue-50 dark:bg-blue-950 border-blue-300 dark:border-blue-700">
-                            {mitigation.implementationDetail.design.split('\n').filter(l => l.trim().startsWith('- ')).length} items
-                          </Badge>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="px-6 pb-6 pt-2 bg-gradient-to-b from-blue-50/20 to-transparent dark:from-blue-950/20">
-                        {renderSectionContent(mitigation.implementationDetail.design, "design-phase")}
-                      </AccordionContent>
-                    </AccordionItem>
-                  )}
+              {/* References */}
+              {mitigation.references && mitigation.references.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <ExternalLink className="h-5 w-5 text-purple-500" />
+                      References & Resources
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {mitigation.references.map((ref, index) => (
+                        <a
+                          key={index}
+                          href={ref.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted/50 transition-colors group"
+                        >
+                          <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                          <span className="text-sm font-medium group-hover:text-primary transition-colors">
+                            {ref.title}
+                          </span>
+                        </a>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
-                  {/* Build Phase */}
-                  {mitigation.implementationDetail.build && mitigation.implementationDetail.build.trim() && (
-                    <AccordionItem value="build-phase" className="border border-yellow-200 dark:border-yellow-800 rounded-lg bg-card shadow-sm">
-                      <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-yellow-50/50 dark:hover:bg-yellow-950/50 transition-colors rounded-t-lg">
-                        <div className="flex items-center gap-3 w-full">
-                          <div className="w-3 h-3 rounded-full bg-yellow-500 shadow-sm"></div>
-                          <span className="text-base font-semibold text-yellow-700 dark:text-yellow-300">Build Phase</span>
-                          <Badge variant="outline" className="ml-auto mr-4 bg-yellow-50 dark:bg-yellow-950 border-yellow-300 dark:border-yellow-700">
-                            {mitigation.implementationDetail.build.split('\n').filter(l => l.trim().startsWith('- ')).length} items
-                          </Badge>
+              {/* Implementation Summary */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Implementation Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {hasDesign && (
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                        <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        <div className="flex-1">
+                          <div className="font-medium text-blue-900 dark:text-blue-100">Design Phase</div>
+                          <div className="text-sm text-muted-foreground">
+                            {mitigation.implementationDetail.design.split('\n').filter(l => l.trim().startsWith('- ')).length} tasks
+                          </div>
                         </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="px-6 pb-6 pt-2 bg-gradient-to-b from-yellow-50/20 to-transparent dark:from-yellow-950/20">
-                        {renderSectionContent(mitigation.implementationDetail.build, "build-phase")}
-                      </AccordionContent>
-                    </AccordionItem>
-                  )}
-
-                  {/* Operation Phase */}
-                  {mitigation.implementationDetail.operations && mitigation.implementationDetail.operations.trim() && (
-                    <AccordionItem value="operation-phase" className="border border-green-200 dark:border-green-800 rounded-lg bg-card shadow-sm">
-                      <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-green-50/50 dark:hover:bg-green-950/50 transition-colors rounded-t-lg">
-                        <div className="flex items-center gap-3 w-full">
-                          <div className="w-3 h-3 rounded-full bg-green-500 shadow-sm"></div>
-                          <span className="text-base font-semibold text-green-700 dark:text-green-300">Operation Phase</span>
-                          <Badge variant="outline" className="ml-auto mr-4 bg-green-50 dark:bg-green-950 border-green-300 dark:border-green-700">
-                            {mitigation.implementationDetail.operations.split('\n').filter(l => l.trim().startsWith('- ')).length} items
-                          </Badge>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="px-6 pb-6 pt-2 bg-gradient-to-b from-green-50/20 to-transparent dark:from-green-950/20">
-                        {renderSectionContent(mitigation.implementationDetail.operations, "operation-phase")}
-                      </AccordionContent>
-                    </AccordionItem>
-                  )}
-
-                  {/* Tools & Frameworks */}
-                  {mitigation.implementationDetail.toolsAndFrameworks && mitigation.implementationDetail.toolsAndFrameworks.trim() && (
-                    <AccordionItem value="tools-frameworks" className="border border-purple-200 dark:border-purple-800 rounded-lg bg-card shadow-sm">
-                      <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-purple-50/50 dark:hover:bg-purple-950/50 transition-colors rounded-t-lg">
-                        <div className="flex items-center gap-3 w-full">
-                          <div className="w-3 h-3 rounded-full bg-purple-500 shadow-sm"></div>
-                          <span className="text-base font-semibold text-purple-700 dark:text-purple-300">Tools & Frameworks</span>
-                          <Badge variant="outline" className="ml-auto mr-4 bg-purple-50 dark:bg-purple-950 border-purple-300 dark:border-purple-700">
-                            {mitigation.implementationDetail.toolsAndFrameworks.split('\n').filter(l => l.trim().startsWith('- ')).length} items
-                          </Badge>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="px-6 pb-6 pt-2 bg-gradient-to-b from-purple-50/20 to-transparent dark:from-purple-950/20">
-                        {renderSectionContent(mitigation.implementationDetail.toolsAndFrameworks, "tools-frameworks")}
-                      </AccordionContent>
-                    </AccordionItem>
-                  )}
-
-                  {/* Mitigates Threats */}
-                  <AccordionItem value="threats" className="border border-red-200 dark:border-red-800 rounded-lg bg-card shadow-sm">
-                    <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-red-50/50 dark:hover:bg-red-950/50 transition-colors rounded-t-lg">
-                      <div className="flex items-center gap-3 w-full">
-                        <div className="w-3 h-3 rounded-full bg-red-500 shadow-sm"></div>
-                        <span className="text-base font-semibold text-red-700 dark:text-red-300">Mitigates Threats</span>
-                        <Badge variant="outline" className="ml-auto mr-4 bg-red-50 dark:bg-red-950 border-red-300 dark:border-red-700">
-                          {threats.length} threats
-                        </Badge>
+                        <Button variant="ghost" size="sm" onClick={() => setActiveTab("design")}>
+                          View <ArrowRight className="h-4 w-4 ml-1" />
+                        </Button>
                       </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="px-6 pb-6 pt-2 bg-gradient-to-b from-red-50/20 to-transparent dark:from-red-950/20">
-                      {threats.length > 0 ? (
-                        <div className="grid gap-3">
-                          {threats.map(threat => (
-                            <HoverCard key={threat.id}>
-                              <HoverCardTrigger asChild>
-                                <Link 
-                                  to={`/threats/${threat.id}`} 
-                                  className="flex items-center gap-3 p-3 rounded-lg border border-red-100 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-950 transition-colors group"
-                                >
-                                  <div className="w-2 h-2 rounded-full bg-red-500 group-hover:scale-125 transition-transform"></div>
-                                  <div className="flex-1">
-                                    <div className="font-medium text-red-700 dark:text-red-300 group-hover:text-red-600 dark:group-hover:text-red-200">
-                                      {threat.code} - {threat.name}
-                                    </div>
-                                    <div className="text-sm text-muted-foreground line-clamp-2">
-                                      {enhanceTextWithInteractivity(threat.description)}
-                                    </div>
-                                  </div>
-                                  <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors" />
-                                </Link>
-                              </HoverCardTrigger>
-                              <HoverCardContent className="w-80">
-                                <div className="space-y-2">
-                                  <h4 className="text-sm font-semibold text-red-700 dark:text-red-300">
-                                    {threat.code} - {threat.name}
-                                  </h4>
-                                  <p className="text-sm text-muted-foreground">
-                                    {enhanceTextWithInteractivity(threat.description)}
-                                  </p>
-                                  {threat.impactLevel && (
-                                    <div className="flex items-center gap-2 mt-2">
-                                      <span className="text-xs font-medium">Impact Level:</span>
-                                      <Badge variant={threat.impactLevel === 'high' ? 'destructive' : threat.impactLevel === 'medium' ? 'secondary' : 'outline'}>
-                                        {threat.impactLevel}
-                                      </Badge>
-                                    </div>
-                                  )}
-                                  {threat.tags && threat.tags.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mt-2">
-                                      {threat.tags.slice(0, 3).map(tag => (
-                                        <Badge key={tag} variant="outline" className="text-xs">
-                                          {tag}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              </HoverCardContent>
-                            </HoverCard>
-                          ))}
+                    )}
+                    {hasBuild && (
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-yellow-50/50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800">
+                        <Hammer className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                        <div className="flex-1">
+                          <div className="font-medium text-yellow-900 dark:text-yellow-100">Build Phase</div>
+                          <div className="text-sm text-muted-foreground">
+                            {mitigation.implementationDetail.build.split('\n').filter(l => l.trim().startsWith('- ')).length} tasks
+                          </div>
                         </div>
-                      ) : (
-                        <div className="text-center py-8 text-muted-foreground">
-                          <Circle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          <p>No threats documented for this control.</p>
+                        <Button variant="ghost" size="sm" onClick={() => setActiveTab("build")}>
+                          View <ArrowRight className="h-4 w-4 ml-1" />
+                        </Button>
+                      </div>
+                    )}
+                    {hasOperations && (
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50/50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                        <Settings className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        <div className="flex-1">
+                          <div className="font-medium text-green-900 dark:text-green-100">Operations Phase</div>
+                          <div className="text-sm text-muted-foreground">
+                            {mitigation.implementationDetail.operations.split('\n').filter(l => l.trim().startsWith('- ')).length} tasks
+                          </div>
                         </div>
-                      )}
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-              </div>
-            </div>
-          </div>
+                        <Button variant="ghost" size="sm" onClick={() => setActiveTab("operations")}>
+                          View <ArrowRight className="h-4 w-4 ml-1" />
+                        </Button>
+                      </div>
+                    )}
+                    {hasTools && (
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
+                        <Wrench className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                        <div className="flex-1">
+                          <div className="font-medium text-purple-900 dark:text-purple-100">Tools & Frameworks</div>
+                          <div className="text-sm text-muted-foreground">
+                            {mitigation.implementationDetail.toolsAndFrameworks.split('\n').filter(l => l.trim().startsWith('- ')).length} items
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => setActiveTab("tools")}>
+                          View <ArrowRight className="h-4 w-4 ml-1" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Design Phase Tab */}
+            {hasDesign && (
+              <TabsContent value="design" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Shield className="h-5 w-5 text-blue-500" />
+                      Design Phase
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {renderSectionContent(mitigation.implementationDetail.design, "design-phase")}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
+
+            {/* Build Phase Tab */}
+            {hasBuild && (
+              <TabsContent value="build" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Hammer className="h-5 w-5 text-yellow-500" />
+                      Build Phase
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {renderSectionContent(mitigation.implementationDetail.build, "build-phase")}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
+
+            {/* Operations Phase Tab */}
+            {hasOperations && (
+              <TabsContent value="operations" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Settings className="h-5 w-5 text-green-500" />
+                      Operations Phase
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {renderSectionContent(mitigation.implementationDetail.operations, "operation-phase")}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
+
+            {/* Tools & Frameworks Tab */}
+            {hasTools && (
+              <TabsContent value="tools" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Wrench className="h-5 w-5 text-purple-500" />
+                      Tools & Frameworks
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {renderSectionContent(mitigation.implementationDetail.toolsAndFrameworks, "tools-frameworks")}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
+          </Tabs>
         </div>
       </section>
     </>
   );
 };
 
-export default ControlDetail; 
+export default ControlDetail;

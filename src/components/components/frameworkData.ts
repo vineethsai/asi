@@ -28,7 +28,7 @@ const threatIdToTitleMap: { [key: string]: string } = {
   t15: "Human Manipulation (by LLM)",
 };
 
-// Data parsed from your components.md (simulated structure based on previous interactions)
+// Data parsed from components.md with complete component definitions
 const parsedComponentsData = [
   {
     id: "kc1",
@@ -161,13 +161,14 @@ interface MyComponentData {
   description?: string;
   threatIds?: string[];
   color?: string;
-  children?: MyComponentData[]; // Parsed children
+  children?: MyComponentData[];
 }
 
 const myComponentDataMap: Map<string, MyComponentData> = new Map();
 
+// Normalize ID to lowercase for matching (both dot and dash notation map to same key)
 function normalizeId(id: string): string {
-  return id.replace(/-/g, '.').toLowerCase(); // Normalize to dot notation and lowercase for matching
+  return id.replace(/-/g, '.').toLowerCase();
 }
 
 interface ParsedComponent {
@@ -208,9 +209,9 @@ function populateComponentMap(components: ParsedComponent[], map: Map<string, My
                     id: ssc.id,
                     title: ssc.title,
                     description: ssc.description,
-                    threatIds: ssc.threatIds, // if they exist at this level
-                    color: ssc.color,       // if it exists
-                    children: [], // Assuming no further nesting in MD for these
+                    threatIds: ssc.threatIds,
+                    color: ssc.color,
+                    children: [],
                 });
             });
         }
@@ -231,7 +232,7 @@ function populateComponentMap(components: ParsedComponent[], map: Map<string, My
       description: comp.description,
       threatIds: comp.threatIds,
       color: comp.color,
-      children: children, // Store parsed children
+      children: children,
     });
     // Recursively add children to the map as well, so they can be found by ID
     if (children.length > 0) {
@@ -253,7 +254,7 @@ function populateComponentMapInternal(components: MyComponentData[], map: Map<st
 populateComponentMap(parsedComponentsData, myComponentDataMap);
 // --- End helper function ---
 
-// Full component framework data (User's original structure to be updated)
+// Full component framework data - using dot notation consistently
 export const frameworkData: ComponentNode[] = [
   {
     id: "kc1",
@@ -264,33 +265,31 @@ export const frameworkData: ComponentNode[] = [
     icon: "Brain",
     children: [
       {
-        id: "kc1-1",
-        title: "Foundation Models",
-        description: "Large language models that serve as the base for agentic systems",
+        id: "kc1.1",
+        title: "Large Language Models (LLMs)",
+        description: "Core cognitive engine utilizing pre-trained foundation models for reasoning, planning, and generation",
         threatCategories: ["Model Extraction", "Input Validation Bypass"],
         color: "border-primary/20 bg-primary/5 hover:bg-primary/10",
-        children: [
-          {
-            id: "kc1-1-1",
-            title: "Base Models",
-            description: "Pre-trained models before fine-tuning",
-            color: "border-primary/10 bg-transparent hover:bg-primary/5",
-          },
-          {
-            id: "kc1-1-2",
-            title: "Fine-tuned Models",
-            description: "Models adapted for specific use cases or domains",
-            color: "border-primary/10 bg-transparent hover:bg-primary/5",
-          }
-        ]
       },
       {
-        id: "kc1-2",
-        title: "Multimodal Capabilities",
-        description: "Processing of multiple types of inputs (text, images, audio)",
+        id: "kc1.2",
+        title: "Multimodal LLMs (MLLMs)",
+        description: "LLMs capable of processing and generating information across multiple data types",
         threatCategories: ["Cross-Modal Attacks", "Adversarial Examples"],
         color: "border-primary/20 bg-primary/5 hover:bg-primary/10",
       },
+      {
+        id: "kc1.3",
+        title: "Small-Language Models (SLMs)",
+        description: "Language models with fewer parameters, designed for specific tasks or use cases",
+        color: "border-primary/20 bg-primary/5 hover:bg-primary/10",
+      },
+      {
+        id: "kc1.4",
+        title: "Fine-tuned Models",
+        description: "Language models that undergo additional training on specific datasets",
+        color: "border-primary/20 bg-primary/5 hover:bg-primary/10",
+      }
     ]
   },
   {
@@ -302,30 +301,22 @@ export const frameworkData: ComponentNode[] = [
     icon: "Workflow",
     children: [
       {
-        id: "kc2-1",
-        title: "Task Planning",
-        description: "Decomposition of complex tasks into subtasks",
+        id: "kc2.1",
+        title: "Workflows",
+        description: "Structured, pre-defined sequence of tasks or steps that agents follow",
         color: "border-architecture/20 bg-architecture/5 hover:bg-architecture/10",
       },
       {
-        id: "kc2-2",
-        title: "Agent Collaboration",
-        description: "Communication and coordination between multiple agents",
+        id: "kc2.2",
+        title: "Hierarchical Planning",
+        description: "Multiple agents collaborating via an orchestrator that decomposes and routes tasks",
         color: "border-architecture/20 bg-architecture/5 hover:bg-architecture/10",
-        children: [
-          {
-            id: "kc2-2-1",
-            title: "Message Passing",
-            description: "Communication protocols between agents",
-            color: "border-architecture/10 bg-transparent hover:bg-architecture/5",
-          },
-          {
-            id: "kc2-2-2",
-            title: "Role Assignment",
-            description: "Dynamic allocation of responsibilities among agents",
-            color: "border-architecture/10 bg-transparent hover:bg-architecture/5",
-          }
-        ]
+      },
+      {
+        id: "kc2.3",
+        title: "Multi-agent Collaboration",
+        description: "Multiple agents working together, sharing information and resources",
+        color: "border-architecture/20 bg-architecture/5 hover:bg-architecture/10",
       },
     ]
   },
@@ -338,15 +329,27 @@ export const frameworkData: ComponentNode[] = [
     icon: "BrainCircuit",
     children: [
       {
-        id: "kc3-1",
-        title: "Chain of Thought",
-        description: "Step-by-step reasoning to solve problems",
+        id: "kc3.1",
+        title: "Structured Planning / Execution",
+        description: "Decomposing tasks into a formal plan with separate planner/executor components",
         color: "border-control/20 bg-control/5 hover:bg-control/10",
       },
       {
-        id: "kc3-2",
-        title: "ReAct Framework",
-        description: "Reasoning and acting in an iterative process",
+        id: "kc3.2",
+        title: "ReAct (Reason + Act)",
+        description: "Dynamically interleaves reasoning steps with actions based on feedback",
+        color: "border-control/20 bg-control/5 hover:bg-control/10",
+      },
+      {
+        id: "kc3.3",
+        title: "Chain of Thought (CoT)",
+        description: "Enhances reasoning quality by prompting step-by-step thinking",
+        color: "border-control/20 bg-control/5 hover:bg-control/10",
+      },
+      {
+        id: "kc3.4",
+        title: "Tree of Thoughts (ToT)",
+        description: "Explores multiple reasoning paths in parallel with backtracking",
         color: "border-control/20 bg-control/5 hover:bg-control/10",
       },
     ]
@@ -360,30 +363,40 @@ export const frameworkData: ComponentNode[] = [
     icon: "Database",
     children: [
       {
-        id: "kc4-1",
-        title: "Short-term Memory",
-        description: "Temporary storage for current task execution",
+        id: "kc4.1",
+        title: "In-agent session memory",
+        description: "Memory limited to a single agent and a single session",
         color: "border-primary/20 bg-primary/5 hover:bg-primary/10",
       },
       {
-        id: "kc4-2",
-        title: "Long-term Memory",
-        description: "Persistent storage across multiple interactions",
+        id: "kc4.2",
+        title: "Cross-agent session memory",
+        description: "Memory shared across multiple agents but limited to a single session",
         color: "border-primary/20 bg-primary/5 hover:bg-primary/10",
-        children: [
-          {
-            id: "kc4-2-1",
-            title: "Vector Databases",
-            description: "Storage and retrieval of embeddings",
-            color: "border-primary/10 bg-transparent hover:bg-primary/5",
-          },
-          {
-            id: "kc4-2-2",
-            title: "Knowledge Graphs",
-            description: "Structured representation of entities and relationships",
-            color: "border-primary/10 bg-transparent hover:bg-primary/5",
-          }
-        ]
+      },
+      {
+        id: "kc4.3",
+        title: "In-agent cross-session memory",
+        description: "Memory limited to a single agent but shared across multiple sessions",
+        color: "border-primary/20 bg-primary/5 hover:bg-primary/10",
+      },
+      {
+        id: "kc4.4",
+        title: "Cross-agent cross-session memory",
+        description: "Memory shared across multiple agents and sessions",
+        color: "border-primary/20 bg-primary/5 hover:bg-primary/10",
+      },
+      {
+        id: "kc4.5",
+        title: "In-agent cross-user memory",
+        description: "Memory limited to a single agent but shared across multiple users",
+        color: "border-primary/20 bg-primary/5 hover:bg-primary/10",
+      },
+      {
+        id: "kc4.6",
+        title: "Cross-agent cross-user memory",
+        description: "Memory shared across multiple agents and users",
+        color: "border-primary/20 bg-primary/5 hover:bg-primary/10",
       },
     ]
   },
@@ -396,15 +409,21 @@ export const frameworkData: ComponentNode[] = [
     icon: "Tool",
     children: [
       {
-        id: "kc5-1",
-        title: "API Connections",
-        description: "Integration with external services via APIs",
+        id: "kc5.1",
+        title: "Flexible Libraries / SDK Features",
+        description: "Code-level building blocks offering high flexibility (e.g., LangChain, CrewAI)",
         color: "border-threat/20 bg-threat/5 hover:bg-threat/10",
       },
       {
-        id: "kc5-2",
-        title: "Function Calling",
-        description: "Execution of code or functions by the agent",
+        id: "kc5.2",
+        title: "Managed Platforms / Services",
+        description: "Vendor-provided solutions handling infrastructure (e.g., Amazon Bedrock, Microsoft Copilot)",
+        color: "border-threat/20 bg-threat/5 hover:bg-threat/10",
+      },
+      {
+        id: "kc5.3",
+        title: "Managed APIs",
+        description: "Vendor-hosted services providing higher-level abstractions (e.g., OpenAI Assistants API)",
         color: "border-threat/20 bg-threat/5 hover:bg-threat/10",
       }
     ]
@@ -418,36 +437,100 @@ export const frameworkData: ComponentNode[] = [
     icon: "Cloud",
     children: [
       {
-        id: "kc6-1",
-        title: "Execution Environment",
-        description: "Where code runs and computational resources",
-        color: "border-control/20 bg-control/5 hover:bg-control/10",
-      },
-      {
-        id: "kc6-2",
-        title: "Data Access",
-        description: "Interfaces to databases and storage systems",
+        id: "kc6.1",
+        title: "API Access",
+        description: "Agents utilizing LLM capabilities to interact with APIs",
         color: "border-control/20 bg-control/5 hover:bg-control/10",
         children: [
           {
-            id: "kc6-2-1",
-            title: "Read Operations",
-            description: "Data retrieval mechanisms",
+            id: "kc6.1.1",
+            title: "Limited API Access",
+            description: "Agent generates some parameters for a predefined API call",
             color: "border-control/10 bg-transparent hover:bg-control/5",
           },
           {
-            id: "kc6-2-2",
-            title: "Write Operations",
-            description: "Data modification mechanisms",
+            id: "kc6.1.2",
+            title: "Extensive API Access",
+            description: "Agent generates the entire API call",
             color: "border-control/10 bg-transparent hover:bg-control/5",
           }
         ]
+      },
+      {
+        id: "kc6.2",
+        title: "Code Execution",
+        description: "Agents utilizing LLM capabilities for code-related tasks",
+        color: "border-control/20 bg-control/5 hover:bg-control/10",
+        children: [
+          {
+            id: "kc6.2.1",
+            title: "Limited Code Execution",
+            description: "Agent generates parameters for a predefined function",
+            color: "border-control/10 bg-transparent hover:bg-control/5",
+          },
+          {
+            id: "kc6.2.2",
+            title: "Extensive Code Execution",
+            description: "Agent runs LLM-generated code",
+            color: "border-control/10 bg-transparent hover:bg-control/5",
+          }
+        ]
+      },
+      {
+        id: "kc6.3",
+        title: "Database Execution",
+        description: "Agents utilizing LLM capabilities to interact with databases",
+        color: "border-control/20 bg-control/5 hover:bg-control/10",
+        children: [
+          {
+            id: "kc6.3.1",
+            title: "Limited Database Execution",
+            description: "Agent runs specific queries with limited permissions",
+            color: "border-control/10 bg-transparent hover:bg-control/5",
+          },
+          {
+            id: "kc6.3.2",
+            title: "Extensive Database Execution",
+            description: "Agent generates and runs all CRUD operations",
+            color: "border-control/10 bg-transparent hover:bg-control/5",
+          },
+          {
+            id: "kc6.3.3",
+            title: "RAG Data Sources",
+            description: "Agent uses external datasources for context or updates records",
+            color: "border-control/10 bg-transparent hover:bg-control/5",
+          }
+        ]
+      },
+      {
+        id: "kc6.4",
+        title: "Web Access (Web-Use)",
+        description: "Agent utilizing LLM for browser operations",
+        color: "border-control/20 bg-control/5 hover:bg-control/10",
+      },
+      {
+        id: "kc6.5",
+        title: "PC Operations (PC-Use)",
+        description: "Agent utilizing LLM for OS operations, including file system",
+        color: "border-control/20 bg-control/5 hover:bg-control/10",
+      },
+      {
+        id: "kc6.6",
+        title: "Operating Critical Systems",
+        description: "Agent utilizing LLM to operate critical systems (e.g., SCADA)",
+        color: "border-control/20 bg-control/5 hover:bg-control/10",
+      },
+      {
+        id: "kc6.7",
+        title: "Access to IoT Devices",
+        description: "Agent controlling IoT devices",
+        color: "border-control/20 bg-control/5 hover:bg-control/10",
       }
     ]
   }
 ];
 
-// Recursive function to update the user's frameworkData structure
+// Recursive function to update the user's frameworkData structure with parsed data
 function updateUserNode(userNode: ComponentNode): void {
   const normalizedUserNodeId = normalizeId(userNode.id);
   const myData = myComponentDataMap.get(normalizedUserNodeId);

@@ -20,9 +20,8 @@ export type Architecture = {
   displayOrder?: number;
 };
 
-// --- PARSED DATA SIMULATION (from architectures_md_v2_raw content) ---
-const parsedArchitecturesMd = [
-  {
+export const architecturesData: Record<string, Architecture> = {
+  sequential: {
     id: "sequential",
     name: "Sequential Agent Architecture",
     description: "A straightforward linear workflow where a single agent processes tasks through a linear workflow. This design typically uses a single KC1.1 (Large Language Model) as its cognitive core, guided by a KC2.1 (Sequential workflow) and KC3.3 (Chain of Thought) reasoning.",
@@ -50,18 +49,19 @@ const parsedArchitecturesMd = [
     mitigationIds: ["m1", "m4", "m5", "m6", "m11", "m12"],
     tags: ["simple", "linear", "single-agent"],
     references: [
-      { title: "OWASP Agentic Architectures", url: "https://owasp.org/agentic-architectures" }
+      { title: "OWASP Agentic AI Threats", url: "https://genai.owasp.org/resource/agentic-ai-threats-and-mitigations/" },
+      { title: "LangChain Agent Architectures", url: "https://blog.langchain.dev/what-is-an-agent/" }
     ],
     riskScore: 5,
     status: "active",
-    version: "2024.1",
-    lastUpdated: "2024-06-01",
+    version: "2025.1",
+    lastUpdated: "2025-01-22",
     updatedBy: "vineeth",
     color: "#2563eb",
     icon: "flow-linear",
     displayOrder: 1
   },
-  {
+  hierarchical: {
     id: "hierarchical",
     name: "Hierarchical Agent Architecture",
     description: "This architecture introduces a KC2.2 (Hierarchical planning) model where a central orchestrator agent decomposes complex tasks and delegates them to specialized sub-agents. These sub-agents may use specialized KC1.1 or KC1.4 (Fine-tuned) models.",
@@ -88,17 +88,21 @@ const parsedArchitecturesMd = [
     threatIds: ["t3", "t6", "t9", "t12"],
     mitigationIds: ["m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m10", "m11", "m12"],
     tags: ["multi-agent", "orchestration", "complex"],
+    references: [
+      { title: "OWASP Multi-Agent Threat Modeling", url: "https://genai.owasp.org/resource/multi-agentic-system-threat-modeling-guide-v1-0/" },
+      { title: "CrewAI Hierarchical Process", url: "https://docs.crewai.com/concepts/processes" }
+    ],
     riskScore: 8,
     status: "active",
-    version: "2024.1",
-    lastUpdated: "2024-06-01",
+    version: "2025.1",
+    lastUpdated: "2025-01-22",
     updatedBy: "vineeth",
     color: "#22c55e",
     icon: "flow-hierarchical",
     displayOrder: 2
   },
-  {
-    id: "swarm",
+  collaborative: {
+    id: "collaborative",
     name: "Collaborative Agent Swarm",
     description: "A collaborative swarm is a decentralized system where multiple peer agents operate without a strict hierarchy, using KC2.3 (Multi-agent collaboration). They can explore different solutions in parallel, often using advanced reasoning like KC3.4 (Tree of Thoughts).",
     detailedDescription: "A collaborative swarm is a decentralized system where multiple peer agents operate without a strict hierarchy, using KC2.3 (Multi-agent collaboration). They can explore different solutions in parallel, often using advanced reasoning like KC3.4 (Tree of Thoughts). This architecture relies heavily on persistent, shared memory, such as KC4.4 (Cross-agent cross-session memory), to maintain a collective understanding.",
@@ -124,120 +128,102 @@ const parsedArchitecturesMd = [
     threatIds: ["t1", "t8", "t9", "t12", "t13"],
     mitigationIds: ["m1", "m2", "m3", "m4", "m5", "m6", "m7", "m10", "m11", "m12"],
     tags: ["collaborative", "swarm", "distributed"],
+    references: [
+      { title: "OpenAI Swarm Framework", url: "https://github.com/openai/swarm" },
+      { title: "Swarm Intelligence in AI", url: "https://www.lasso.security/blog/agentic-ai-security-threats-2025" }
+    ],
     riskScore: 7,
     status: "active",
+    version: "2025.1",
+    lastUpdated: "2025-01-22",
+    updatedBy: "vineeth",
     color: "#f59e42",
     icon: "flow-swarm",
     displayOrder: 3
   },
-  {
+  reactive: {
     id: "reactive",
     name: "Reactive Agent Architecture",
     description: "Agents designed for responsive workflows, often event-driven, where actions are taken based on immediate inputs or changes in the environment. Utilizes ReAct paradigm and managed APIs for quick interactions.",
+    detailedDescription: "A reactive agent architecture is built around the ReAct (Reasoning + Acting) paradigm, where agents dynamically interleave reasoning steps with actions based on real-time environmental feedback. This architecture typically uses KC1.2 (Multimodal LLMs) for processing diverse inputs, KC3.2 (ReAct reasoning) for decision-making, and KC5.3 (Managed APIs) for rapid external interactions. The agent maintains KC4.3 (In-agent cross-session memory) to learn from past interactions while responding to immediate stimuli. This pattern is ideal for real-time monitoring, event-driven automation, and adaptive systems that must respond quickly to changing conditions.",
+    relevantThreats: [
+      {
+        title: "T2 (Tool Misuse) & T11 (Unexpected RCE)",
+        description: "The rapid action-taking nature of reactive agents creates risks when tools are invoked quickly without thorough validation. An attacker can exploit the agent's responsiveness to trigger unauthorized tool executions or inject malicious code through event payloads."
+      },
+      {
+        title: "T6 (Intent Breaking) & T7 (Misaligned Behaviors)",
+        description: "The real-time decision-making process can be manipulated through carefully crafted environmental inputs or events. Attackers may craft inputs that cause the agent to deviate from its intended purpose or exhibit harmful behaviors in edge cases."
+      },
+      {
+        title: "T5 (Cascading Hallucination)",
+        description: "In fast-paced reactive environments, there's less opportunity for validation between reasoning steps. Hallucinated information from one reasoning cycle can quickly propagate through subsequent actions before being caught."
+      },
+      {
+        title: "T15 (Human Manipulation)",
+        description: "Reactive agents that interact directly with users in real-time may be exploited to manipulate human operators through rapid, persuasive interactions that don't allow time for careful consideration."
+      }
+    ],
     keyComponents: ["kc1.2", "kc2.1", "kc3.2", "kc4.3", "kc5.3", "kc6.4"],
     threatIds: ["t1", "t2", "t3", "t5", "t6", "t7", "t8", "t11", "t12", "t15"],
     mitigationIds: ["m1", "m2", "m4", "m5", "m6", "m7", "m9", "m11", "m12"],
-    tags: ["event-driven", "reactive"],
+    tags: ["event-driven", "reactive", "real-time", "ReAct"],
+    references: [
+      { title: "ReAct: Reasoning and Acting in LLMs", url: "https://arxiv.org/abs/2210.03629" },
+      { title: "LangChain ReAct Agents", url: "https://python.langchain.com/docs/concepts/agents/" },
+      { title: "Event-Driven Agent Patterns", url: "https://www.anthropic.com/research/building-effective-agents" }
+    ],
     riskScore: 6,
     status: "active",
+    version: "2025.1",
+    lastUpdated: "2025-01-22",
+    updatedBy: "vineeth",
     color: "#eab308",
     icon: "flow-reactive",
     displayOrder: 4
   },
-  {
-    id: "knowledge_intensive",
+  knowledge: {
+    id: "knowledge",
     name: "Knowledge-Intensive Agent Architecture",
     description: "Agents focused on leveraging and processing large volumes of external data, typically using sophisticated RAG approaches. Employs chain of thought for reasoning over retrieved knowledge and data connectors for accessing persistent knowledge stores.",
+    detailedDescription: "A knowledge-intensive agent architecture is designed around Retrieval-Augmented Generation (RAG) patterns, where agents leverage extensive external knowledge bases to inform their reasoning and responses. This architecture typically combines KC1.1 (LLMs) with KC1.2 (Multimodal LLMs) for processing diverse content types, uses KC3.3 (Chain of Thought) for reasoning over retrieved information, and relies heavily on KC4.6 (Cross-agent cross-user memory) and KC6.3.3 (RAG data sources) for accessing persistent knowledge stores. The agent excels at research tasks, information synthesis, and providing authoritative responses grounded in verified data sources.",
+    relevantThreats: [
+      {
+        title: "T1 (Memory Poisoning) via RAG Poisoning",
+        description: "The primary attack vector is injecting malicious content into the knowledge base or RAG data sources. Attackers can plant misinformation, prompt injection payloads, or biased content that gets retrieved and influences the agent's outputs, potentially affecting many users."
+      },
+      {
+        title: "T5 (Cascading Hallucination) & T7 (Misaligned Behaviors)",
+        description: "When the agent reasons over retrieved information, it may blend retrieved facts with hallucinated content, creating believable but inaccurate outputs. This is especially dangerous when users trust the agent as an authoritative source."
+      },
+      {
+        title: "T3 (Privilege Compromise) via Data Access",
+        description: "Knowledge-intensive agents often have broad read access to data stores. An attacker can exploit this access to exfiltrate sensitive information, bypass access controls, or access documents the user shouldn't see through context manipulation."
+      },
+      {
+        title: "T12 (Communication Poisoning) via Document Injection",
+        description: "Indirect prompt injection through documents is a critical threat. Attackers can embed malicious instructions in documents that get retrieved and processed, causing the agent to execute unauthorized actions or leak information."
+      }
+    ],
     keyComponents: ["kc1.1", "kc1.2", "kc2.1", "kc3.3", "kc4.3", "kc4.6", "kc5.1", "kc6.3.3", "kc6.4"],
     threatIds: ["t1", "t2", "t3", "t5", "t6", "t7", "t8", "t12", "t15"],
     mitigationIds: ["m1", "m2", "m4", "m5", "m6", "m7", "m11", "m12"],
-    tags: ["knowledge-intensive", "rag", "data-driven"],
+    tags: ["knowledge-intensive", "rag", "data-driven", "retrieval", "research"],
+    references: [
+      { title: "RAG Poisoning Attacks", url: "https://www.promptfoo.dev/blog/rag-poisoning/" },
+      { title: "Securing RAG Systems", url: "https://arxiv.org/abs/2312.10997" },
+      { title: "LangChain RAG Tutorial", url: "https://python.langchain.com/docs/tutorials/rag/" },
+      { title: "Vector Database Security", url: "https://weaviate.io/blog/security-best-practices" }
+    ],
     riskScore: 7,
     status: "active",
+    version: "2025.1",
+    lastUpdated: "2025-01-22",
+    updatedBy: "vineeth",
     color: "#a21caf",
     icon: "flow-knowledge",
     displayOrder: 5
   }
-];
-// --- END PARSED DATA SIMULATION ---
-
-export const architecturesData: Record<string, Architecture> = {
-  sequential: {
-    id: "sequential",
-    name: "Sequential Agent",
-    description:
-      "A single agent or a simple pipeline where tasks are performed in a linear, step-by-step manner. Each step depends on the output of the previous one, with minimal branching or parallelism. Provides high traceability but limited adaptability.",
-    keyComponents: ["kc1", "kc3", "kc4"],
-    threatIds: ["t5", "t6", "t7", "t15"],
-    mitigationIds: ["m5", "m6", "m12"]
-  },
-  hierarchical: {
-    id: "hierarchical",
-    name: "Hierarchical",
-    description:
-      "A multi-level agent system where a top-level orchestrator delegates tasks to specialized sub-agents. Enables decomposition of complex tasks and separation of concerns. Excellent for scaling to complex problems through structured delegation.",
-    keyComponents: ["kc1", "kc2", "kc3", "kc4", "kc5", "kc6"],
-    threatIds: ["t6", "t8", "t9", "t10", "t12", "t13", "t14"],
-    mitigationIds: ["m3", "m6", "m7", "m8", "m9"]
-  },
-  collaborative: {
-    id: "collaborative",
-    name: "Collaborative Swarm",
-    description:
-      "Multiple agents work together, often in a peer-to-peer or loosely coordinated fashion, to solve problems or achieve goals. Emphasizes communication, redundancy, and distributed decision-making. Provides high fault tolerance but can be difficult to explain and control.",
-    keyComponents: ["kc1", "kc2", "kc3", "kc4", "kc6"],
-    threatIds: ["t9", "t12", "t13", "t14"],
-    mitigationIds: ["m7", "m8", "m11"]
-  },
-  reactive: {
-    id: "reactive",
-    name: "Reactive",
-    description:
-      "Agents that respond to stimuli with predefined actions or patterns, often using the ReAct (Reasoning+Acting) paradigm. Highly adaptable to changing conditions and excellent for real-time response systems. Balances structure with flexibility.",
-    keyComponents: ["kc1", "kc2", "kc3", "kc5", "kc6"],
-    threatIds: ["t2", "t4", "t7", "t11", "t15"],
-    mitigationIds: ["m1", "m3", "m4", "m9", "m10"]
-  },
-  knowledge: {
-    id: "knowledge",
-    name: "Knowledge-Intensive",
-    description:
-      "Architecture focused on extensive knowledge retrieval and processing capabilities. Leverages large contextual databases and sophisticated retrieval mechanisms to inform agent decisions. Excellent for research, reasoning, and information synthesis tasks.",
-    keyComponents: ["kc1", "kc3", "kc4", "kc5"],
-    threatIds: ["t1", "t3", "t5", "t6", "t7"],
-    mitigationIds: ["m1", "m2", "m5", "m6", "m12"]
-  }
 };
-
-// Update logic
-parsedArchitecturesMd.forEach(parsedArch => {
-  let targetKey = parsedArch.id;
-  if (parsedArch.id === "swarm") {
-    targetKey = "collaborative"; // Map MD 'swarm' to user's 'collaborative'
-  } else if (parsedArch.id === "knowledge_intensive") {
-    targetKey = "knowledge"; // Map MD 'knowledge_intensive' to user's 'knowledge'
-  }
-
-  if (architecturesData[targetKey]) {
-    architecturesData[targetKey].name = parsedArch.name;
-    architecturesData[targetKey].description = parsedArch.description;
-    architecturesData[targetKey].detailedDescription = parsedArch.detailedDescription;
-    architecturesData[targetKey].relevantThreats = parsedArch.relevantThreats;
-    architecturesData[targetKey].keyComponents = parsedArch.keyComponents;
-    architecturesData[targetKey].threatIds = parsedArch.threatIds;
-    architecturesData[targetKey].mitigationIds = parsedArch.mitigationIds;
-    // Copy new metadata fields if present
-    architecturesData[targetKey].tags = parsedArch.tags;
-    architecturesData[targetKey].references = parsedArch.references;
-    architecturesData[targetKey].riskScore = parsedArch.riskScore;
-    architecturesData[targetKey].status = parsedArch.status as "active" | "deprecated" | "experimental";
-    architecturesData[targetKey].version = parsedArch.version;
-    architecturesData[targetKey].lastUpdated = parsedArch.lastUpdated;
-    architecturesData[targetKey].updatedBy = parsedArch.updatedBy;
-    architecturesData[targetKey].color = parsedArch.color;
-    architecturesData[targetKey].icon = parsedArch.icon;
-    architecturesData[targetKey].displayOrder = parsedArch.displayOrder;
-  }
-});
 
 export default architecturesData;

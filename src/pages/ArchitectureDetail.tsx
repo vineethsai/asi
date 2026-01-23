@@ -50,14 +50,18 @@ const realWorldExamples: Record<string, string[]> = {
     "Swarm intelligence applications"
   ],
   reactive: [
-    "Real-time monitoring agents",
-    "Event-driven chatbots",
-    "IoT device controllers"
+    "Real-time monitoring agents for infrastructure and security",
+    "Event-driven chatbots with dynamic response capabilities",
+    "IoT device controllers with adaptive behavior",
+    "Automated incident response systems",
+    "Live customer support with real-time context adaptation"
   ],
   knowledge: [
-    "Research assistants",
-    "Legal/medical information synthesis",
-    "Enterprise knowledge management bots"
+    "Research assistants for scientific literature analysis",
+    "Legal document review and case law synthesis",
+    "Medical diagnosis support with clinical knowledge retrieval",
+    "Enterprise knowledge management and search systems",
+    "Financial analysis agents with regulatory document access"
   ]
 };
 
@@ -150,7 +154,10 @@ const ArchitectureDetail = () => {
     // Fallback to searching in framework data
     function search(nodes) {
       for (const node of nodes) {
-        if (node.id === id || node.id.replace(/-/g, '.') === id) return node;
+        // Normalize both IDs to dot notation for comparison
+        const normalizedNodeId = node.id.replace(/-/g, '.');
+        const normalizedSearchId = id.replace(/-/g, '.');
+        if (normalizedNodeId === normalizedSearchId) return node;
         if (node.children) {
           const found = search(node.children);
           if (found) return found;

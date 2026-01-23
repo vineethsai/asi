@@ -233,7 +233,7 @@ export const atlasTechniques: Record<string, ATLASTechnique> = {
     detection: "Monitor for unusual access patterns to public documentation and repositories",
     version: "1.0",
     created: "2021-04-15",
-    lastModified: "2024-12-01"
+    lastModified: "2025-01-22"
   },
   "active_scanning": {
     id: "active_scanning",
@@ -257,7 +257,7 @@ export const atlasTechniques: Record<string, ATLASTechnique> = {
     detection: "Monitor for suspicious scanning activities and unusual network traffic patterns",
     version: "1.0",
     created: "2021-04-15",
-    lastModified: "2024-12-01"
+    lastModified: "2025-01-22"
   },
 
   // Resource Development
@@ -283,7 +283,7 @@ export const atlasTechniques: Record<string, ATLASTechnique> = {
     detection: "Implement dataset integrity checking and provenance tracking",
     version: "1.0",
     created: "2021-04-15",
-    lastModified: "2024-12-01"
+    lastModified: "2025-01-22"
   },
 
   // Initial Access
@@ -310,7 +310,7 @@ export const atlasTechniques: Record<string, ATLASTechnique> = {
     detection: "Monitor for unusual prompt patterns and system instruction overrides",
     version: "1.1",
     created: "2021-04-15",
-    lastModified: "2024-12-01"
+    lastModified: "2025-01-22"
   },
   "supply_chain_compromise": {
     id: "supply_chain_compromise",
@@ -334,7 +334,7 @@ export const atlasTechniques: Record<string, ATLASTechnique> = {
     detection: "Implement model and dependency integrity verification",
     version: "1.0",
     created: "2021-04-15",
-    lastModified: "2024-12-01"
+    lastModified: "2025-01-22"
   },
 
   // ML Model Access
@@ -360,7 +360,7 @@ export const atlasTechniques: Record<string, ATLASTechnique> = {
     detection: "Monitor API usage patterns and implement rate limiting",
     version: "1.0",
     created: "2021-04-15",
-    lastModified: "2024-12-01"
+    lastModified: "2025-01-22"
   },
 
   // Execution
@@ -386,7 +386,7 @@ export const atlasTechniques: Record<string, ATLASTechnique> = {
     detection: "Implement model integrity checking and anomaly detection",
     version: "1.0",
     created: "2021-04-15",
-    lastModified: "2024-12-01"
+    lastModified: "2025-01-22"
   },
 
   // Defense Evasion
@@ -412,7 +412,7 @@ export const atlasTechniques: Record<string, ATLASTechnique> = {
     detection: "Implement adversarial detection mechanisms and input validation",
     version: "1.0",
     created: "2021-04-15",
-    lastModified: "2024-12-01"
+    lastModified: "2025-01-22"
   },
 
   // Credential Access
@@ -438,7 +438,7 @@ export const atlasTechniques: Record<string, ATLASTechnique> = {
     detection: "Monitor for credential access attempts and implement secure credential storage",
     version: "1.0",
     created: "2021-04-15",
-    lastModified: "2024-12-01"
+    lastModified: "2025-01-22"
   },
 
   // ML Attack Staging
@@ -464,7 +464,7 @@ export const atlasTechniques: Record<string, ATLASTechnique> = {
     detection: "Monitor for adversarial data generation activities",
     version: "1.0",
     created: "2021-04-15",
-    lastModified: "2024-12-01"
+    lastModified: "2025-01-22"
   },
 
   // Impact
@@ -490,7 +490,7 @@ export const atlasTechniques: Record<string, ATLASTechnique> = {
     detection: "Implement data integrity monitoring and validation",
     version: "1.0",
     created: "2021-04-15",
-    lastModified: "2024-12-01"
+    lastModified: "2025-01-22"
   }
 };
 
