@@ -14,53 +14,10 @@ const Architectures = () => {
   const architectures: Architecture[] = Object.values(architecturesData);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Collect all tags and statuses
-  const _allTags = Array.from(new Set(architectures.flatMap((a) => a.tags || [])));
-  const _allStatuses = Array.from(new Set(architectures.map((a) => a.status).filter(Boolean)));
-  const [tagFilter, _setTagFilter] = useState<string | null>(null);
-  const [statusFilter, _setStatusFilter] = useState<string | null>(null);
-  const [riskFilter, _setRiskFilter] = useState<number | null>(null);
-  const [sortBy, _setSortBy] = useState<string>("displayOrder");
-  // Filtering
-  const filtered = useMemo(
-    () =>
-      architectures.filter((a) => {
-        if (tagFilter && !(a.tags || []).includes(tagFilter)) return false;
-        if (statusFilter && a.status !== statusFilter) return false;
-        if (riskFilter && a.riskScore !== riskFilter) return false;
-        return true;
-      }),
-    [architectures, tagFilter, statusFilter, riskFilter],
+  const sorted = useMemo(
+    () => [...architectures].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)),
+    [architectures],
   );
-  // Sorting
-  const sorted = useMemo(() => {
-    return [...filtered].sort((a, b) => {
-      if (sortBy === "risk") return (b.riskScore || 0) - (a.riskScore || 0);
-      if (sortBy === "name") return a.name.localeCompare(b.name);
-      return (a.displayOrder || 0) - (b.displayOrder || 0);
-    });
-  }, [filtered, sortBy]);
-  // Analytics
-  const _statusCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    architectures.forEach((a) => {
-      if (a.status) counts[a.status] = (counts[a.status] || 0) + 1;
-    });
-    return counts;
-  }, [architectures]);
-  const _avgRisk = useMemo(() => {
-    const risks = architectures.map((a) => a.riskScore).filter(Boolean) as number[];
-    return risks.length ? (risks.reduce((a, b) => a + b, 0) / risks.length).toFixed(1) : "-";
-  }, [architectures]);
-  const _tagCloud = useMemo(() => {
-    const counts: Record<string, number> = {};
-    architectures.forEach((a) =>
-      (a.tags || []).forEach((t) => {
-        counts[t] = (counts[t] || 0) + 1;
-      }),
-    );
-    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  }, [architectures]);
 
   const handleMobileMenuToggle = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -92,7 +49,7 @@ const Architectures = () => {
       {/* Mobile Navigation Sidebar */}
       <SidebarNav type="architectures" isOpen={isMobileMenuOpen} onClose={handleMobileMenuClose} />
 
-      <section className="py-16">
+      <section id="main-content" className="py-16">
         <div className="container px-4 md:px-6">
           <div className="max-w-7xl mx-auto">
             <div className="mb-8">
@@ -141,7 +98,7 @@ const Architectures = () => {
                               href={ref.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="underline text-blue-600 mr-2"
+                              className="underline text-primary mr-2"
                             >
                               {ref.title}
                             </a>

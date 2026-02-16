@@ -2,13 +2,23 @@ import { useParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import Header from "@/components/layout/Header";
 import SidebarNav from "@/components/layout/SidebarNav";
+import Footer from "@/components/layout/Footer";
 import { architecturesData, Architecture } from "../components/components/architecturesData";
 import { threatsData, mitigationsData } from "../components/components/securityData";
 import { frameworkData as allComponentNodes } from "../components/components/frameworkData";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { Helmet } from "react-helmet";
-import ArchitectureDiagram from "@/components/visual/ArchitectureDiagrams";
+import { Crosshair } from "lucide-react";
+import ArchitectureFlowDiagram from "@/components/visual/ArchitectureFlowDiagram";
+
+const ARCH_TO_TEMPLATE: Record<string, string> = {
+  sequential: "sequential-pipeline",
+  hierarchical: "multi-agent",
+  collaborative: "collaborative-swarm",
+  reactive: "reactive-agent",
+  knowledge_intensive: "knowledge-intensive",
+};
 
 // Helper to get component description from frameworkData
 const getComponentDescription = (id: string): string => {
@@ -79,12 +89,6 @@ const ArchitectureDetail = () => {
       id,
       description: getComponentDescription(id),
     })) || [];
-
-  // Build threat-to-component matrix for visualization
-  const _threatComponentMatrix = threats.map((threat) => ({
-    threat,
-    affected: architecture?.keyComponents.filter((cid) => threat.componentIds.includes(cid)) || [],
-  }));
 
   // Helper: does a threat affect a component (by root)?
   function threatAffectsComponent(threat, compId) {
@@ -319,7 +323,6 @@ const ArchitectureDetail = () => {
     return search(allComponentNodes);
   }
 
-  const [_isSidebarOpen, _setIsSidebarOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleMobileMenuToggle = () => {
@@ -411,7 +414,7 @@ const ArchitectureDetail = () => {
         onClose={handleMobileMenuClose}
       />
 
-      <section className="py-12 bg-secondary/50 min-h-screen">
+      <section id="main-content" className="py-12 min-h-screen">
         <div className="container px-4 md:px-6">
           <div className="flex flex-col gap-6">
             <div className="flex-1">
@@ -447,13 +450,33 @@ const ArchitectureDetail = () => {
                           href={ref.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="underline text-blue-600 mr-2"
+                          className="underline text-primary hover:text-primary/80 mr-2"
                         >
                           {ref.title}
                         </a>
                       ))}
                     </div>
                   )}
+                </CardContent>
+              </Card>
+
+              {/* Architecture Diagram - Full width, prominent */}
+              <Card className="mb-4 border border-border bg-card">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-lg font-semibold text-foreground">Architecture Diagram</h2>
+                    <Link
+                      to={`/threat-modeler?template=${ARCH_TO_TEMPLATE[architecture.id] ?? ""}`}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 border border-primary/30 rounded-md px-3 py-1.5 hover:bg-primary/5 transition-colors"
+                    >
+                      <Crosshair className="h-3.5 w-3.5" />
+                      Open in Threat Modeler
+                    </Link>
+                  </div>
+                  <ArchitectureFlowDiagram
+                    architectureId={architecture.id}
+                    className="w-full h-[400px]"
+                  />
                 </CardContent>
               </Card>
 
@@ -473,18 +496,23 @@ const ArchitectureDetail = () => {
 
               {/* Relevant Threats Section */}
               {architecture.relevantThreats && architecture.relevantThreats.length > 0 && (
-                <Card className="mb-4 border border-red-200 bg-card">
+                <Card className="mb-4 border border-destructive/20 dark:border-destructive/30 bg-card">
                   <CardContent className="p-4">
-                    <h2 className="text-lg font-semibold mb-3 text-red-700">Relevant Threats</h2>
+                    <h2 className="text-lg font-semibold mb-3 text-destructive">
+                      Relevant Threats
+                    </h2>
                     <p className="text-sm text-muted-foreground mb-4">
                       Security concerns are focused on protecting this architecture from the
                       following attack vectors:
                     </p>
                     <div className="space-y-4">
                       {architecture.relevantThreats.map((threat, index) => (
-                        <div key={index} className="border rounded-lg p-4 bg-red-50 border-red-200">
-                          <h3 className="font-semibold text-red-800 mb-2">{threat.title}</h3>
-                          <p className="text-sm text-red-700 leading-relaxed">
+                        <div
+                          key={index}
+                          className="border rounded-lg p-4 bg-destructive/5 dark:bg-destructive/10 border-destructive/20 dark:border-destructive/30"
+                        >
+                          <h3 className="font-semibold text-destructive mb-2">{threat.title}</h3>
+                          <p className="text-sm text-destructive/80 leading-relaxed">
                             {threat.description}
                           </p>
                         </div>
@@ -496,13 +524,6 @@ const ArchitectureDetail = () => {
 
               {/* Grid for the rest of the cards */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Visual Diagram */}
-                <Card className="border border-border bg-card">
-                  <CardContent className="p-4">
-                    <h2 className="text-base font-semibold mb-2 text-foreground">Visual Diagram</h2>
-                    <ArchitectureDiagram architectureId={architecture.id} className="w-full h-64" />
-                  </CardContent>
-                </Card>
                 {/* Real-world Examples */}
                 {realWorldExamples[architecture.id] && (
                   <Card className="border border-border bg-card">
@@ -542,13 +563,13 @@ const ArchitectureDetail = () => {
                                 </div>
                                 <Link
                                   to={`/components/${comp.id.replace(/-/g, ".")}`}
-                                  className="text-blue-700 font-medium underline text-xs hover:text-blue-900"
+                                  className="text-primary hover:text-primary/80 font-medium underline text-xs"
                                 >
                                   View Details →
                                 </Link>
                               </div>
                               {node?.description && (
-                                <div className="text-sm text-muted-foreground mb-3 leading-relaxed border-l-4 border-primary/20 pl-3 bg-white/50 py-2 rounded-r">
+                                <div className="text-sm text-muted-foreground mb-3 leading-relaxed border-l-4 border-primary/20 pl-3 bg-muted/30 py-2 rounded-r">
                                   <span className="font-medium text-primary/80">Summary: </span>
                                   {node.description}
                                 </div>
@@ -558,7 +579,7 @@ const ArchitectureDetail = () => {
                                   {node.threatCategories.map((cat, i) => (
                                     <span
                                       key={i}
-                                      className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full"
+                                      className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 text-xs px-2 py-0.5 rounded-full"
                                     >
                                       {cat}
                                     </span>
@@ -577,7 +598,7 @@ const ArchitectureDetail = () => {
                                   {node.children.map((subComp) => (
                                     <div
                                       key={subComp.id}
-                                      className="bg-white/80 border border-primary/10 rounded-md p-3"
+                                      className="bg-muted/30 border border-primary/10 rounded-md p-3"
                                     >
                                       <div className="flex items-center justify-between mb-2">
                                         <div>
@@ -590,13 +611,13 @@ const ArchitectureDetail = () => {
                                         </div>
                                         <Link
                                           to={`/components/${subComp.id.replace(/-/g, ".")}`}
-                                          className="text-blue-600 text-xs hover:text-blue-800 underline"
+                                          className="text-primary text-xs hover:text-primary/80 underline"
                                         >
                                           Details
                                         </Link>
                                       </div>
                                       {subComp.description && (
-                                        <div className="text-xs text-muted-foreground leading-relaxed mb-2 border-l-2 border-primary/10 pl-2 bg-gray-50/50 py-1">
+                                        <div className="text-xs text-muted-foreground leading-relaxed mb-2 border-l-2 border-primary/10 pl-2 bg-muted/30 py-1">
                                           <span className="font-medium text-primary/70">
                                             Summary:{" "}
                                           </span>
@@ -609,7 +630,7 @@ const ArchitectureDetail = () => {
                                             {subComp.threatCategories.map((cat, i) => (
                                               <span
                                                 key={i}
-                                                className="bg-orange-100 text-orange-700 text-xs px-1.5 py-0.5 rounded"
+                                                className="bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-xs px-1.5 py-0.5 rounded"
                                               >
                                                 {cat}
                                               </span>
@@ -627,7 +648,7 @@ const ArchitectureDetail = () => {
                                             {subComp.children.map((subSubComp) => (
                                               <div
                                                 key={subSubComp.id}
-                                                className="bg-gray-50 border border-primary/5 rounded p-2"
+                                                className="bg-muted/30 border border-primary/10 rounded p-2"
                                               >
                                                 <div className="flex items-center justify-between mb-2">
                                                   <div>
@@ -640,13 +661,13 @@ const ArchitectureDetail = () => {
                                                   </div>
                                                   <Link
                                                     to={`/components/${subSubComp.id.replace(/-/g, ".")}`}
-                                                    className="text-blue-500 text-xs hover:text-blue-700 underline"
+                                                    className="text-primary text-xs hover:text-primary/80 underline"
                                                   >
                                                     Details
                                                   </Link>
                                                 </div>
                                                 {subSubComp.description && (
-                                                  <div className="text-xs text-muted-foreground leading-relaxed border-l border-primary/10 pl-2 bg-white/70 py-1">
+                                                  <div className="text-xs text-muted-foreground leading-relaxed border-l border-primary/10 pl-2 bg-muted/30 py-1">
                                                     <span className="font-medium text-primary/60">
                                                       Summary:{" "}
                                                     </span>
@@ -721,7 +742,7 @@ const ArchitectureDetail = () => {
                 </Card>
                 {/* Threat-Component Matrix */}
                 {threats.length > 0 && components.length > 0 && (
-                  <Card className="border border-yellow-200 bg-card lg:col-span-2">
+                  <Card className="border border-yellow-200 dark:border-yellow-800 bg-card lg:col-span-2">
                     <CardContent className="p-4">
                       <h2 className="text-base font-semibold mb-2 text-foreground">
                         Threat-Component Relationship Map
@@ -741,7 +762,7 @@ const ArchitectureDetail = () => {
                                     <div className="text-xs font-medium text-primary">
                                       {node?.title || comp.id.toUpperCase()}
                                     </div>
-                                    <div className="text-xs font-mono text-muted-foreground mt-1 bg-gray-100 px-1 py-0.5 rounded">
+                                    <div className="text-xs font-mono text-muted-foreground mt-1 bg-muted px-1 py-0.5 rounded">
                                       {comp.id.replace(/-/g, ".").toUpperCase()}
                                     </div>
                                   </th>
@@ -783,6 +804,7 @@ const ArchitectureDetail = () => {
           </div>
         </div>
       </section>
+      <Footer />
     </>
   );
 };

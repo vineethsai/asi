@@ -90,9 +90,10 @@ export default function NodePropertiesPanel({
   onClose,
   onEditEdge,
   allThreats,
-  onToggleMitigation,
+  onToggleMitigation: _onToggleMitigation,
   onMitigationStatusChange,
 }: NodePropertiesPanelProps) {
+  void _onToggleMitigation;
   const [mitigationsExpanded, setMitigationsExpanded] = useState(true);
   const [threatsExpanded, setThreatsExpanded] = useState(true);
   const [editingJustification, setEditingJustification] = useState<string | null>(null);
@@ -218,15 +219,11 @@ export default function NodePropertiesPanel({
       } else {
         setEditingJustification(null);
         onMitigationStatusChange?.(selectedNode.id, mitigationId, newStatus);
-        // Also keep legacy toggle in sync
-        const isActive = newStatus === "implemented" || newStatus === "in-progress";
-        onToggleMitigation?.(selectedNode.id, mitigationId, isActive);
       }
     };
 
     const handleSaveJustification = (mitigationId: string) => {
       onMitigationStatusChange?.(selectedNode.id, mitigationId, "accepted-risk", justificationText);
-      onToggleMitigation?.(selectedNode.id, mitigationId, true);
       setEditingJustification(null);
     };
 

@@ -1512,7 +1512,7 @@ export const mitigationsData: Record<string, Mitigation> = {
       "Resource Overload",
     ],
     mitigatedThreatIds: ["t2", "t3", "t11", "t4"],
-    tags: ["sandboxing", "containers", "isolation", "security"],
+    tags: ["sandboxing", "containers", "isolation", "security", "aisvs-v4", "aisvs-v9"],
     references: [
       {
         title: "Container Security Best Practices",
@@ -1675,7 +1675,7 @@ export const mitigationsData: Record<string, Mitigation> = {
       "Privilege Compromise",
     ],
     mitigatedThreatIds: ["t9", "t12", "t13", "t3"],
-    tags: ["communication", "identity", "encryption", "authentication"],
+    tags: ["communication", "identity", "encryption", "authentication", "aisvs-v5", "aisvs-v9"],
     references: [
       { title: "mTLS Best Practices", url: "https://smallstep.com/blog/use-tls/" },
       { title: "SPIFFE/SPIRE Documentation", url: "https://spiffe.io/docs/" },
@@ -1828,7 +1828,7 @@ export const mitigationsData: Record<string, Mitigation> = {
       "Memory Poisoning",
     ],
     mitigatedThreatIds: ["t5", "t6", "t7", "t15", "t1"],
-    tags: ["prompts", "injection", "jailbreak", "security"],
+    tags: ["prompts", "injection", "jailbreak", "security", "aisvs-v2", "aisvs-v10"],
     references: [
       {
         title: "Prompt Injection Guide",
@@ -1988,7 +1988,7 @@ export const mitigationsData: Record<string, Mitigation> = {
       "Memory Poisoning",
     ],
     mitigatedThreatIds: ["t5", "t6", "t7", "t1"],
-    tags: ["reasoning", "validation", "consistency", "fact-checking"],
+    tags: ["reasoning", "validation", "consistency", "fact-checking", "aisvs-v2", "aisvs-v7"],
     references: [
       { title: "Constitutional AI", url: "https://arxiv.org/abs/2212.08073" },
       { title: "LLM as a Judge", url: "https://arxiv.org/abs/2306.05685" },
@@ -2151,7 +2151,7 @@ export const mitigationsData: Record<string, Mitigation> = {
       "Privilege Compromise",
     ],
     mitigatedThreatIds: ["t8", "t13", "t14", "t2", "t3"],
-    tags: ["monitoring", "logging", "auditing", "detection"],
+    tags: ["monitoring", "logging", "auditing", "detection", "aisvs-v12"],
     references: [
       { title: "NIST Cybersecurity Framework", url: "https://www.nist.gov/cyberframework" },
       { title: "MITRE ATT&CK", url: "https://attack.mitre.org/" },
@@ -2308,7 +2308,7 @@ export const mitigationsData: Record<string, Mitigation> = {
     operationPhase: true,
     mitigatedThreatNames: ["Tool Misuse", "Privilege Compromise", "Unexpected RCE", "Rogue Agents"],
     mitigatedThreatIds: ["t2", "t3", "t11", "t13"],
-    tags: ["zero-trust", "access-control", "privileges", "authentication"],
+    tags: ["zero-trust", "access-control", "privileges", "authentication", "aisvs-v5"],
     references: [
       {
         title: "NIST Zero Trust Architecture",
@@ -2485,7 +2485,7 @@ export const mitigationsData: Record<string, Mitigation> = {
       "Intent Breaking & Goal Manipulation",
     ],
     mitigatedThreatIds: ["t10", "t14", "t15", "t6"],
-    tags: ["human-in-the-loop", "approval", "workflow", "fatigue"],
+    tags: ["human-in-the-loop", "approval", "workflow", "fatigue", "aisvs-v13"],
     references: [
       { title: "Human-AI Interaction Design", url: "https://hai.stanford.edu/research" },
       {
@@ -2652,7 +2652,7 @@ export const mitigationsData: Record<string, Mitigation> = {
     operationPhase: true,
     mitigatedThreatNames: ["Resource Overload", "Tool Misuse", "Overwhelming HITL"],
     mitigatedThreatIds: ["t4", "t2", "t10"],
-    tags: ["rate-limiting", "resources", "quotas", "cost-management"],
+    tags: ["rate-limiting", "resources", "quotas", "cost-management", "aisvs-v4", "aisvs-v9"],
     references: [
       {
         title: "Circuit Breaker Pattern",
@@ -2830,7 +2830,14 @@ export const mitigationsData: Record<string, Mitigation> = {
       "Tool Misuse",
     ],
     mitigatedThreatIds: ["t3", "t9", "t12", "t13", "t2"],
-    tags: ["defense-in-depth", "network", "segmentation", "trust-boundaries"],
+    tags: [
+      "defense-in-depth",
+      "network",
+      "segmentation",
+      "trust-boundaries",
+      "aisvs-v4",
+      "aisvs-v5",
+    ],
     references: [
       {
         title: "Defense in Depth",
@@ -3002,7 +3009,15 @@ export const mitigationsData: Record<string, Mitigation> = {
       "Memory Poisoning",
     ],
     mitigatedThreatIds: ["t5", "t7", "t15", "t6", "t1"],
-    tags: ["content-filtering", "pii", "compliance", "sanitization"],
+    tags: [
+      "content-filtering",
+      "pii",
+      "compliance",
+      "sanitization",
+      "aisvs-v2",
+      "aisvs-v7",
+      "aisvs-v11",
+    ],
     references: [
       {
         title: "OWASP Output Encoding",
@@ -3053,7 +3068,15 @@ export const mitigationsData: Record<string, Mitigation> = {
       "Tool Misuse",
     ],
     mitigatedThreatIds: ["t1", "t5", "t7", "t13", "t2"],
-    tags: ["training", "validation", "model-security", "pipeline"],
+    tags: [
+      "training",
+      "validation",
+      "model-security",
+      "pipeline",
+      "aisvs-v1",
+      "aisvs-v3",
+      "aisvs-v6",
+    ],
     references: [
       { title: "NIST AI RMF - Model Development", url: "https://airc.nist.gov/AI_RMF_Guidance" },
       {
@@ -3129,7 +3152,16 @@ export const mitigationsData: Record<string, Mitigation> = {
     designPhase: true,
     buildPhase: true,
     operationPhase: true,
-    tags: ["ssdcl", "devsecops", "ci-cd", "security-gates", "testing"],
+    tags: [
+      "ssdcl",
+      "devsecops",
+      "ci-cd",
+      "security-gates",
+      "testing",
+      "aisvs-v3",
+      "aisvs-v4",
+      "aisvs-v6",
+    ],
     references: [
       { title: "OWASP SAMM", url: "https://owaspsamm.org/" },
       {
@@ -3257,7 +3289,7 @@ export const mitigationsData: Record<string, Mitigation> = {
       "Resource Overload",
     ],
     mitigatedThreatIds: ["t11", "t2", "t3", "t4"],
-    tags: ["runtime", "sandboxing", "isolation", "monitoring"],
+    tags: ["runtime", "sandboxing", "isolation", "monitoring", "aisvs-v4", "aisvs-v9"],
     references: [
       {
         title: "Firecracker Security Model",
@@ -3404,7 +3436,7 @@ export const mitigationsData: Record<string, Mitigation> = {
       "Communication Poisoning",
     ],
     mitigatedThreatIds: ["t9", "t13", "t3", "t12"],
-    tags: ["identity", "did", "authentication", "reputation"],
+    tags: ["identity", "did", "authentication", "reputation", "aisvs-v5", "aisvs-v9"],
     references: [
       { title: "W3C DID Core", url: "https://www.w3.org/TR/did-core/" },
       { title: "W3C Verifiable Credentials", url: "https://www.w3.org/TR/vc-data-model/" },
@@ -3562,7 +3594,7 @@ export const mitigationsData: Record<string, Mitigation> = {
       "Cascading Hallucination",
     ],
     mitigatedThreatIds: ["t7", "t15", "t14", "t6", "t5"],
-    tags: ["ethics", "bias", "behavior", "monitoring"],
+    tags: ["ethics", "bias", "behavior", "monitoring", "aisvs-v7", "aisvs-v13"],
     references: [
       { title: "Partnership on AI", url: "https://partnershiponai.org/" },
       {
@@ -3720,7 +3752,7 @@ export const mitigationsData: Record<string, Mitigation> = {
       "Rogue Agents",
     ],
     mitigatedThreatIds: ["t1", "t2", "t3", "t11", "t13"],
-    tags: ["supply-chain", "provenance", "dependencies", "sbom"],
+    tags: ["supply-chain", "provenance", "dependencies", "sbom", "aisvs-v6"],
     references: [
       { title: "NIST SSDF", url: "https://csrc.nist.gov/Projects/ssdf" },
       { title: "SLSA Framework", url: "https://slsa.dev/" },
@@ -3889,7 +3921,7 @@ export const mitigationsData: Record<string, Mitigation> = {
       "Tool Misuse",
     ],
     mitigatedThreatIds: ["t8", "t13", "t11", "t3", "t2"],
-    tags: ["incident-response", "forensics", "recovery", "automation"],
+    tags: ["incident-response", "forensics", "recovery", "automation", "aisvs-v12", "aisvs-v13"],
     references: [
       {
         title: "NIST Incident Response Guide",

@@ -1,7 +1,11 @@
 import { Helmet } from "react-helmet";
+import { useSearchParams } from "react-router-dom";
 import ThreatModelCanvas from "@/components/threat-modeler/ThreatModelCanvas";
 
 export default function ThreatModelerPage() {
+  const [searchParams] = useSearchParams();
+  const templateParam = searchParams.get("template") ?? undefined;
+
   return (
     <>
       <Helmet>
@@ -46,7 +50,7 @@ export default function ThreatModelerPage() {
 
         {/* Full-height canvas */}
         <div className="flex-1 overflow-hidden">
-          <ThreatModelCanvas />
+          <ThreatModelCanvas initialTemplate={templateParam} />
         </div>
       </div>
     </>

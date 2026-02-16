@@ -133,7 +133,7 @@ const ComponentDetail = () => {
         {/* Mobile Navigation Sidebar */}
         <SidebarNav type="components" isOpen={isMobileMenuOpen} onClose={handleMobileMenuClose} />
 
-        <main className="container py-12">
+        <main id="main-content" className="container py-12">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-3xl font-bold mb-4">
               {isSubComponent ? "Sub-Component Not Found" : "Component Not Found"}
@@ -221,7 +221,7 @@ const ComponentDetail = () => {
         onClose={handleMobileMenuClose}
       />
 
-      <main className="container py-12">
+      <main id="main-content" className="container py-12">
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
             <Link

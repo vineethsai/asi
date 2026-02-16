@@ -50,27 +50,27 @@ const colorMap: Record<string, { bg: string; text: string; border: string }> = {
   blue: {
     bg: "bg-blue-100 dark:bg-blue-950/30",
     text: "text-blue-800 dark:text-blue-300",
-    border: "border-blue-200",
+    border: "border-blue-200 dark:border-blue-800",
   },
   green: {
     bg: "bg-green-100 dark:bg-green-950/30",
     text: "text-green-800 dark:text-green-300",
-    border: "border-green-200",
+    border: "border-green-200 dark:border-green-800",
   },
   purple: {
     bg: "bg-purple-100 dark:bg-purple-950/30",
     text: "text-purple-800 dark:text-purple-300",
-    border: "border-purple-200",
+    border: "border-purple-200 dark:border-purple-800",
   },
   orange: {
     bg: "bg-orange-100 dark:bg-orange-950/30",
     text: "text-orange-800 dark:text-orange-300",
-    border: "border-orange-200",
+    border: "border-orange-200 dark:border-orange-800",
   },
   red: {
     bg: "bg-red-100 dark:bg-red-950/30",
     text: "text-red-800 dark:text-red-300",
-    border: "border-red-200",
+    border: "border-red-200 dark:border-red-800",
   },
 };
 
@@ -677,10 +677,10 @@ export const SecurityChecklist: React.FC = () => {
             <div
               className={`text-3xl font-bold mb-1 ${
                 securityScore >= 80
-                  ? "text-green-600"
+                  ? "text-green-600 dark:text-green-400"
                   : securityScore >= 60
-                    ? "text-yellow-600"
-                    : "text-red-600"
+                    ? "text-yellow-600 dark:text-yellow-400"
+                    : "text-red-600 dark:text-red-400"
               }`}
             >
               {securityScore}/100
@@ -728,7 +728,7 @@ export const SecurityChecklist: React.FC = () => {
           </div>
 
           {securityScore < 80 && (
-            <Alert className="mt-4 bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200">
+            <Alert className="mt-4 bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-800">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
                 <strong>Security Score: {securityScore}/100</strong>
@@ -746,7 +746,7 @@ export const SecurityChecklist: React.FC = () => {
           )}
 
           {securityScore >= 80 && (
-            <Alert className="mt-4 bg-green-50 dark:bg-green-950/30 border-green-200">
+            <Alert className="mt-4 bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
               <CheckCircle className="h-4 w-4" />
               <AlertDescription>
                 <strong>Excellent Security Score: {securityScore}/100</strong>

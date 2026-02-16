@@ -371,7 +371,6 @@ export const ThreatDetail = () => {
   }
 
   const mitigationCount = mitigations.length;
-  const _componentCount = threat.componentIds?.length || 0;
   const attackVectorCount = (threat.attackVectors || []).length;
   const riskScore = threat.riskScore || 0;
 
@@ -451,7 +450,7 @@ export const ThreatDetail = () => {
         onClose={handleMobileMenuClose}
       />
 
-      <section className="py-8 bg-background min-h-screen">
+      <section id="main-content" className="py-8 bg-background min-h-screen">
         <div className="container px-4 md:px-6 max-w-7xl">
           {/* Breadcrumb */}
           <Link
@@ -493,7 +492,7 @@ export const ThreatDetail = () => {
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 mb-1">
-                    <Shield className="h-4 w-4 text-blue-500" />
+                    <Shield className="h-4 w-4 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">Mitigations</span>
                   </div>
                   <div className="text-2xl font-bold text-control">{mitigationCount}</div>
@@ -565,12 +564,12 @@ export const ThreatDetail = () => {
                       <div
                         className={`flex items-center gap-4 p-4 rounded-lg border ${
                           threat.impactAnalysis.confidentiality
-                            ? "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
+                            ? "bg-destructive/5 dark:bg-destructive/10 border-destructive/20 dark:border-destructive/30"
                             : "bg-muted/50 border-muted"
                         }`}
                       >
                         {threat.impactAnalysis.confidentiality ? (
-                          <ShieldX className="h-8 w-8 text-red-500 flex-shrink-0" />
+                          <ShieldX className="h-8 w-8 text-destructive flex-shrink-0" />
                         ) : (
                           <ShieldCheck className="h-8 w-8 text-green-500 flex-shrink-0" />
                         )}
@@ -594,12 +593,12 @@ export const ThreatDetail = () => {
                       <div
                         className={`flex items-center gap-4 p-4 rounded-lg border ${
                           threat.impactAnalysis.integrity
-                            ? "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
+                            ? "bg-destructive/5 dark:bg-destructive/10 border-destructive/20 dark:border-destructive/30"
                             : "bg-muted/50 border-muted"
                         }`}
                       >
                         {threat.impactAnalysis.integrity ? (
-                          <ShieldX className="h-8 w-8 text-red-500 flex-shrink-0" />
+                          <ShieldX className="h-8 w-8 text-destructive flex-shrink-0" />
                         ) : (
                           <ShieldCheck className="h-8 w-8 text-green-500 flex-shrink-0" />
                         )}
@@ -623,12 +622,12 @@ export const ThreatDetail = () => {
                       <div
                         className={`flex items-center gap-4 p-4 rounded-lg border ${
                           threat.impactAnalysis.availability
-                            ? "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
+                            ? "bg-destructive/5 dark:bg-destructive/10 border-destructive/20 dark:border-destructive/30"
                             : "bg-muted/50 border-muted"
                         }`}
                       >
                         {threat.impactAnalysis.availability ? (
-                          <ShieldX className="h-8 w-8 text-red-500 flex-shrink-0" />
+                          <ShieldX className="h-8 w-8 text-destructive flex-shrink-0" />
                         ) : (
                           <ShieldCheck className="h-8 w-8 text-green-500 flex-shrink-0" />
                         )}

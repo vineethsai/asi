@@ -109,7 +109,7 @@ function autoLayout(nodes: CanvasNode[], edges: CanvasEdge[]): CanvasNode[] {
   });
 }
 
-function ThreatModelCanvasInner() {
+function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string }) {
   const [nodes, setNodes, onNodesChange] = useNodesState<CanvasNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<CanvasEdge>([]);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -175,8 +175,9 @@ function ThreatModelCanvasInner() {
     return () => clearInterval(interval);
   }, [nodes, edges, methodology, customComponents]);
 
-  // Restore auto-save on mount
+  // Restore auto-save on mount (skip if initial template will be loaded)
   useEffect(() => {
+    if (initialTemplate) return;
     const saved = localStorage.getItem(AUTO_SAVE_KEY);
     if (saved && nodes.length === 0) {
       try {
@@ -191,6 +192,31 @@ function ThreatModelCanvasInner() {
         /* ignore */
       }
     }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load template from URL parameter on mount
+  useEffect(() => {
+    if (!initialTemplate) return;
+    const template = ARCHITECTURE_TEMPLATES.find((t) => t.id === initialTemplate);
+    if (!template) return;
+    const newNodes: CanvasNode[] = template.nodes.map((n, i) => ({
+      ...n,
+      id: `template-${initialTemplate}-${i}`,
+    })) as CanvasNode[];
+    const newEdges: CanvasEdge[] = template.edges.map((e, i) => {
+      const edge = e as { source: string; target: string };
+      return {
+        ...e,
+        id: `template-edge-${initialTemplate}-${i}`,
+        source: `template-${initialTemplate}-${edge.source}`,
+        target: `template-${initialTemplate}-${edge.target}`,
+      } as CanvasEdge;
+    });
+    setNodes(newNodes);
+    setEdges(newEdges);
+    pushHistory(newNodes, newEdges);
+    setTimeout(() => fitView({ duration: 300 }), 100);
+    toast.success(`Loaded "${template.name}" architecture`);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -335,16 +361,46 @@ function ThreatModelCanvasInner() {
           })) as CanvasEdge[],
       );
       setIsAnalyzing(false);
-      toast.success(`Analysis complete - ${result.summary.total} threats found`);
+      if (analysisModeRef.current !== "live") {
+        toast.success(`Analysis complete - ${result.summary.total} threats found`);
+      }
     });
   }, [nodes, edges, methodology, customComponents, setNodes, setEdges]);
 
+  const analysisModeRef = useRef(analysisMode);
+  analysisModeRef.current = analysisMode;
+
+  const doAnalysisRef = useRef(doAnalysis);
+  doAnalysisRef.current = doAnalysis;
+
+  // Structural fingerprint: only changes when model topology/metadata changes,
+  // NOT when threat badges, mitigations, or positions update.
+  const modelStructureKey = useMemo(() => {
+    const nodeKey = nodes
+      .map(
+        (n) =>
+          `${n.id}:${n.type}:${n.data?.label}:${n.data?.category}:${n.data?.trustLevel}:${(n.data?.maestroLayers ?? []).join("+")}`,
+      )
+      .sort()
+      .join("|");
+    const edgeKey = edges
+      .map((e) => {
+        const d = e.data;
+        return `${e.id}:${e.source}:${e.target}:${d?.protocol}:${d?.encrypted}:${d?.authentication}:${d?.dataClassification}`;
+      })
+      .sort()
+      .join("|");
+    return `${nodeKey}::${edgeKey}::${methodology}`;
+  }, [nodes, edges, methodology]);
+
   useEffect(() => {
-    if (analysisMode === "live" && nodes.length > 0) {
-      const timeout = setTimeout(doAnalysis, 800);
-      return () => clearTimeout(timeout);
-    }
-  }, [analysisMode, nodes, edges, doAnalysis]);
+    if (analysisMode !== "live") return;
+    // Guard: don't run on empty canvas
+    if (modelStructureKey === `::::${methodology}`) return;
+    const timeout = setTimeout(() => doAnalysisRef.current(), 800);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analysisMode, modelStructureKey]);
 
   const deleteSelected = useCallback(() => {
     const selectedNodes = nodes.filter((n) => n.selected);
@@ -887,7 +943,12 @@ function ThreatModelCanvasInner() {
               statuses[mitigationId] = { status, justification };
             }
             const appliedIds = Object.entries(statuses)
-              .filter(([, s]) => s.status === "implemented" || s.status === "in-progress")
+              .filter(
+                ([, s]) =>
+                  s.status === "implemented" ||
+                  s.status === "in-progress" ||
+                  s.status === "accepted-risk",
+              )
               .map(([id]) => id);
             return {
               ...n,
@@ -898,6 +959,36 @@ function ThreatModelCanvasInner() {
     },
     [setNodes],
   );
+
+  // Recompute risk score reactively based on actual mitigation progress
+  const effectiveRiskSummary = useMemo(() => {
+    if (!riskSummary || !fullAnalysisResult) return riskSummary;
+    const appliedByNode = new Map<string, Set<string>>();
+    for (const node of nodes) {
+      if (node.data?.appliedMitigations?.length) {
+        appliedByNode.set(
+          node.id,
+          new Set(node.data.appliedMitigations.map((m: string) => m.toLowerCase().trim())),
+        );
+      }
+    }
+    if (appliedByNode.size === 0) return riskSummary;
+    const { mitigated } = filterMitigatedThreats(fullAnalysisResult.threats, appliedByNode);
+    const mitigationRatio = mitigated.length / Math.max(fullAnalysisResult.threats.length, 1);
+    // Reduce risk proportional to mitigation coverage (up to 70% reduction at full coverage)
+    const adjustedScore = Math.round(riskSummary.overallScore * (1 - mitigationRatio * 0.7));
+    const severityLabel =
+      adjustedScore >= 80
+        ? "Critical"
+        : adjustedScore >= 60
+          ? "High"
+          : adjustedScore >= 40
+            ? "Medium"
+            : adjustedScore >= 20
+              ? "Low"
+              : "Minimal";
+    return { ...riskSummary, overallScore: adjustedScore, severityLabel };
+  }, [riskSummary, fullAnalysisResult, nodes]);
 
   const filteredAnalysisResult = useMemo(() => {
     if (!fullAnalysisResult) return null;
@@ -1071,7 +1162,7 @@ function ThreatModelCanvasInner() {
 
       <ThreatResultsPanel
         result={filteredAnalysisResult ?? analysisResult}
-        riskSummary={riskSummary}
+        riskSummary={effectiveRiskSummary}
         attackPaths={attackPaths}
         nodes={nodes as CanvasNode[]}
         onThreatClick={onThreatClick}
@@ -1129,10 +1220,10 @@ function ThreatModelCanvasInner() {
   );
 }
 
-export default function ThreatModelCanvas() {
+export default function ThreatModelCanvas({ initialTemplate }: { initialTemplate?: string } = {}) {
   return (
     <ReactFlowProvider>
-      <ThreatModelCanvasInner />
+      <ThreatModelCanvasInner initialTemplate={initialTemplate} />
     </ReactFlowProvider>
   );
 }

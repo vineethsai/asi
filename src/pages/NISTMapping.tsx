@@ -84,13 +84,6 @@ interface GraphNode {
   data?: GraphNodeData;
 }
 
-interface GraphLink {
-  source: string;
-  target: string;
-  type: "hierarchy" | "mapping";
-  visible?: boolean;
-}
-
 // NIST AI RMF Data Structure
 const nistAIRMF: NISTFunction[] = [
   {
@@ -896,14 +889,13 @@ export const NISTMapping = () => {
   // Convert AISVS data for easier access
   const aisvsCategories = Object.values(aisvsData);
 
-  // Reset graph state on component mount
+  // Initialize graph with GOVERN expanded on component mount
   useEffect(() => {
-    // Reset graph state when component mounts
-    setExpandedNodes(new Set());
+    setExpandedNodes(new Set(["govern"]));
     setSelectedNode(null);
     setSelectedNodeData(null);
     setFocusMode(false);
-  }, []); // Empty dependency array means this runs only on mount
+  }, []);
 
   // Handle URL hash-based navigation
   useEffect(() => {
@@ -1033,736 +1025,445 @@ export const NISTMapping = () => {
     };
   }, [aisvsCategories]);
 
-  // D3 Graph Data Structure
-  const graphData = useMemo(() => {
-    const nodes: GraphNode[] = [];
-    const links: GraphLink[] = [];
+  // Tree layout rendering
+  useEffect(() => {
+    if (!svgRef.current || activeTab !== "graph") return;
 
-    // Add NIST Function nodes
-    nistAIRMF.forEach((func, funcIndex) => {
-      nodes.push({
+    const svg = d3.select(svgRef.current);
+    const containerEl = svgRef.current.parentElement;
+    const width = containerEl?.clientWidth || 1100;
+    const height = containerEl?.clientHeight || 700;
+
+    svg.selectAll("*").remove();
+    svg.attr("viewBox", `0 0 ${width} ${height}`);
+
+    const isDark = document.documentElement.classList.contains("dark");
+    const fg = isDark ? "#e5e7eb" : "#1f2937";
+    const mutedFg = isDark ? "#9ca3af" : "#6b7280";
+    const gridColor = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)";
+    const bgCard = isDark ? "#1c1c1e" : "#ffffff";
+
+    const zoom = d3
+      .zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.3, 3])
+      .on("zoom", (event) => {
+        g.attr("transform", event.transform);
+      });
+    svg.call(zoom);
+
+    const g = svg.append("g");
+
+    // Subtle dot grid
+    const defs = svg.append("defs");
+    const pat = defs
+      .append("pattern")
+      .attr("id", "tree-grid")
+      .attr("width", 24)
+      .attr("height", 24)
+      .attr("patternUnits", "userSpaceOnUse");
+    pat.append("circle").attr("cx", 12).attr("cy", 12).attr("r", 0.8).attr("fill", gridColor);
+    g.append("rect")
+      .attr("width", width * 3)
+      .attr("height", height * 3)
+      .attr("x", -width)
+      .attr("y", -height)
+      .attr("fill", "url(#tree-grid)");
+
+    // Layout constants
+    const leftMargin = 40;
+    const colFunc = leftMargin;
+    const colCat = leftMargin + 220;
+    const colSub = leftMargin + 470;
+    const colAISVS = width - 200;
+    const rowHeight = 28;
+    const funcGap = 16;
+    const catGap = 8;
+
+    // Build positioned tree data
+    interface TreeNode {
+      id: string;
+      type: "nist-function" | "nist-category" | "nist-subcategory";
+      label: string;
+      description: string;
+      color: string;
+      x: number;
+      y: number;
+      expanded: boolean;
+      parentId?: string;
+      data: NISTFunction | NISTCategory | NISTSubcategory;
+    }
+    interface MappingLink {
+      subId: string;
+      subX: number;
+      subY: number;
+      aisvsCode: string;
+    }
+
+    const treeNodes: TreeNode[] = [];
+    const hierarchyLinks: { source: TreeNode; target: TreeNode }[] = [];
+    const mappingLinks: MappingLink[] = [];
+    let curY = 30;
+
+    nistAIRMF.forEach((func) => {
+      const funcNode: TreeNode = {
         id: func.id,
         type: "nist-function",
         label: func.code,
         description: func.name,
         color: func.color,
-        x: 200,
-        y: 150 + funcIndex * 150,
+        x: colFunc,
+        y: curY,
         expanded: expandedNodes.has(func.id),
-        visible: true,
         data: func,
-      });
+      };
+      treeNodes.push(funcNode);
 
-      // Add categories and subcategories if function is expanded
       if (expandedNodes.has(func.id)) {
-        func.categories.forEach((category, catIndex) => {
-          const categoryId = `${func.id}-${category.id}`;
-          nodes.push({
-            id: categoryId,
+        curY += rowHeight;
+        func.categories.forEach((cat) => {
+          const catId = `${func.id}-${cat.id}`;
+          const catNode: TreeNode = {
+            id: catId,
             type: "nist-category",
-            label: category.code,
-            description: category.name,
+            label: cat.code,
+            description: cat.name,
             color: func.color,
+            x: colCat,
+            y: curY,
+            expanded: expandedNodes.has(catId),
             parentId: func.id,
-            x: 400,
-            y: 100 + funcIndex * 150 + catIndex * 60,
-            expanded: expandedNodes.has(categoryId),
-            visible: true,
-            data: category,
-          });
+            data: cat,
+          };
+          treeNodes.push(catNode);
+          hierarchyLinks.push({ source: funcNode, target: catNode });
 
-          // Hierarchy link from function to category
-          links.push({
-            source: func.id,
-            target: categoryId,
-            type: "hierarchy",
-            visible: true,
-          });
-
-          // Add subcategories if category is expanded
-          if (expandedNodes.has(categoryId)) {
-            category.subcategories.forEach((subcategory, subIndex) => {
-              const subcategoryId = `${categoryId}-${subcategory.id}`;
-              nodes.push({
-                id: subcategoryId,
+          if (expandedNodes.has(catId)) {
+            curY += rowHeight * 0.5;
+            cat.subcategories.forEach((sub) => {
+              const subId = `${catId}-${sub.id}`;
+              const subNode: TreeNode = {
+                id: subId,
                 type: "nist-subcategory",
-                label: subcategory.code,
-                description: subcategory.name,
+                label: sub.code,
+                description: sub.name,
                 color: func.color,
-                parentId: categoryId,
-                x: 600,
-                y: 80 + funcIndex * 150 + catIndex * 60 + subIndex * 30,
-                visible: true,
-                data: subcategory,
+                x: colSub,
+                y: curY,
+                expanded: false,
+                parentId: catId,
+                data: sub,
+              };
+              treeNodes.push(subNode);
+              hierarchyLinks.push({ source: catNode, target: subNode });
+
+              sub.aisvsMapping.forEach((code) => {
+                mappingLinks.push({ subId, subX: colSub + 120, subY: curY, aisvsCode: code });
               });
-
-              // Hierarchy link from category to subcategory
-              links.push({
-                source: categoryId,
-                target: subcategoryId,
-                type: "hierarchy",
-                visible: true,
-              });
-
-              // Add mapping links to AISVS categories
-              subcategory.aisvsMapping.forEach((aisvsCode) => {
-                const aisvsId = `aisvs-${aisvsCode}`;
-
-                // Ensure AISVS node exists
-                if (!nodes.find((n) => n.id === aisvsId)) {
-                  const aisvsCategory = getAISVSCategory(aisvsCode);
-                  if (aisvsCategory) {
-                    const aisvsIndex = aisvsCategories.findIndex((cat) => cat.code === aisvsCode);
-                    nodes.push({
-                      id: aisvsId,
-                      type: "aisvs-category",
-                      label: aisvsCategory.code,
-                      description: aisvsCategory.name,
-                      color: aisvsCategory.color,
-                      x: 900,
-                      y: 100 + aisvsIndex * 45,
-                      visible: true,
-                      data: aisvsCategory,
-                    });
-                  }
-                }
-
-                // Add mapping link
-                links.push({
-                  source: subcategoryId,
-                  target: aisvsId,
-                  type: "mapping",
-                  visible: true,
-                });
-              });
+              curY += rowHeight;
             });
+            curY += catGap;
+          } else {
+            curY += rowHeight + catGap;
           }
         });
+        curY += funcGap;
+      } else {
+        curY += rowHeight + funcGap + 8;
       }
     });
 
-    // Add standalone AISVS nodes for those not yet connected
-    aisvsCategories.forEach((category, index) => {
-      const aisvsId = `aisvs-${category.code}`;
-      if (!nodes.find((n) => n.id === aisvsId)) {
-        nodes.push({
-          id: aisvsId,
-          type: "aisvs-category",
-          label: category.code,
-          description: category.name,
-          color: category.color,
-          x: 900,
-          y: 100 + index * 45,
-          visible: true,
-          data: category,
-        });
-      }
-    });
-
-    // Apply focus mode filtering
-    if (focusMode && selectedNode) {
-      // Get all nodes and links related to the selected node
-      const relatedNodeIds = new Set<string>();
-      const relatedLinkIds = new Set<string>();
-
-      // Add the selected node itself
-      relatedNodeIds.add(selectedNode);
-
-      // Find all links connected to the selected node
-      links.forEach((link, _index) => {
-        const sourceId =
-          typeof link.source === "string"
-            ? link.source
-            : (link.source as { id?: string })?.id || link.source;
-        const targetId =
-          typeof link.target === "string"
-            ? link.target
-            : (link.target as { id?: string })?.id || link.target;
-
-        if (sourceId === selectedNode || targetId === selectedNode) {
-          relatedLinkIds.add(`${sourceId}-${targetId}`);
-          relatedNodeIds.add(sourceId);
-          relatedNodeIds.add(targetId);
-        }
-      });
-
-      // If selected node is AISVS, also include parent hierarchy for connected NIST nodes
-      if (selectedNode.startsWith("aisvs-")) {
-        links.forEach((link) => {
-          const targetId =
-            typeof link.target === "string"
-              ? link.target
-              : (link.target as { id?: string })?.id || link.target;
-          if (targetId === selectedNode && link.type === "mapping") {
-            const nistSubcategoryId =
-              typeof link.source === "string"
-                ? link.source
-                : (link.source as { id?: string })?.id || link.source;
-            relatedNodeIds.add(nistSubcategoryId);
-
-            // Find parent category and function
-            const subcategoryNode = nodes.find((n) => n.id === nistSubcategoryId);
-            if (subcategoryNode?.parentId) {
-              relatedNodeIds.add(subcategoryNode.parentId);
-
-              // Add hierarchy links
-              relatedLinkIds.add(`${subcategoryNode.parentId}-${nistSubcategoryId}`);
-
-              const categoryNode = nodes.find((n) => n.id === subcategoryNode.parentId);
-              if (categoryNode?.parentId) {
-                relatedNodeIds.add(categoryNode.parentId);
-                relatedLinkIds.add(`${categoryNode.parentId}-${subcategoryNode.parentId}`);
-              }
-            }
-          }
-        });
-      }
-
-      // If selected node is NIST, include its hierarchy
-      if (!selectedNode.startsWith("aisvs-")) {
-        // Find children in hierarchy
-        const findChildren = (nodeId: string) => {
-          links.forEach((link) => {
-            const sourceId =
-              typeof link.source === "string"
-                ? link.source
-                : (link.source as { id?: string })?.id || link.source;
-            if (sourceId === nodeId && link.type === "hierarchy") {
-              const childId =
-                typeof link.target === "string"
-                  ? link.target
-                  : (link.target as { id?: string })?.id || link.target;
-              relatedNodeIds.add(childId);
-              relatedLinkIds.add(`${nodeId}-${childId}`);
-              findChildren(childId); // Recursively find children
-            }
-          });
-        };
-
-        // Find parents in hierarchy
-        const findParents = (nodeId: string) => {
-          const node = nodes.find((n) => n.id === nodeId);
-          if (node?.parentId) {
-            relatedNodeIds.add(node.parentId);
-            relatedLinkIds.add(`${node.parentId}-${nodeId}`);
-            findParents(node.parentId);
-          }
-        };
-
-        findChildren(selectedNode);
-        findParents(selectedNode);
-      }
-
-      // Update node visibility
-      nodes.forEach((node) => {
-        node.visible = relatedNodeIds.has(node.id);
-      });
-
-      // Update link visibility
-      links.forEach((link) => {
-        const sourceId =
-          typeof link.source === "string"
-            ? link.source
-            : (link.source as { id?: string })?.id || link.source;
-        const targetId =
-          typeof link.target === "string"
-            ? link.target
-            : (link.target as { id?: string })?.id || link.target;
-        const linkId = `${sourceId}-${targetId}`;
-
-        // Show link only if both nodes are visible and link is in related set
-        link.visible =
-          relatedNodeIds.has(sourceId) &&
-          relatedNodeIds.has(targetId) &&
-          (relatedLinkIds.has(linkId) || relatedLinkIds.has(`${targetId}-${sourceId}`));
-      });
-    } else {
-      // Normal mode - show all visible nodes and links
-      nodes.forEach((node) => {
-        if (node.visible === undefined) node.visible = true;
-      });
-      links.forEach((link) => {
-        if (link.visible === undefined) link.visible = true;
-      });
-    }
-
-    return { nodes, links };
-  }, [expandedNodes, aisvsCategories, getAISVSCategory, focusMode, selectedNode]);
-
-  // D3 Graph Rendering Effect
-  useEffect(() => {
-    if (!svgRef.current || activeTab !== "graph") return;
-
-    const svg = d3.select(svgRef.current);
-    const width = 1200;
-    const height = 800;
-
-    // Clear previous content
-    svg.selectAll("*").remove();
-
-    // Setup zoom behavior
-    const zoom = d3
-      .zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.1, 4])
-      .on("zoom", (event) => {
-        container.attr("transform", event.transform);
-      });
-
-    svg.call(zoom);
-
-    // Create main container
-    const container = svg.append("g");
-
-    // Add background grid
-    const defs = svg.append("defs");
-    const pattern = defs
-      .append("pattern")
-      .attr("id", "grid")
-      .attr("width", 40)
-      .attr("height", 40)
-      .attr("patternUnits", "userSpaceOnUse");
-
-    pattern
-      .append("path")
-      .attr("d", "M 40 0 L 0 0 0 40")
-      .attr("fill", "none")
-      .attr("stroke", "currentColor")
-      .attr("stroke-width", 0.5)
-      .attr("opacity", 0.1);
-
-    container.append("rect").attr("width", width).attr("height", height).attr("fill", "url(#grid)");
-
-    // Create force simulation
-    const simulation = d3
-      .forceSimulation(graphData.nodes as d3.SimulationNodeDatum[])
-      .force(
-        "link",
-        d3
-          .forceLink(graphData.links as unknown as d3.SimulationLinkDatum<d3.SimulationNodeDatum>[])
-          .id((d) => (d as unknown as GraphNode).id)
-          .distance((d) => ((d as unknown as GraphLink).type === "hierarchy" ? 100 : 200))
-          .strength((d) => ((d as unknown as GraphLink).type === "hierarchy" ? 0.8 : 0.3)),
-      )
-      .force("charge", d3.forceManyBody().strength(-300))
-      .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collision", d3.forceCollide().radius(30));
-
-    // Create links
-    const link = container
-      .append("g")
-      .selectAll("line")
-      .data(graphData.links.filter((l) => l.visible))
-      .enter()
-      .append("line")
-      .attr("stroke", (d: { type: string }) => (d.type === "hierarchy" ? "#666" : "#999"))
-      .attr("stroke-width", (d: { type: string }) => (d.type === "hierarchy" ? 2 : 1))
-      .attr("stroke-dasharray", (d: { type: string }) => (d.type === "mapping" ? "5,5" : "none"))
-      .attr("opacity", 0.6);
-
-    // Create node groups
-    const node = container
-      .append("g")
-      .selectAll("g")
-      .data(graphData.nodes.filter((n) => n.visible))
-      .enter()
-      .append("g")
-      .attr("class", "node")
-      .style("cursor", "pointer")
-      .call(
-        d3
-          .drag<SVGGElement, GraphNode>()
-          .on("start", (event, d) => {
-            if (!event.active) simulation.alphaTarget(0.3).restart();
-            d.fx = d.x;
-            d.fy = d.y;
-          })
-          .on("drag", (event, d) => {
-            d.fx = event.x;
-            d.fy = event.y;
-          })
-          .on("end", (event, d) => {
-            if (!event.active) simulation.alphaTarget(0);
-            d.fx = null;
-            d.fy = null;
-          }),
-      );
-
-    // Add node shapes based on type
-    node.each(function (d: {
-      type: string;
+    // AISVS nodes positioned on the right
+    interface AISVSNode {
+      id: string;
+      code: string;
+      name: string;
       color: string;
-      expanded?: boolean;
-      label: string;
-      description?: string;
-    }) {
-      const nodeGroup = d3.select(this);
+      x: number;
+      y: number;
+    }
+    const aisvsNodes: AISVSNode[] = aisvsCategories.map((cat, i) => ({
+      id: `aisvs-${cat.code}`,
+      code: cat.code,
+      name: cat.name.split(" &")[0],
+      color: cat.color,
+      x: colAISVS,
+      y: 30 + i * 42,
+    }));
 
-      if (d.type === "nist-function") {
-        // Large circles for NIST functions
-        nodeGroup
-          .append("circle")
-          .attr("r", 40)
-          .attr("fill", d.color)
-          .attr("opacity", 0.8)
-          .attr("stroke", "white")
-          .attr("stroke-width", 3);
-
-        // Plus/minus indicator for expansion
-        const _indicator = nodeGroup
-          .append("circle")
-          .attr("r", 8)
-          .attr("cx", 28)
-          .attr("cy", -28)
-          .attr("fill", "white")
-          .attr("stroke", d.color)
-          .attr("stroke-width", 2);
-
-        nodeGroup
-          .append("text")
-          .attr("x", 28)
-          .attr("y", -24)
-          .attr("text-anchor", "middle")
-          .attr("font-size", "12px")
-          .attr("font-weight", "bold")
-          .attr("fill", d.color)
-          .text(d.expanded ? "−" : "+");
-      } else if (d.type === "nist-category") {
-        // Rounded rectangles for categories
-        nodeGroup
-          .append("rect")
-          .attr("x", -40)
-          .attr("y", -15)
-          .attr("width", 80)
-          .attr("height", 30)
-          .attr("rx", 15)
-          .attr("fill", d.color)
-          .attr("opacity", 0.7)
-          .attr("stroke", "white")
-          .attr("stroke-width", 2);
-
-        // Plus/minus indicator for expansion
-        nodeGroup
-          .append("circle")
-          .attr("r", 6)
-          .attr("cx", 30)
-          .attr("cy", -10)
-          .attr("fill", "white")
-          .attr("stroke", d.color)
-          .attr("stroke-width", 2);
-
-        nodeGroup
-          .append("text")
-          .attr("x", 30)
-          .attr("y", -6)
-          .attr("text-anchor", "middle")
-          .attr("font-size", "10px")
-          .attr("font-weight", "bold")
-          .attr("fill", d.color)
-          .text(d.expanded ? "−" : "+");
-      } else if (d.type === "nist-subcategory") {
-        // Small rectangles for subcategories
-        nodeGroup
-          .append("rect")
-          .attr("x", -30)
-          .attr("y", -10)
-          .attr("width", 60)
-          .attr("height", 20)
-          .attr("rx", 10)
-          .attr("fill", d.color)
-          .attr("opacity", 0.6)
-          .attr("stroke", "white")
-          .attr("stroke-width", 1);
-      } else if (d.type === "aisvs-category") {
-        // Rounded rectangles for AISVS categories
-        nodeGroup
-          .append("rect")
-          .attr("x", -50)
-          .attr("y", -12)
-          .attr("width", 100)
-          .attr("height", 24)
-          .attr("rx", 12)
-          .attr("fill", d.color)
-          .attr("opacity", 0.8)
-          .attr("stroke", "white")
-          .attr("stroke-width", 2);
-      }
-
-      // Add labels
-      nodeGroup
-        .append("text")
-        .attr("text-anchor", "middle")
-        .attr("dy", d.type === "nist-function" ? "0.35em" : "0.35em")
-        .attr("font-size", d.type === "nist-function" ? "12px" : "10px")
-        .attr("font-weight", "bold")
-        .attr("fill", "white")
-        .text(d.label);
-
-      // Add description text below for functions
-      if (d.type === "nist-function") {
-        nodeGroup
-          .append("text")
-          .attr("text-anchor", "middle")
-          .attr("dy", "50px")
-          .attr("font-size", "10px")
-          .attr("fill", () => {
-            // Check if dark mode is active
-            const isDarkMode = document.documentElement.classList.contains("dark");
-            return isDarkMode ? "#e5e7eb" : "#374151"; // Light gray for dark mode, dark gray for light mode
-          })
-          .attr("opacity", 0.9)
-          .text(d.description);
-      }
+    // Draw hierarchy links (curved)
+    const linkGroup = g.append("g");
+    hierarchyLinks.forEach((link) => {
+      const sx = link.source.type === "nist-function" ? link.source.x + 90 : link.source.x + 120;
+      const sy = link.source.y + 10;
+      const tx = link.target.x;
+      const ty = link.target.y + 10;
+      const mx = (sx + tx) / 2;
+      linkGroup
+        .append("path")
+        .attr("d", `M${sx},${sy} C${mx},${sy} ${mx},${ty} ${tx},${ty}`)
+        .attr("fill", "none")
+        .attr("stroke", link.source.color)
+        .attr("stroke-width", 1.5)
+        .attr("opacity", 0.3);
     });
 
-    // Add click handlers for expansion and reverse mapping
-    node.on("click", (event, d: GraphNode) => {
-      event.stopPropagation();
+    // Draw mapping links (dashed curved)
+    const mappingGroup = g.append("g");
+    mappingLinks.forEach((ml) => {
+      const aisvsNode = aisvsNodes.find((a) => a.code === ml.aisvsCode);
+      if (!aisvsNode) return;
+      const sx = ml.subX;
+      const sy = ml.subY + 10;
+      const tx = aisvsNode.x;
+      const ty = aisvsNode.y + 10;
+      const mx = sx + (tx - sx) * 0.4;
+      const mx2 = sx + (tx - sx) * 0.6;
+      mappingGroup
+        .append("path")
+        .attr("d", `M${sx},${sy} C${mx},${sy} ${mx2},${ty} ${tx},${ty}`)
+        .attr("fill", "none")
+        .attr("stroke", aisvsNode.color)
+        .attr("stroke-width", 1)
+        .attr("stroke-dasharray", "4,3")
+        .attr("opacity", 0.35);
+    });
 
-      // Check if this is the same node being clicked again
-      const isSameNode = selectedNode === d.id;
+    // Column headers
+    const headerY = -4;
+    g.append("text")
+      .attr("x", colFunc)
+      .attr("y", headerY)
+      .attr("font-size", "10px")
+      .attr("font-weight", "600")
+      .attr("fill", mutedFg)
+      .attr("text-transform", "uppercase")
+      .attr("letter-spacing", "0.05em")
+      .text("NIST Functions");
+    g.append("text")
+      .attr("x", colCat)
+      .attr("y", headerY)
+      .attr("font-size", "10px")
+      .attr("font-weight", "600")
+      .attr("fill", mutedFg)
+      .text("Categories");
+    g.append("text")
+      .attr("x", colSub)
+      .attr("y", headerY)
+      .attr("font-size", "10px")
+      .attr("font-weight", "600")
+      .attr("fill", mutedFg)
+      .text("Subcategories");
+    g.append("text")
+      .attr("x", colAISVS)
+      .attr("y", headerY)
+      .attr("font-size", "10px")
+      .attr("font-weight", "600")
+      .attr("fill", mutedFg)
+      .text("AISVS Controls");
 
-      if (d.type === "nist-function" || d.type === "nist-category") {
-        const newExpandedNodes = new Set(expandedNodes);
-        if (expandedNodes.has(d.id)) {
-          newExpandedNodes.delete(d.id);
-          // Also collapse all children
-          if (d.type === "nist-function") {
-            ((d.data as NISTFunction)?.categories ?? []).forEach((cat: NISTCategory) => {
-              const catId = `${d.id}-${cat.id}`;
-              newExpandedNodes.delete(catId);
-            });
+    // Render NIST tree nodes
+    const nodeGroup = g.append("g");
+    treeNodes.forEach((n) => {
+      const ng = nodeGroup
+        .append("g")
+        .attr("transform", `translate(${n.x},${n.y})`)
+        .style("cursor", "pointer");
+
+      if (n.type === "nist-function") {
+        ng.append("rect")
+          .attr("width", 170)
+          .attr("height", 28)
+          .attr("rx", 6)
+          .attr("fill", n.color)
+          .attr("opacity", 0.9);
+        ng.append("text")
+          .attr("x", 12)
+          .attr("y", 18)
+          .attr("font-size", "12px")
+          .attr("font-weight", "700")
+          .attr("fill", "#fff")
+          .text(n.label);
+        ng.append("text")
+          .attr("x", 85)
+          .attr("y", 18)
+          .attr("font-size", "11px")
+          .attr("fill", "rgba(255,255,255,0.85)")
+          .text(`- ${n.description}`);
+        // expand indicator
+        ng.append("text")
+          .attr("x", 160)
+          .attr("y", 18)
+          .attr("text-anchor", "end")
+          .attr("font-size", "13px")
+          .attr("fill", "rgba(255,255,255,0.7)")
+          .text(n.expanded ? "−" : "+");
+      } else if (n.type === "nist-category") {
+        ng.append("rect")
+          .attr("width", 220)
+          .attr("height", 24)
+          .attr("rx", 4)
+          .attr("fill", n.color)
+          .attr("opacity", 0.15);
+        ng.append("rect")
+          .attr("width", 3)
+          .attr("height", 24)
+          .attr("rx", 1.5)
+          .attr("fill", n.color)
+          .attr("opacity", 0.7);
+        ng.append("text")
+          .attr("x", 12)
+          .attr("y", 16)
+          .attr("font-size", "11px")
+          .attr("font-weight", "600")
+          .attr("fill", fg)
+          .text(n.label);
+        ng.append("text")
+          .attr("x", 80)
+          .attr("y", 16)
+          .attr("font-size", "10px")
+          .attr("fill", mutedFg)
+          .text(n.description.length > 22 ? n.description.substring(0, 22) + "..." : n.description);
+        ng.append("text")
+          .attr("x", 210)
+          .attr("y", 16)
+          .attr("text-anchor", "end")
+          .attr("font-size", "11px")
+          .attr("fill", mutedFg)
+          .text(n.expanded ? "−" : "+");
+      } else if (n.type === "nist-subcategory") {
+        ng.append("rect")
+          .attr("width", 240)
+          .attr("height", 22)
+          .attr("rx", 4)
+          .attr("fill", bgCard)
+          .attr("stroke", n.color)
+          .attr("stroke-width", 1)
+          .attr("opacity", 0.8);
+        ng.append("text")
+          .attr("x", 8)
+          .attr("y", 15)
+          .attr("font-size", "10px")
+          .attr("font-weight", "500")
+          .attr("fill", fg)
+          .text(n.label);
+        ng.append("text")
+          .attr("x", 75)
+          .attr("y", 15)
+          .attr("font-size", "9px")
+          .attr("fill", mutedFg)
+          .text(n.description.length > 26 ? n.description.substring(0, 26) + "..." : n.description);
+      }
+
+      // Click handler
+      ng.on("click", () => {
+        if (n.type === "nist-function" || n.type === "nist-category") {
+          const newExp = new Set(expandedNodes);
+          if (expandedNodes.has(n.id)) {
+            newExp.delete(n.id);
+            if (n.type === "nist-function") {
+              ((n.data as NISTFunction)?.categories ?? []).forEach((cat: NISTCategory) => {
+                newExp.delete(`${n.id}-${cat.id}`);
+              });
+            }
+          } else {
+            newExp.add(n.id);
           }
-        } else {
-          newExpandedNodes.add(d.id);
+          setExpandedNodes(newExp);
         }
-        setExpandedNodes(newExpandedNodes);
-      } else if (d.type === "aisvs-category") {
-        // For AISVS categories, expand all NIST elements that map to this category
-        const newExpandedNodes = new Set(expandedNodes);
+        setSelectedNode(n.id);
+        setSelectedNodeData({
+          id: n.id,
+          type: n.type,
+          label: n.label,
+          description: n.description,
+          color: n.color,
+          parentId: n.parentId,
+          data: n.data as GraphNodeData,
+        });
+        setFocusMode(false);
+      });
 
-        // Find all NIST subcategories that map to this AISVS category
+      // Hover tooltip
+      ng.on("mouseenter", function () {
+        d3.select(this).select("rect").transition().duration(150).attr("opacity", 1);
+      }).on("mouseleave", function () {
+        const opacity = n.type === "nist-function" ? 0.9 : n.type === "nist-category" ? 0.15 : 0.8;
+        d3.select(this).select("rect").transition().duration(150).attr("opacity", opacity);
+      });
+    });
+
+    // Render AISVS nodes on right column
+    const aisvsGroup = g.append("g");
+    aisvsNodes.forEach((a) => {
+      const ag = aisvsGroup
+        .append("g")
+        .attr("transform", `translate(${a.x},${a.y})`)
+        .style("cursor", "pointer");
+      ag.append("rect")
+        .attr("width", 160)
+        .attr("height", 28)
+        .attr("rx", 14)
+        .attr("fill", a.color)
+        .attr("opacity", 0.15);
+      ag.append("circle").attr("cx", 14).attr("cy", 14).attr("r", 5).attr("fill", a.color);
+      ag.append("text")
+        .attr("x", 26)
+        .attr("y", 18)
+        .attr("font-size", "11px")
+        .attr("font-weight", "600")
+        .attr("fill", fg)
+        .text(a.code);
+      ag.append("text")
+        .attr("x", 52)
+        .attr("y", 18)
+        .attr("font-size", "10px")
+        .attr("fill", mutedFg)
+        .text(a.name.length > 15 ? a.name.substring(0, 15) + "..." : a.name);
+
+      ag.on("click", () => {
+        const newExp = new Set(expandedNodes);
         nistAIRMF.forEach((func) => {
           func.categories.forEach((cat) => {
             cat.subcategories.forEach((sub) => {
-              if (sub.aisvsMapping.includes(d.label)) {
-                // Expand the function and category to show this subcategory
-                newExpandedNodes.add(func.id);
-                newExpandedNodes.add(`${func.id}-${cat.id}`);
+              if (sub.aisvsMapping.includes(a.code)) {
+                newExp.add(func.id);
+                newExp.add(`${func.id}-${cat.id}`);
               }
             });
           });
         });
-
-        setExpandedNodes(newExpandedNodes);
-      }
-
-      // Toggle focus mode for AISVS categories and NIST subcategories
-      if (d.type === "aisvs-category" || d.type === "nist-subcategory") {
-        if (isSameNode && focusMode) {
-          // If clicking the same node and already in focus mode, exit focus mode
-          setFocusMode(false);
-          setSelectedNode(null);
-          setSelectedNodeData(null);
-        } else {
-          // Enter focus mode for this node
-          setFocusMode(true);
-          setSelectedNode(d.id);
-          setSelectedNodeData(d);
+        setExpandedNodes(newExp);
+        const aisvsCategory = getAISVSCategory(a.code);
+        if (aisvsCategory) {
+          setSelectedNode(a.id);
+          setSelectedNodeData({
+            id: a.id,
+            type: "aisvs-category",
+            label: a.code,
+            description: aisvsCategory.name,
+            color: a.color,
+            data: aisvsCategory as GraphNodeData,
+          });
         }
-      } else {
-        // For other node types, just select without focus mode
         setFocusMode(false);
-        setSelectedNode(d.id);
-        setSelectedNodeData(d);
-      }
-    });
-
-    // Add hover effects
-    node
-      .on("mouseenter", function (event, d: GraphNode) {
-        d3.select(this).select("circle, rect").transition().duration(200).attr("opacity", 1);
-
-        // Show tooltip
-        const tooltip = container
-          .append("g")
-          .attr("class", "tooltip")
-          .attr("transform", `translate(${(d.x ?? 0) + 50}, ${(d.y ?? 0) - 20})`);
-
-        const _rect = tooltip
-          .append("rect")
-          .attr("x", 0)
-          .attr("y", 0)
-          .attr("width", 200)
-          .attr("height", 40)
-          .attr("rx", 5)
-          .attr("fill", () => {
-            // Check if dark mode is active
-            const isDarkMode = document.documentElement.classList.contains("dark");
-            return isDarkMode ? "#111827" : "#000000"; // Very dark gray for dark mode, black for light mode
-          })
-          .attr("opacity", 0.9)
-          .attr("stroke", () => {
-            // Check if dark mode is active
-            const isDarkMode = document.documentElement.classList.contains("dark");
-            return isDarkMode ? "#374151" : "#ffffff"; // Border for better visibility
-          })
-          .attr("stroke-width", 1);
-
-        tooltip
-          .append("text")
-          .attr("x", 10)
-          .attr("y", 15)
-          .attr("fill", "white")
-          .attr("font-size", "12px")
-          .attr("font-weight", "bold")
-          .text(d.label);
-
-        tooltip
-          .append("text")
-          .attr("x", 10)
-          .attr("y", 30)
-          .attr("fill", "white")
-          .attr("font-size", "10px")
-          .text(d.description?.substring(0, 30) + "...");
-      })
-      .on("mouseleave", function (event, d: { type: string }) {
-        d3.select(this)
-          .select("circle, rect")
-          .transition()
-          .duration(200)
-          .attr(
-            "opacity",
-            d.type === "nist-function"
-              ? 0.8
-              : d.type === "aisvs-category"
-                ? 0.8
-                : d.type === "nist-category"
-                  ? 0.7
-                  : 0.6,
-          );
-
-        container.selectAll(".tooltip").remove();
       });
 
-    // Update positions on simulation tick (D3 mutates source/target from strings to objects)
-    type SimulatedLink = {
-      source: { x: number; y: number };
-      target: { x: number; y: number };
-    };
-    simulation.on("tick", () => {
-      link
-        .attr("x1", (d) => (d as unknown as SimulatedLink).source.x)
-        .attr("y1", (d) => (d as unknown as SimulatedLink).source.y)
-        .attr("x2", (d) => (d as unknown as SimulatedLink).target.x)
-        .attr("y2", (d) => (d as unknown as SimulatedLink).target.y);
-
-      node.attr(
-        "transform",
-        (d: { x?: number; y?: number }) => `translate(${d.x ?? 0},${d.y ?? 0})`,
-      );
+      ag.on("mouseenter", function () {
+        d3.select(this).select("rect").transition().duration(150).attr("opacity", 0.3);
+      }).on("mouseleave", function () {
+        d3.select(this).select("rect").transition().duration(150).attr("opacity", 0.15);
+      });
     });
 
-    // Add legend
-    const legend = container.append("g").attr("transform", "translate(50, 650)");
+    // Auto-fit the view
+    const totalH = Math.max(curY + 40, aisvsNodes.length * 42 + 60);
+    const scale = Math.min(1, height / totalH, width / (colAISVS + 200));
+    const tx = 10;
+    const ty = 20;
+    svg.call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(Math.max(0.5, scale)));
 
-    legend
-      .append("rect")
-      .attr("x", 0)
-      .attr("y", 0)
-      .attr("width", 300)
-      .attr("height", 120)
-      .attr("rx", 8)
-      .attr("fill", () => {
-        // Check if dark mode is active
-        const isDarkMode = document.documentElement.classList.contains("dark");
-        return isDarkMode ? "#1f2937" : "#ffffff"; // Dark gray for dark mode, white for light mode
-      })
-      .attr("opacity", 0.95)
-      .attr("stroke", () => {
-        // Check if dark mode is active
-        const isDarkMode = document.documentElement.classList.contains("dark");
-        return isDarkMode ? "#374151" : "#d1d5db"; // Darker border for dark mode, light border for light mode
-      })
-      .attr("stroke-width", 1);
-
-    legend
-      .append("text")
-      .attr("x", 10)
-      .attr("y", 20)
-      .attr("font-size", "14px")
-      .attr("font-weight", "bold")
-      .attr("fill", () => {
-        // Check if dark mode is active
-        const isDarkMode = document.documentElement.classList.contains("dark");
-        return isDarkMode ? "#e5e7eb" : "#374151"; // Light gray for dark mode, dark gray for light mode
-      })
-      .text("Interactive Legend");
-
-    // Legend items
-    const legendItems = [
-      { type: "circle", r: 8, fill: "#3b82f6", text: "NIST Functions (Click to expand)" },
-      {
-        type: "rect",
-        width: 16,
-        height: 8,
-        fill: "#3b82f6",
-        text: "NIST Categories/Subcategories",
-      },
-      { type: "rect", width: 20, height: 10, fill: "#10b981", text: "AISVS Categories" },
-      { type: "line", stroke: "#999", text: "Mapping Connections" },
-    ];
-
-    legendItems.forEach((item, i) => {
-      const y = 40 + i * 20;
-
-      if (item.type === "circle") {
-        legend
-          .append("circle")
-          .attr("cx", 20)
-          .attr("cy", y)
-          .attr("r", item.r)
-          .attr("fill", item.fill)
-          .attr("opacity", 0.8);
-      } else if (item.type === "rect") {
-        legend
-          .append("rect")
-          .attr("x", 20 - item.width! / 2)
-          .attr("y", y - item.height! / 2)
-          .attr("width", item.width)
-          .attr("height", item.height)
-          .attr("rx", 4)
-          .attr("fill", item.fill)
-          .attr("opacity", 0.8);
-      } else if (item.type === "line") {
-        legend
-          .append("line")
-          .attr("x1", 10)
-          .attr("y1", y)
-          .attr("x2", 30)
-          .attr("y2", y)
-          .attr("stroke", item.stroke)
-          .attr("stroke-width", 2)
-          .attr("stroke-dasharray", "3,3");
-      }
-
-      legend
-        .append("text")
-        .attr("x", 40)
-        .attr("y", y + 4)
-        .attr("font-size", "11px")
-        .attr("fill", () => {
-          // Check if dark mode is active
-          const isDarkMode = document.documentElement.classList.contains("dark");
-          return isDarkMode ? "#e5e7eb" : "#374151"; // Light gray for dark mode, dark gray for light mode
-        })
-        .text(item.text);
-    });
-
-    // Cleanup function
-    return () => {
-      simulation.stop();
-    };
-  }, [activeTab, graphData, expandedNodes, focusMode, selectedNode]);
+    return () => {};
+  }, [activeTab, expandedNodes, aisvsCategories, getAISVSCategory, selectedNode]);
 
   return (
     <>
@@ -1804,7 +1505,7 @@ export const NISTMapping = () => {
         {/* Mobile Navigation Sidebar */}
         <SidebarNav type="controls" isOpen={isMobileMenuOpen} onClose={handleMobileMenuClose} />
 
-        <main className="container mx-auto px-4 py-8">
+        <main id="main-content" className="container mx-auto px-4 py-8">
           {/* Header Section */}
           <div className="mb-8">
             <h1 className="text-2xl font-bold tracking-tight">NIST AI RMF Mapping</h1>
@@ -1892,11 +1593,11 @@ export const NISTMapping = () => {
               <Select value={selectedFunction} onValueChange={setSelectedFunction}>
                 <SelectTrigger className="border-border/50 focus:border-primary/50 bg-background/50 focus:bg-background transition-all duration-200">
                   <div className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-blue-500" />
+                    <Shield className="h-4 w-4 text-muted-foreground" />
                     <SelectValue placeholder="All NIST Functions" />
                   </div>
                 </SelectTrigger>
-                <SelectContent className="z-[9999] bg-background border border-border shadow-lg">
+                <SelectContent className="z-[9999] bg-popover border border-border shadow-lg">
                   <SelectItem value="all">All NIST Functions</SelectItem>
                   {nistAIRMF.map((func) => (
                     <SelectItem key={func.id} value={func.id}>
@@ -1914,11 +1615,11 @@ export const NISTMapping = () => {
               <Select value={selectedAISVS} onValueChange={setSelectedAISVS}>
                 <SelectTrigger className="border-border/50 focus:border-primary/50 bg-background/50 focus:bg-background transition-all duration-200">
                   <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
                     <SelectValue placeholder="All AISVS Categories" />
                   </div>
                 </SelectTrigger>
-                <SelectContent className="z-[9999] bg-background border border-border shadow-lg">
+                <SelectContent className="z-[9999] bg-popover border border-border shadow-lg">
                   <SelectItem value="all">All AISVS Categories</SelectItem>
                   {aisvsCategories.map((cat) => (
                     <SelectItem key={cat.id} value={cat.code}>
@@ -2188,7 +1889,7 @@ export const NISTMapping = () => {
                                 {aisvsCategories.slice(0, 10).map((cat) => (
                                   <td key={cat.id} className="border p-2 text-center">
                                     {subcategory.aisvsMapping.includes(cat.code) ? (
-                                      <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
+                                      <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mx-auto" />
                                     ) : (
                                       <div className="w-4 h-4 mx-auto"></div>
                                     )}
@@ -2206,7 +1907,7 @@ export const NISTMapping = () => {
                     <h4 className="font-semibold mb-2">Matrix Legend</h4>
                     <div className="flex items-center gap-4 text-sm">
                       <div className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
                         <span>Direct mapping exists</span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -2222,42 +1923,64 @@ export const NISTMapping = () => {
             {/* Interactive Graph Tab */}
             <TabsContent value="graph" className="mt-6">
               <Card className="border-border/50">
-                <CardHeader className="bg-card border-b border-border/50">
-                  <CardTitle className="flex items-center gap-3">
-                    <Network className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <h3 className="text-lg font-bold">NIST Controls to AISVS Mapping</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Advanced visualization with expandable nodes and intelligent focus modes
-                      </p>
-                    </div>
-                  </CardTitle>
-                  <div className="flex items-center gap-4 mt-4 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                      <span>Click nodes to expand</span>
+                <CardHeader className="bg-card border-b border-border/50 pb-3">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div className="flex items-center gap-3">
+                      <Network className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <h3 className="text-base font-semibold">NIST AI RMF to AISVS Mapping</h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Click functions to expand categories and subcategories. Click AISVS nodes
+                          to highlight related NIST controls.
+                        </p>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                      <span>Hit Reset to start the visualization</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                      <span>Use focus mode for clarity</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setExpandedNodes(new Set(["govern"]));
+                          setSelectedNode(null);
+                          setSelectedNodeData(null);
+                        }}
+                        className="text-xs h-7"
+                      >
+                        <RotateCcw className="h-3 w-3 mr-1" />
+                        Reset
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const all = new Set<string>();
+                          nistAIRMF.forEach((func) => {
+                            all.add(func.id);
+                            func.categories.forEach((cat) => {
+                              all.add(`${func.id}-${cat.id}`);
+                            });
+                          });
+                          setExpandedNodes(all);
+                        }}
+                        className="text-xs h-7"
+                      >
+                        <Maximize className="h-3 w-3 mr-1" />
+                        Expand All
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setExpandedNodes(new Set())}
+                        className="text-xs h-7"
+                      >
+                        Collapse All
+                      </Button>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="relative w-full h-[800px] border border-border/50 rounded-xl bg-muted/50 overflow-hidden">
-                    {/* Background Pattern */}
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent opacity-50"></div>
-
-                    <svg
-                      ref={svgRef}
-                      width="100%"
-                      height="100%"
-                      className="absolute inset-0 z-10"
-                    />
+                <CardContent className="p-0">
+                  <div className="relative w-full h-[650px] border-b border-border/50 bg-muted/30 overflow-hidden">
+                    <svg ref={svgRef} width="100%" height="100%" />
 
                     {/* Modern Interactive Controls */}
                     <div className="absolute top-4 right-4 flex flex-col gap-3 z-50">
@@ -2362,15 +2085,9 @@ export const NISTMapping = () => {
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Visible:</span>
+                            <span className="text-muted-foreground">Focus Mode:</span>
                             <span className="font-medium text-foreground">
-                              {graphData.nodes.filter((n) => n.visible).length}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Links:</span>
-                            <span className="font-medium text-foreground">
-                              {graphData.links.filter((l) => l.visible).length}
+                              {focusMode ? "On" : "Off"}
                             </span>
                           </div>
                         </div>
@@ -2469,7 +2186,9 @@ export const NISTMapping = () => {
                                       {selectedNodeData.id === "govern" && (
                                         <>
                                           <li className="flex items-start gap-2">
-                                            <span className="text-blue-500 font-bold">•</span>
+                                            <span className="text-blue-600 dark:text-blue-400 font-bold">
+                                              •
+                                            </span>
                                             <span>
                                               <strong>Governance Structure:</strong> Establish AI
                                               governance boards, define roles and responsibilities,
@@ -2477,7 +2196,9 @@ export const NISTMapping = () => {
                                             </span>
                                           </li>
                                           <li className="flex items-start gap-2">
-                                            <span className="text-blue-500 font-bold">•</span>
+                                            <span className="text-blue-600 dark:text-blue-400 font-bold">
+                                              •
+                                            </span>
                                             <span>
                                               <strong>Policy Development:</strong> Create
                                               comprehensive AI policies covering ethics, risk
@@ -2485,7 +2206,9 @@ export const NISTMapping = () => {
                                             </span>
                                           </li>
                                           <li className="flex items-start gap-2">
-                                            <span className="text-blue-500 font-bold">•</span>
+                                            <span className="text-blue-600 dark:text-blue-400 font-bold">
+                                              •
+                                            </span>
                                             <span>
                                               <strong>Human-AI Alignment:</strong> Design meaningful
                                               human oversight mechanisms and decision-making
@@ -2493,7 +2216,9 @@ export const NISTMapping = () => {
                                             </span>
                                           </li>
                                           <li className="flex items-start gap-2">
-                                            <span className="text-blue-500 font-bold">•</span>
+                                            <span className="text-blue-600 dark:text-blue-400 font-bold">
+                                              •
+                                            </span>
                                             <span>
                                               <strong>Risk Appetite:</strong> Define organizational
                                               tolerance for AI risks and establish clear boundaries
@@ -2504,7 +2229,9 @@ export const NISTMapping = () => {
                                       {selectedNodeData.id === "map" && (
                                         <>
                                           <li className="flex items-start gap-2">
-                                            <span className="text-green-500 font-bold">•</span>
+                                            <span className="text-green-600 dark:text-green-400 font-bold">
+                                              •
+                                            </span>
                                             <span>
                                               <strong>Context Analysis:</strong> Document AI system
                                               purpose, use cases, and operational environment
@@ -2512,7 +2239,9 @@ export const NISTMapping = () => {
                                             </span>
                                           </li>
                                           <li className="flex items-start gap-2">
-                                            <span className="text-green-500 font-bold">•</span>
+                                            <span className="text-green-600 dark:text-green-400 font-bold">
+                                              •
+                                            </span>
                                             <span>
                                               <strong>Risk Categorization:</strong> Classify AI
                                               systems by impact level (high, moderate, low) and risk
@@ -2520,7 +2249,9 @@ export const NISTMapping = () => {
                                             </span>
                                           </li>
                                           <li className="flex items-start gap-2">
-                                            <span className="text-green-500 font-bold">•</span>
+                                            <span className="text-green-600 dark:text-green-400 font-bold">
+                                              •
+                                            </span>
                                             <span>
                                               <strong>Stakeholder Mapping:</strong> Identify all
                                               affected parties and document their concerns and
@@ -2528,7 +2259,9 @@ export const NISTMapping = () => {
                                             </span>
                                           </li>
                                           <li className="flex items-start gap-2">
-                                            <span className="text-green-500 font-bold">•</span>
+                                            <span className="text-green-600 dark:text-green-400 font-bold">
+                                              •
+                                            </span>
                                             <span>
                                               <strong>Threat Modeling:</strong> Systematically
                                               identify AI-specific threats, attack vectors, and
@@ -2575,7 +2308,9 @@ export const NISTMapping = () => {
                                       {selectedNodeData.id === "manage" && (
                                         <>
                                           <li className="flex items-start gap-2">
-                                            <span className="text-red-500 font-bold">•</span>
+                                            <span className="text-red-600 dark:text-red-400 font-bold">
+                                              •
+                                            </span>
                                             <span>
                                               <strong>Risk Treatment:</strong> Implement mitigation
                                               strategies including avoidance, reduction, transfer,
@@ -2583,7 +2318,9 @@ export const NISTMapping = () => {
                                             </span>
                                           </li>
                                           <li className="flex items-start gap-2">
-                                            <span className="text-red-500 font-bold">•</span>
+                                            <span className="text-red-600 dark:text-red-400 font-bold">
+                                              •
+                                            </span>
                                             <span>
                                               <strong>Control Implementation:</strong> Deploy
                                               technical, administrative, and physical safeguards for
@@ -2591,7 +2328,9 @@ export const NISTMapping = () => {
                                             </span>
                                           </li>
                                           <li className="flex items-start gap-2">
-                                            <span className="text-red-500 font-bold">•</span>
+                                            <span className="text-red-600 dark:text-red-400 font-bold">
+                                              •
+                                            </span>
                                             <span>
                                               <strong>Incident Response:</strong> Establish 24/7
                                               monitoring, detection, and response capabilities for
@@ -2599,7 +2338,9 @@ export const NISTMapping = () => {
                                             </span>
                                           </li>
                                           <li className="flex items-start gap-2">
-                                            <span className="text-red-500 font-bold">•</span>
+                                            <span className="text-red-600 dark:text-red-400 font-bold">
+                                              •
+                                            </span>
                                             <span>
                                               <strong>Third-Party Management:</strong> Assess and
                                               monitor AI vendors, suppliers, and service providers
@@ -2910,7 +2651,9 @@ export const NISTMapping = () => {
                                       {selectedNodeData.label === "C2" && (
                                         <>
                                           <div className="flex items-start gap-2">
-                                            <span className="text-blue-500 font-bold">•</span>
+                                            <span className="text-blue-600 dark:text-blue-400 font-bold">
+                                              •
+                                            </span>
                                             <span>
                                               <strong>Authentication Controls:</strong> Implement
                                               strong user authentication and identity verification
@@ -2918,14 +2661,18 @@ export const NISTMapping = () => {
                                             </span>
                                           </div>
                                           <div className="flex items-start gap-2">
-                                            <span className="text-blue-500 font-bold">•</span>
+                                            <span className="text-blue-600 dark:text-blue-400 font-bold">
+                                              •
+                                            </span>
                                             <span>
                                               <strong>Session Management:</strong> Secure session
                                               handling, timeout controls, and session invalidation
                                             </span>
                                           </div>
                                           <div className="flex items-start gap-2">
-                                            <span className="text-blue-500 font-bold">•</span>
+                                            <span className="text-blue-600 dark:text-blue-400 font-bold">
+                                              •
+                                            </span>
                                             <span>
                                               <strong>Multi-Factor Authentication:</strong> Deploy
                                               MFA for privileged access to AI systems and data
@@ -2936,7 +2683,9 @@ export const NISTMapping = () => {
                                       {selectedNodeData.label === "C3" && (
                                         <>
                                           <div className="flex items-start gap-2">
-                                            <span className="text-green-500 font-bold">•</span>
+                                            <span className="text-green-600 dark:text-green-400 font-bold">
+                                              •
+                                            </span>
                                             <span>
                                               <strong>Access Control Policies:</strong> Define and
                                               enforce granular access controls for AI resources and
@@ -2944,14 +2693,18 @@ export const NISTMapping = () => {
                                             </span>
                                           </div>
                                           <div className="flex items-start gap-2">
-                                            <span className="text-green-500 font-bold">•</span>
+                                            <span className="text-green-600 dark:text-green-400 font-bold">
+                                              •
+                                            </span>
                                             <span>
                                               <strong>Role-Based Access:</strong> Implement
                                               RBAC/ABAC models appropriate for AI system operations
                                             </span>
                                           </div>
                                           <div className="flex items-start gap-2">
-                                            <span className="text-green-500 font-bold">•</span>
+                                            <span className="text-green-600 dark:text-green-400 font-bold">
+                                              •
+                                            </span>
                                             <span>
                                               <strong>Privilege Management:</strong> Apply least
                                               privilege principles and regular access reviews
@@ -3169,7 +2922,7 @@ export const NISTMapping = () => {
                                               {mappedSubcategories.map((sub) => (
                                                 <div
                                                   key={sub.id}
-                                                  className="flex items-start gap-2 p-2 bg-white dark:bg-gray-800 border rounded text-xs"
+                                                  className="flex items-start gap-2 p-2 bg-card border rounded text-xs"
                                                 >
                                                   <div className="flex-1">
                                                     <div className="font-medium">{sub.code}</div>

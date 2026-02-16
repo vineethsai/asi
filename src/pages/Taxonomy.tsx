@@ -5,18 +5,13 @@ import Footer from "@/components/layout/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Layers, Target, Calculator, Zap, Network } from "lucide-react";
+import { Layers, Target, Calculator, Zap, Network } from "lucide-react";
 
 import { ciscoTaxonomyData, getTaxonomyStats } from "@/components/components/ciscoTaxonomyData";
 import { agenticTop10Data } from "@/components/components/owaspAgenticTop10Data";
 import { coreRiskScores } from "@/components/components/aivssCalcData";
 import { threatsData } from "@/components/components/securityData";
-import atlasTechniquesData from "@/components/components/atlas_techniques.json";
-import atlasTacticsData from "@/components/components/atlas_tactics.json";
 
-const MitreAtlasContent = React.lazy(() =>
-  import("./MitreAtlas").then((m) => ({ default: m.MitreAtlasContent })),
-);
 const CiscoTaxonomyContent = React.lazy(() =>
   import("./CiscoTaxonomy").then((m) => ({ default: m.CiscoTaxonomyContent })),
 );
@@ -53,28 +48,7 @@ interface FrameworkEdge {
 function useFrameworkData() {
   return useMemo(() => {
     const ciscoStats = getTaxonomyStats();
-    const atlasCount = (atlasTechniquesData as unknown[]).length;
-    const tacticsCount = (atlasTacticsData as unknown[]).length;
     const threatCount = Object.keys(threatsData).length;
-
-    let atlasToThreats = 0;
-    (atlasTechniquesData as { threatMapping?: string[] }[]).forEach((t) => {
-      if (t.threatMapping) atlasToThreats += t.threatMapping.length;
-    });
-
-    let atlasToCisco = 0;
-    ciscoTaxonomyData.forEach((og) => {
-      og.ai_tech.forEach((t) => {
-        t.mappings.forEach((m) => {
-          if (m.includes("MITRE ATLAS")) atlasToCisco++;
-        });
-        t.ai_subtech.forEach((s) => {
-          s.mappings.forEach((m) => {
-            if (m.includes("MITRE ATLAS")) atlasToCisco++;
-          });
-        });
-      });
-    });
 
     let ciscoToAgentic = 0;
     agenticTop10Data.forEach((e) => {
@@ -98,21 +72,11 @@ function useFrameworkData() {
       r = 175;
     const angleOffset = -Math.PI / 2;
     const pos = (i: number) => ({
-      x: cx + r * Math.cos(angleOffset + (i * 2 * Math.PI) / 5),
-      y: cy + r * Math.sin(angleOffset + (i * 2 * Math.PI) / 5),
+      x: cx + r * Math.cos(angleOffset + (i * 2 * Math.PI) / 4),
+      y: cy + r * Math.sin(angleOffset + (i * 2 * Math.PI) / 4),
     });
 
     const nodes: FrameworkNode[] = [
-      {
-        id: "atlas",
-        name: "MITRE ATLAS",
-        shortName: "ATLAS",
-        color: "#3b82f6",
-        darkColor: "#60a5fa",
-        count: atlasCount,
-        description: `${tacticsCount} tactics, ${atlasCount} techniques`,
-        ...pos(0),
-      },
       {
         id: "cisco",
         name: "Cisco AI Taxonomy",
@@ -121,7 +85,7 @@ function useFrameworkData() {
         darkColor: "#22d3ee",
         count: ciscoStats.objectiveGroups,
         description: `${ciscoStats.objectiveGroups} objectives, ${ciscoStats.techniques} techniques`,
-        ...pos(1),
+        ...pos(0),
       },
       {
         id: "agentic",
@@ -131,7 +95,7 @@ function useFrameworkData() {
         darkColor: "#fb7185",
         count: 10,
         description: "10 core agentic security risks",
-        ...pos(2),
+        ...pos(1),
       },
       {
         id: "aivss",
@@ -141,7 +105,7 @@ function useFrameworkData() {
         darkColor: "#fbbf24",
         count: coreRiskScores.length,
         description: `${coreRiskScores.length} pre-scored core risks`,
-        ...pos(3),
+        ...pos(2),
       },
       {
         id: "threats",
@@ -151,23 +115,11 @@ function useFrameworkData() {
         darkColor: "#a78bfa",
         count: threatCount,
         description: `${threatCount} identified agent threats`,
-        ...pos(4),
+        ...pos(3),
       },
     ];
 
     const edges: FrameworkEdge[] = [
-      {
-        source: "atlas",
-        target: "threats",
-        count: atlasToThreats,
-        label: "technique→threat mappings",
-      },
-      {
-        source: "atlas",
-        target: "cisco",
-        count: atlasToCisco,
-        label: "Cisco→ATLAS references",
-      },
       {
         source: "cisco",
         target: "agentic",
@@ -248,7 +200,6 @@ function FrameworkVisualization({ onSelectTab }: { onSelectTab: (tab: string) =>
   }, []);
 
   const tabMap: Record<string, string> = {
-    atlas: "mitre-atlas",
     cisco: "cisco",
     agentic: "owasp-agentic",
     aivss: "aivss",
@@ -1038,15 +989,12 @@ export default function Taxonomy() {
     [setSearchParams],
   );
 
-  const { nodes, edges: allEdges } = useFrameworkData();
-  const _totalMappings = useMemo(() => {
-    return allEdges.reduce((sum, e) => sum + e.count, 0);
-  }, [allEdges]);
+  const { nodes } = useFrameworkData();
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
+      <main id="main-content" className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-8">
           <h1 className="text-2xl font-bold tracking-tight">Threat Taxonomy</h1>
           <p className="mt-1 text-muted-foreground">
@@ -1061,11 +1009,6 @@ export default function Taxonomy() {
                 <Network className="h-4 w-4" />
                 <span className="hidden sm:inline">Overview & Mapping</span>
                 <span className="sm:hidden">Overview</span>
-              </TabsTrigger>
-              <TabsTrigger value="mitre-atlas" className="gap-1.5">
-                <Shield className="h-4 w-4" />
-                <span className="hidden sm:inline">MITRE ATLAS</span>
-                <span className="sm:hidden">ATLAS</span>
               </TabsTrigger>
               <TabsTrigger value="cisco" className="gap-1.5">
                 <Layers className="h-4 w-4" />
@@ -1097,12 +1040,6 @@ export default function Taxonomy() {
             <ThreatSankeyDiagram />
             <FrameworkVisualization onSelectTab={handleTabChange} />
             <MappingMatrix />
-          </TabsContent>
-
-          <TabsContent value="mitre-atlas" className="mt-0">
-            <Suspense fallback={<TabLoader />}>
-              <MitreAtlasContent />
-            </Suspense>
           </TabsContent>
 
           <TabsContent value="cisco" className="mt-0">

@@ -43,7 +43,6 @@ function buildSearchIndex(): SearchResult[] {
     { title: "References", path: "/references", type: "page" },
     { title: "About", path: "/about", type: "page" },
     { title: "AI Security Taxonomy", path: "/taxonomy", type: "page" },
-    { title: "MITRE ATLAS", path: "/taxonomy?tab=mitre-atlas", type: "page" },
     { title: "Cisco AI Taxonomy", path: "/taxonomy?tab=cisco", type: "page" },
     { title: "OWASP Agentic Top 10", path: "/taxonomy?tab=owasp-agentic", type: "page" },
     { title: "AIVSS Calculator", path: "/taxonomy?tab=aivss", type: "page" },

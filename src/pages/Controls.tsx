@@ -82,9 +82,6 @@ export const Controls = () => {
   const [activeTab, setActiveTab] = useState("mitigations");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Get all unique values for filters
-  const _allTags = Array.from(new Set(controls.flatMap((c) => c.tags || [])));
-  const _allStatuses = Array.from(new Set(controls.map((c) => c.status).filter(Boolean)));
   const allThreats = Object.values(threatsData);
 
   // Handle URL hash-based navigation
@@ -293,7 +290,7 @@ export const Controls = () => {
       {/* Mobile Navigation Sidebar */}
       <SidebarNav type="controls" isOpen={isMobileMenuOpen} onClose={handleMobileMenuClose} />
 
-      <section className="py-16">
+      <section id="main-content" className="py-16">
         <div className="container px-4 md:px-6">
           <div className="max-w-7xl mx-auto">
             {/* Header */}
@@ -359,7 +356,7 @@ export const Controls = () => {
                       <SelectTrigger>
                         <SelectValue placeholder="All Categories" />
                       </SelectTrigger>
-                      <SelectContent className="z-[9999] bg-white border shadow-lg">
+                      <SelectContent className="z-[9999] bg-popover border shadow-lg">
                         <SelectItem value="all">All Categories</SelectItem>
                         {aisvsCategories.map((category) => (
                           <SelectItem key={category.id} value={category.id}>
@@ -376,7 +373,7 @@ export const Controls = () => {
                       <SelectTrigger>
                         <SelectValue placeholder="All Threats" />
                       </SelectTrigger>
-                      <SelectContent className="z-[9999] bg-white border shadow-lg">
+                      <SelectContent className="z-[9999] bg-popover border shadow-lg">
                         <SelectItem value="all">All Threats</SelectItem>
                         {allThreats.map((threat) => (
                           <SelectItem key={threat.id} value={threat.id}>
@@ -393,7 +390,7 @@ export const Controls = () => {
                       <SelectTrigger>
                         <SelectValue placeholder="All Levels" />
                       </SelectTrigger>
-                      <SelectContent className="z-[9999] bg-white border shadow-lg">
+                      <SelectContent className="z-[9999] bg-popover border shadow-lg">
                         <SelectItem value="all">All Levels</SelectItem>
                         <SelectItem value="1">Level 1</SelectItem>
                         <SelectItem value="2">Level 2</SelectItem>
@@ -420,7 +417,7 @@ export const Controls = () => {
                     className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
                     onClick={() => handleTabChange("mitigations")}
                   >
-                    <Shield className="h-4 w-4 text-blue-500" />
+                    <Shield className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">Security Controls</span>
                   </Link>
                   <Link
@@ -428,7 +425,7 @@ export const Controls = () => {
                     className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
                     onClick={() => handleTabChange("aisvs")}
                   >
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <CheckCircle className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">AISVS Requirements</span>
                   </Link>
                   <Link
@@ -436,7 +433,7 @@ export const Controls = () => {
                     className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
                     onClick={() => handleTabChange("integration")}
                   >
-                    <Database className="h-4 w-4 text-purple-500" />
+                    <Database className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">Integration Matrix</span>
                   </Link>
                 </div>
@@ -459,7 +456,11 @@ export const Controls = () => {
               <TabsContent value="mitigations" className="mt-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                   {filteredControls.map((control) => (
-                    <Link to={`/controls/${control.id}`} key={control.id}>
+                    <div
+                      key={control.id}
+                      onClick={() => navigate(`/controls/${control.id}`)}
+                      className="cursor-pointer"
+                    >
                       <Card className="h-full border border-control/20 hover:bg-muted/50 transition-colors">
                         <CardContent className="p-6">
                           <div className="flex items-center mb-3 gap-2">
@@ -541,7 +542,7 @@ export const Controls = () => {
                                     <Badge
                                       key={tag}
                                       variant="default"
-                                      className="text-xs bg-blue-100 text-blue-800"
+                                      className="text-xs bg-primary/10 text-primary"
                                     >
                                       {tag.replace("aisvs-", "").toUpperCase()}
                                     </Badge>
@@ -582,7 +583,7 @@ export const Controls = () => {
                           )}
                         </CardContent>
                       </Card>
-                    </Link>
+                    </div>
                   ))}
                 </div>
               </TabsContent>
@@ -997,7 +998,7 @@ export const Controls = () => {
                         return (
                           <div
                             key={category.id}
-                            className="border-2 rounded-xl p-6 hover:shadow-lg transition-all duration-200"
+                            className="border-2 rounded-xl p-6 hover:bg-muted/50 transition-colors"
                             style={{ borderColor: `${category.color}20` }}
                           >
                             {/* Category Header */}
@@ -1128,14 +1129,14 @@ export const Controls = () => {
                                 <span className="text-muted-foreground">Coverage Summary:</span>
                                 <div className="flex items-center gap-4">
                                   <span
-                                    className={`font-medium ${relatedControls.length > 0 ? "text-green-600" : "text-orange-600"}`}
+                                    className={`font-medium ${relatedControls.length > 0 ? "text-green-600 dark:text-green-400" : "text-orange-600 dark:text-orange-400"}`}
                                   >
                                     {relatedControls.length > 0
                                       ? "✓ Controls Mapped"
                                       : "⚠ Needs Controls"}
                                   </span>
                                   <span
-                                    className={`font-medium ${relevantThreats.length > 0 ? "text-green-600" : "text-orange-600"}`}
+                                    className={`font-medium ${relevantThreats.length > 0 ? "text-green-600 dark:text-green-400" : "text-orange-600 dark:text-orange-400"}`}
                                   >
                                     {relevantThreats.length > 0
                                       ? "✓ Threats Covered"
@@ -1172,7 +1173,7 @@ export const Controls = () => {
                           <div className="text-sm text-muted-foreground">Threat Categories</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-green-600 mb-1">
+                          <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
                             {Math.round(
                               (aisvsCategories.filter((cat) =>
                                 controls.some((ctrl) =>

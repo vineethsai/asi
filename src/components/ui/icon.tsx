@@ -77,15 +77,24 @@ export interface IconProps {
   name?: string;
   color?: string;
   size?: number;
+  className?: string;
 }
 
-export const Icon: FC<IconProps> = ({ name, color, size = 28 }) => {
+export const Icon: FC<IconProps> = ({ name, color, size = 28, className }) => {
   if (name && iconMap[name]) {
     const Comp = iconMap[name];
-    return <Comp color={color} size={size} />;
+    return (
+      <span className={className}>
+        <Comp color={color} size={size} />
+      </span>
+    );
   }
   // fallback
-  return <AlertCircle color={color || "#64748b"} size={size} />;
+  return (
+    <span className={className}>
+      <AlertCircle color={color || "#64748b"} size={size} />
+    </span>
+  );
 };
 
 export default Icon;

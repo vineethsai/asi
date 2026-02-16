@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calculator, Download, BarChart3, Info } from "lucide-react";
+import { Download, BarChart3, Info } from "lucide-react";
 import {
   agenticRiskFactors,
   coreRiskScores,
@@ -120,18 +120,11 @@ export function AIVSSCalculatorContent() {
   return (
     <>
       <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <Calculator className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold">AIVSS Calculator</h1>
-        </div>
-        <p className="text-muted-foreground max-w-3xl">
+        <h1 className="text-2xl font-bold tracking-tight">AIVSS Calculator</h1>
+        <p className="mt-1 text-muted-foreground">
           AI Vulnerability Scoring System for Agentic AI. Extends CVSS v4.0 with 10 agentic risk
           amplification factors to quantify the unique risks of autonomous AI systems.
         </p>
-        <div className="flex gap-2 mt-3">
-          <Badge variant="outline">OWASP AIVSS v0.5</Badge>
-          <Badge variant="outline">Based on CVSS v4.0</Badge>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

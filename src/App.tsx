@@ -1,5 +1,4 @@
 import React, { Suspense } from "react";
-import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -60,7 +59,6 @@ const AppWithAnalytics = () => {
         <Route path="/interactive" element={<Interactive />} />
         <Route path="/references" element={<References />} />
         <Route path="/taxonomy" element={<Taxonomy />} />
-        <Route path="/mitre-atlas" element={<Navigate to="/taxonomy?tab=mitre-atlas" replace />} />
         <Route path="/cisco-taxonomy" element={<Navigate to="/taxonomy?tab=cisco" replace />} />
         <Route
           path="/owasp-agentic-top10"
@@ -82,7 +80,6 @@ const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
         <Sonner />
         <BrowserRouter>
           <ScrollToTop />

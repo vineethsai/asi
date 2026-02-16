@@ -230,7 +230,6 @@ export default function About() {
                 "Submit pull requests for new controls or threats",
                 "Improve documentation and implementation guides",
                 "Share feedback on the interactive assessment tools",
-                "Add MITRE ATLAS technique mappings",
                 "Help expand AISVS verification requirements",
               ].map((item) => (
                 <div key={item} className="flex items-start gap-2">

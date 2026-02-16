@@ -210,7 +210,7 @@ const References = () => {
 
       <Header />
 
-      <main className="container mx-auto px-4 py-8">
+      <main id="main-content" className="container mx-auto px-4 py-8">
         {/* Header Section */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold tracking-tight">References</h1>

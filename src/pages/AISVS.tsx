@@ -35,7 +35,6 @@ export const AISVS = () => {
     content_category: "security_standards",
   });
 
-  const [_isSidebarOpen, _setIsSidebarOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -119,13 +118,13 @@ export const AISVS = () => {
   const getLevelBadgeColor = (level: number) => {
     switch (level) {
       case 1:
-        return "bg-green-100 text-green-800 border-green-200";
+        return "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800";
       case 2:
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+        return "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800";
       case 3:
-        return "bg-red-100 text-red-800 border-red-200";
+        return "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+        return "bg-gray-100 dark:bg-gray-800/30 text-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700";
     }
   };
 
@@ -188,7 +187,7 @@ export const AISVS = () => {
         {/* Mobile Navigation Sidebar */}
         <SidebarNav type="controls" isOpen={isMobileMenuOpen} onClose={handleMobileMenuClose} />
 
-        <main className="container mx-auto px-4 py-8">
+        <main id="main-content" className="container mx-auto px-4 py-8">
           {/* Header Section */}
           <div className="mb-8">
             <h1 className="text-2xl font-bold tracking-tight">OWASP AISVS</h1>
@@ -235,7 +234,7 @@ export const AISVS = () => {
               <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
-              <SelectContent className="z-[9999] bg-white border shadow-lg">
+              <SelectContent className="z-[9999] bg-popover border shadow-lg">
                 <SelectItem value="all">All Categories</SelectItem>
                 {categories.map((category) => (
                   <SelectItem key={category.id} value={category.id}>
@@ -248,7 +247,7 @@ export const AISVS = () => {
               <SelectTrigger className="w-full sm:w-[150px]">
                 <SelectValue placeholder="All Levels" />
               </SelectTrigger>
-              <SelectContent className="z-[9999] bg-white border shadow-lg">
+              <SelectContent className="z-[9999] bg-popover border shadow-lg">
                 <SelectItem value="all">All Levels</SelectItem>
                 <SelectItem value="1">Level 1</SelectItem>
                 <SelectItem value="2">Level 2</SelectItem>
@@ -369,7 +368,7 @@ export const AISVS = () => {
                                               </div>
                                             </label>
                                             {isChecked && (
-                                              <CheckCircle className="h-4 w-4 text-green-600 float-right" />
+                                              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 float-right" />
                                             )}
                                           </div>
                                         </div>

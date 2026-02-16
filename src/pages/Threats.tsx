@@ -106,7 +106,7 @@ export const Threats = () => {
 
       <SidebarNav type="threats" isOpen={isMobileMenuOpen} onClose={handleMobileMenuClose} />
 
-      <section className="py-16 bg-background min-h-screen">
+      <section id="main-content" className="py-16 bg-background min-h-screen">
         <div className="container px-4 md:px-6">
           <div className="max-w-7xl mx-auto">
             {/* Header */}

@@ -4,17 +4,16 @@ import { Header } from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Search, ChevronRight, Layers, Target, Database, Zap } from "lucide-react";
+import { Search, ChevronRight, Target, Database, Zap } from "lucide-react";
 import {
   ciscoTaxonomyData,
-  ciscoTaxonomyVersion,
   getTaxonomyStats,
   parseMappingBadge,
   getMappingColor,
@@ -112,39 +111,24 @@ export function CiscoTaxonomyContent() {
   return (
     <>
       <div className="mb-8">
-        <div className="flex items-center gap-2 mb-2">
-          <Layers className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold">Cisco AI Security Taxonomy</h1>
-        </div>
-        <p className="text-muted-foreground max-w-3xl">
+        <h1 className="text-2xl font-bold tracking-tight">Cisco AI Security Taxonomy</h1>
+        <p className="mt-1 text-muted-foreground">
           Comprehensive AI/ML threat taxonomy covering {stats.objectiveGroups} objective groups,{" "}
           {stats.techniques} techniques, and {stats.subTechniques} sub-techniques with
           cross-framework mappings to OWASP, MITRE ATLAS, MITRE ATT&CK, and NIST.
         </p>
-        <Badge variant="outline" className="mt-2">
-          Version {ciscoTaxonomyVersion}
-        </Badge>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <Card>
-          <CardContent className="pt-4 pb-4 text-center">
-            <div className="text-3xl font-bold text-primary">{stats.objectiveGroups}</div>
-            <div className="text-sm text-muted-foreground">Objective Groups</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-4 text-center">
-            <div className="text-3xl font-bold text-primary">{stats.techniques}</div>
-            <div className="text-sm text-muted-foreground">Techniques</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-4 text-center">
-            <div className="text-3xl font-bold text-primary">{stats.subTechniques}</div>
-            <div className="text-sm text-muted-foreground">Sub-Techniques</div>
-          </CardContent>
-        </Card>
+      <div className="flex flex-wrap gap-6 text-sm text-muted-foreground mb-6">
+        <span>
+          <strong className="text-foreground">{stats.objectiveGroups}</strong> Objective Groups
+        </span>
+        <span>
+          <strong className="text-foreground">{stats.techniques}</strong> Techniques
+        </span>
+        <span>
+          <strong className="text-foreground">{stats.subTechniques}</strong> Sub-Techniques
+        </span>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-6">

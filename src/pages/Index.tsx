@@ -125,7 +125,7 @@ const Index = () => {
       {/* Mobile Navigation Sidebar */}
       <SidebarNav type="components" isOpen={isMobileMenuOpen} onClose={handleMobileMenuClose} />
 
-      <main>
+      <main id="main-content">
         <HeroSection />
         <ArchitectureShowcase />
         <ArchitectureGraphSection />

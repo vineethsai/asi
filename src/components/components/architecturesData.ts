@@ -286,5 +286,3 @@ export const architecturesData: Record<string, Architecture> = {
     displayOrder: 5,
   },
 };
-
-export default architecturesData;

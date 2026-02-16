@@ -9,26 +9,11 @@ import SidebarNav from "@/components/layout/SidebarNav";
 import { Icon } from "@/components/ui/icon";
 import { Helmet } from "react-helmet";
 
-const getAllTags = (data) => {
-  const tags = new Set();
-  data.forEach((comp) => {
-    if (comp.threatCategories) comp.threatCategories.forEach((t) => tags.add(t));
-    if (comp.children) {
-      comp.children.forEach((sub) => {
-        if (sub.threatCategories) sub.threatCategories.forEach((t) => tags.add(t));
-      });
-    }
-  });
-  return Array.from(tags);
-};
-
 const Components = () => {
-  const [tagFilter, _setTagFilter] = useState("");
-  const [sortBy, _setSortBy] = useState("name");
-  const [searchQuery, _setSearchQuery] = useState("");
+  const [tagFilter] = useState("");
+  const [sortBy] = useState("name");
+  const [searchQuery] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const _allTags = useMemo(() => getAllTags(frameworkData), []);
 
   const filtered = useMemo(() => {
     let comps = frameworkData;
@@ -123,7 +108,7 @@ const Components = () => {
       {/* Mobile Navigation Sidebar */}
       <SidebarNav type="components" isOpen={isMobileMenuOpen} onClose={handleMobileMenuClose} />
 
-      <main className="py-16 bg-background">
+      <main id="main-content" className="py-16 bg-background">
         <div className="container px-4 md:px-6">
           <div className="max-w-7xl mx-auto">
             <div className="mb-8">

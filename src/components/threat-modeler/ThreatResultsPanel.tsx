@@ -232,9 +232,9 @@ export default function ThreatResultsPanel({
             </div>
             <button
               onClick={onToggleShowMitigated}
-              className={`text-[9px] px-1.5 py-0.5 rounded transition-all ${showMitigated ? "bg-green-500/20 text-green-600 font-semibold" : "bg-muted text-muted-foreground hover:bg-accent"}`}
+              className={`text-[9px] px-2 py-1 rounded border transition-all ${showMitigated ? "bg-green-500/20 border-green-500/40 text-green-600 font-semibold" : "bg-muted border-border text-muted-foreground hover:bg-accent hover:text-foreground"}`}
             >
-              {showMitigated ? "Showing all" : "Show mitigated"}
+              {showMitigated ? "Showing all" : "Showing active"}
             </button>
           </div>
         )}

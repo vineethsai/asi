@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Search,
   ZoomIn,
@@ -14,10 +15,14 @@ import {
   RotateCcw,
   Play,
   Pause,
-  Target,
   Maximize,
   Minimize,
+  X,
+  ExternalLink,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 interface GraphNode extends d3.SimulationNodeDatum {
@@ -42,7 +47,7 @@ interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
 }
 
 // Component data mapping from the parsed components with proper dot notation
-const componentDataMap = {
+const componentDataMap: Record<string, { title: string; description: string }> = {
   "kc1.1": {
     title: "Large Language Models (LLMs)",
     description:
@@ -209,7 +214,6 @@ const componentDataMap = {
       "Agent controlling IoT devices. Compromise could impact the operational environment or misuse devices.",
   },
 
-  // Main component data
   kc1: {
     title: "Language Models (LLMs)",
     description:
@@ -241,15 +245,9 @@ const componentDataMap = {
   },
 };
 
-// Helper function to get component data by ID
 const getComponentDataById = (id: string) => {
-  // First try the component data map
   const componentData = componentDataMap[id];
-  if (componentData) {
-    return componentData;
-  }
-
-  // Fallback to searching in framework data
+  if (componentData) return componentData;
   const searchInFramework = (nodes: ComponentNode[]): ComponentNode | null => {
     for (const node of nodes) {
       if (node.id === id || node.id.replace(/-/g, ".") === id) return node;
@@ -263,16 +261,58 @@ const getComponentDataById = (id: string) => {
   return searchInFramework(frameworkData);
 };
 
+const NODE_COLORS = {
+  architecture: "#3b82f6",
+  component: "#22c55e",
+  threat: "#ef4444",
+  mitigation: "#f59e0b",
+} as const;
+
+const LINK_COLORS = {
+  "arch-comp": "#3b82f6",
+  "comp-threat": "#ef4444",
+  "threat-mitigation": "#f59e0b",
+} as const;
+
+function getDetailPath(node: GraphNode): string | null {
+  switch (node.type) {
+    case "architecture":
+      return `/architectures/${node.id}`;
+    case "component":
+      return `/components/${node.id}`;
+    case "threat":
+      return `/threats/${node.id}`;
+    case "mitigation":
+      return `/controls`;
+    default:
+      return null;
+  }
+}
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return debounced;
+}
+
 const ArchitectureNavigator: React.FC = () => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const explorerRef = useRef<HTMLDivElement>(null);
   const simulationRef = useRef<d3.Simulation<GraphNode, GraphLink> | null>(null);
+  const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
 
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 200);
   const [isSimulationRunning, setIsSimulationRunning] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [filters, setFilters] = useState({
     architecture: true,
     component: true,
@@ -280,12 +320,18 @@ const ArchitectureNavigator: React.FC = () => {
     mitigation: true,
   });
 
+  const [tooltip, setTooltip] = useState<{
+    x: number;
+    y: number;
+    name: string;
+    type: string;
+  } | null>(null);
+
   // Build graph data
   const { nodes, links } = useMemo(() => {
     const nodeMap = new Map<string, GraphNode>();
     const linkArray: GraphLink[] = [];
 
-    // Helper to add node
     const addNode = (
       id: string,
       name: string,
@@ -311,36 +357,28 @@ const ArchitectureNavigator: React.FC = () => {
       }
     };
 
-    // Helper to add link
     const addLink = (
       sourceId: string,
       targetId: string,
       type: GraphLink["type"],
       strength: number = 1,
     ) => {
-      linkArray.push({
-        source: sourceId,
-        target: targetId,
-        type,
-        strength,
-      });
+      linkArray.push({ source: sourceId, target: targetId, type, strength });
     };
 
     try {
-      // Add architecture nodes
       Object.values(architecturesData).forEach((arch: Architecture) => {
         addNode(
           arch.id,
           arch.name,
           "architecture",
           arch.description,
-          "#3b82f6", // Blue for architectures
+          NODE_COLORS.architecture,
           60,
           arch.riskScore,
           arch.tags,
         );
 
-        // Add component nodes and links
         (arch.keyComponents || []).forEach((compId) => {
           const component = getComponentDataById(compId);
           if (component) {
@@ -349,21 +387,18 @@ const ArchitectureNavigator: React.FC = () => {
               component.title,
               "component",
               component.description || "",
-              "#22c55e", // Green for components
+              NODE_COLORS.component,
               40,
               undefined,
-              component.threatCategories,
+              (component as ComponentNode).threatCategories,
             );
             addLink(arch.id, compId, "arch-comp", 2);
 
-            // Add threat nodes and links
             (arch.threatIds || []).forEach((threatId) => {
               const threat = threatsData[threatId];
               if (threat) {
-                // Check if this threat affects the current component (handle both dot and dash notation)
                 const normalizedCompId = compId.replace(/\./g, "-");
                 const mainCompId = compId.includes(".") ? compId.split(".")[0] : compId;
-
                 const threatAffectsComponent = threat.componentIds?.some(
                   (tCompId) =>
                     tCompId === compId ||
@@ -378,7 +413,7 @@ const ArchitectureNavigator: React.FC = () => {
                     threat.name,
                     "threat",
                     threat.description,
-                    "#ef4444", // Red for threats
+                    NODE_COLORS.threat,
                     30,
                     threat.riskScore,
                     threat.tags,
@@ -390,7 +425,6 @@ const ArchitectureNavigator: React.FC = () => {
                     threat.riskScore ? threat.riskScore / 10 : 1,
                   );
 
-                  // Add mitigation nodes and links
                   (arch.mitigationIds || []).forEach((mitigationId) => {
                     const mitigation = mitigationsData[mitigationId];
                     if (mitigation && mitigation.threatIds?.includes(threatId)) {
@@ -399,7 +433,7 @@ const ArchitectureNavigator: React.FC = () => {
                         mitigation.name,
                         "mitigation",
                         mitigation.description,
-                        "#f59e0b", // Orange for mitigations
+                        NODE_COLORS.mitigation,
                         25,
                         undefined,
                         mitigation.tags,
@@ -417,57 +451,60 @@ const ArchitectureNavigator: React.FC = () => {
       console.error("Error building graph data:", error);
     }
 
-    return {
-      nodes: Array.from(nodeMap.values()),
-      links: linkArray,
-    };
+    return { nodes: Array.from(nodeMap.values()), links: linkArray };
   }, []);
 
-  // Filter nodes and links based on search and filters
+  // Filter nodes and links
   const filteredData = useMemo(() => {
     const filteredNodes = nodes.filter((node) => {
-      // Type filter
       if (!filters[node.type]) return false;
-
-      // Search filter
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
+      if (debouncedSearch) {
+        const s = debouncedSearch.toLowerCase();
         return (
-          node.name.toLowerCase().includes(searchLower) ||
-          node.description.toLowerCase().includes(searchLower) ||
-          node.tags?.some((tag) => tag.toLowerCase().includes(searchLower))
+          node.name.toLowerCase().includes(s) ||
+          node.description.toLowerCase().includes(s) ||
+          node.tags?.some((tag) => tag.toLowerCase().includes(s))
         );
       }
-
       return true;
     });
-
     const nodeIds = new Set(filteredNodes.map((n) => n.id));
     const filteredLinks = links.filter((link) => {
       const sourceId = typeof link.source === "string" ? link.source : link.source.id;
       const targetId = typeof link.target === "string" ? link.target : link.target.id;
       return nodeIds.has(sourceId) && nodeIds.has(targetId);
     });
-
     return { nodes: filteredNodes, links: filteredLinks };
-  }, [nodes, links, filters, searchTerm]);
+  }, [nodes, links, filters, debouncedSearch]);
 
-  // Update dimensions on resize
+  // Connected nodes count for the selected node
+  const connectedCount = useMemo(() => {
+    if (!selectedNode) return 0;
+    const ids = new Set<string>();
+    filteredData.links.forEach((link) => {
+      const src = typeof link.source === "string" ? link.source : link.source.id;
+      const tgt = typeof link.target === "string" ? link.target : link.target.id;
+      if (src === selectedNode.id) ids.add(tgt);
+      if (tgt === selectedNode.id) ids.add(src);
+    });
+    return ids.size;
+  }, [selectedNode, filteredData.links]);
+
+  // Resize
   useEffect(() => {
-    const updateDimensions = () => {
+    const update = () => {
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
-        const isMobile = window.innerWidth < 768; // md breakpoint
+        const isMobile = window.innerWidth < 768;
         setDimensions({
           width: rect.width,
           height: isMobile ? Math.max(400, rect.height) : Math.max(600, rect.height),
         });
       }
     };
-
-    updateDimensions();
-    window.addEventListener("resize", updateDimensions);
-    return () => window.removeEventListener("resize", updateDimensions);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
   }, []);
 
   // D3 visualization
@@ -479,7 +516,6 @@ const ArchitectureNavigator: React.FC = () => {
 
     const g = svg.append("g");
 
-    // Create zoom behavior
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 4])
@@ -487,32 +523,24 @@ const ArchitectureNavigator: React.FC = () => {
         g.attr("transform", event.transform);
       });
 
+    zoomRef.current = zoom;
     svg.call(zoom);
 
-    // Click on empty space to clear selection
     svg.on("click", () => {
       setSelectedNode(null);
-
-      // Reset all node positions and visibility
       node.transition().duration(500).style("opacity", 1);
-
       link.transition().duration(500).style("opacity", 0.6);
-
-      // Release all fixed positions
       filteredData.nodes.forEach((n) => {
         n.fx = null;
         n.fy = null;
       });
-
-      // Restart simulation to spread nodes naturally
       if (simulationRef.current) {
         simulationRef.current.alpha(0.3).restart();
       }
     });
 
-    // Create simulation with improved forces
     const isMobile = dimensions.width < 768;
-    const mobileScale = isMobile ? 0.6 : 1; // Scale down for mobile
+    const mobileScale = isMobile ? 0.6 : 1;
 
     const simulation = d3
       .forceSimulation<GraphNode>(filteredData.nodes)
@@ -522,29 +550,25 @@ const ArchitectureNavigator: React.FC = () => {
           .forceLink<GraphNode, GraphLink>(filteredData.links)
           .id((d) => d.id)
           .distance((d) => {
-            const baseDistance = {
+            const base: Record<string, number> = {
               "arch-comp": 120,
               "comp-threat": 80,
               "threat-mitigation": 60,
-              default: 80,
             };
-            const distance = baseDistance[d.type] || baseDistance.default;
-            return distance * mobileScale;
+            return (base[d.type] || 80) * mobileScale;
           })
           .strength((d) => d.strength * 0.8),
       )
       .force(
         "charge",
         d3.forceManyBody<GraphNode>().strength((d) => {
-          const baseStrength = {
+          const base: Record<string, number> = {
             architecture: -1500,
             component: -800,
             threat: -600,
             mitigation: -400,
-            default: -600,
           };
-          const strength = baseStrength[d.type] || baseStrength.default;
-          return strength * mobileScale;
+          return (base[d.type] || -600) * mobileScale;
         }),
       )
       .force("center", d3.forceCenter(dimensions.width / 2, dimensions.height / 2))
@@ -560,10 +584,8 @@ const ArchitectureNavigator: React.FC = () => {
 
     simulationRef.current = simulation;
 
-    // Create arrow markers for directed links
     const defs = svg.append("defs");
-
-    ["arch-comp", "comp-threat", "threat-mitigation"].forEach((type) => {
+    (["arch-comp", "comp-threat", "threat-mitigation"] as const).forEach((type) => {
       defs
         .append("marker")
         .attr("id", `arrow-${type}`)
@@ -575,36 +597,20 @@ const ArchitectureNavigator: React.FC = () => {
         .attr("orient", "auto")
         .append("path")
         .attr("d", "M0,-5L10,0L0,5")
-        .attr(
-          "fill",
-          type === "arch-comp" ? "#3b82f6" : type === "comp-threat" ? "#ef4444" : "#f59e0b",
-        );
+        .attr("fill", LINK_COLORS[type]);
     });
 
-    // Create links
     const link = g
       .append("g")
       .selectAll(".link")
       .data(filteredData.links)
       .join("line")
       .attr("class", "link")
-      .attr("stroke", (d) => {
-        switch (d.type) {
-          case "arch-comp":
-            return "#3b82f6";
-          case "comp-threat":
-            return "#ef4444";
-          case "threat-mitigation":
-            return "#f59e0b";
-          default:
-            return "#999";
-        }
-      })
+      .attr("stroke", (d) => LINK_COLORS[d.type] || "#999")
       .attr("stroke-width", (d) => Math.max(1, d.strength * 2))
       .attr("stroke-opacity", 0.6)
       .attr("marker-end", (d) => `url(#arrow-${d.type})`);
 
-    // Create drag behavior with sticky nodes
     const drag = d3
       .drag<SVGGElement, GraphNode>()
       .on("start", (event, d) => {
@@ -616,13 +622,10 @@ const ArchitectureNavigator: React.FC = () => {
         d.fx = event.x;
         d.fy = event.y;
       })
-      .on("end", (event, _d) => {
+      .on("end", (event) => {
         if (!event.active) simulation.alphaTarget(0);
-        // Keep nodes at their dragged position (don't reset fx/fy to null)
-        // This makes nodes "stick" where they're dragged
       });
 
-    // Create node groups
     const node = g
       .append("g")
       .selectAll(".node")
@@ -635,26 +638,24 @@ const ArchitectureNavigator: React.FC = () => {
         setSelectedNode(d);
         event.stopPropagation();
 
-        // Get connected nodes
         const connectedNodeIds = new Set<string>();
         const connectedNodes: GraphNode[] = [];
 
-        filteredData.links.forEach((link) => {
-          const sourceId = typeof link.source === "string" ? link.source : link.source.id;
-          const targetId = typeof link.target === "string" ? link.target : link.target.id;
+        filteredData.links.forEach((l) => {
+          const sourceId = typeof l.source === "string" ? l.source : l.source.id;
+          const targetId = typeof l.target === "string" ? l.target : l.target.id;
           if (sourceId === d.id) {
             connectedNodeIds.add(targetId);
-            const targetNode = filteredData.nodes.find((n) => n.id === targetId);
-            if (targetNode) connectedNodes.push(targetNode);
+            const tn = filteredData.nodes.find((n) => n.id === targetId);
+            if (tn) connectedNodes.push(tn);
           }
           if (targetId === d.id) {
             connectedNodeIds.add(sourceId);
-            const sourceNode = filteredData.nodes.find((n) => n.id === sourceId);
-            if (sourceNode) connectedNodes.push(sourceNode);
+            const sn = filteredData.nodes.find((n) => n.id === sourceId);
+            if (sn) connectedNodes.push(sn);
           }
         });
 
-        // Hide unconnected nodes and links
         node
           .transition()
           .duration(500)
@@ -664,70 +665,68 @@ const ArchitectureNavigator: React.FC = () => {
           .transition()
           .duration(500)
           .style("opacity", (l) => {
-            const sourceId = typeof l.source === "string" ? l.source : l.source.id;
-            const targetId = typeof l.target === "string" ? l.target : l.target.id;
-            return sourceId === d.id || targetId === d.id ? 1 : 0.05;
+            const src = typeof l.source === "string" ? l.source : l.source.id;
+            const tgt = typeof l.target === "string" ? l.target : l.target.id;
+            return src === d.id || tgt === d.id ? 1 : 0.05;
           });
 
-        // Spread out connected nodes in a circle around the selected node
         if (connectedNodes.length > 0) {
-          const centerX = d.x || 0;
-          const centerY = d.y || 0;
-          const radius = 150; // Distance from center
-
-          connectedNodes.forEach((connectedNode, index) => {
-            const angle = (2 * Math.PI * index) / connectedNodes.length;
-            const targetX = centerX + radius * Math.cos(angle);
-            const targetY = centerY + radius * Math.sin(angle);
-
-            // Animate to new position
-            connectedNode.fx = targetX;
-            connectedNode.fy = targetY;
+          const cx = d.x || 0;
+          const cy = d.y || 0;
+          const radius = 150;
+          connectedNodes.forEach((cn, i) => {
+            const angle = (2 * Math.PI * i) / connectedNodes.length;
+            cn.fx = cx + radius * Math.cos(angle);
+            cn.fy = cy + radius * Math.sin(angle);
           });
-
-          // Fix the selected node at its current position
-          d.fx = centerX;
-          d.fy = centerY;
-
-          // Restart simulation with lower alpha to animate smoothly
-          if (simulationRef.current) {
-            simulationRef.current.alpha(0.3).restart();
-          }
+          d.fx = cx;
+          d.fy = cy;
+          if (simulationRef.current) simulationRef.current.alpha(0.3).restart();
         }
       })
       .on("mouseover", (event, d) => {
-        // Highlight connected nodes
-        const connectedNodeIds = new Set<string>();
-        filteredData.links.forEach((link) => {
-          const sourceId = typeof link.source === "string" ? link.source : link.source.id;
-          const targetId = typeof link.target === "string" ? link.target : link.target.id;
-          if (sourceId === d.id) connectedNodeIds.add(targetId);
-          if (targetId === d.id) connectedNodeIds.add(sourceId);
+        setTooltip({
+          x: event.clientX,
+          y: event.clientY,
+          name: d.name,
+          type: d.type,
         });
 
-        node.style("opacity", (n) => (n.id === d.id || connectedNodeIds.has(n.id) ? 1 : 0.3));
+        const connected = new Set<string>();
+        filteredData.links.forEach((l) => {
+          const src = typeof l.source === "string" ? l.source : l.source.id;
+          const tgt = typeof l.target === "string" ? l.target : l.target.id;
+          if (src === d.id) connected.add(tgt);
+          if (tgt === d.id) connected.add(src);
+        });
+
+        node.style("opacity", (n) => (n.id === d.id || connected.has(n.id) ? 1 : 0.3));
         link.style("opacity", (l) => {
-          const sourceId = typeof l.source === "string" ? l.source : l.source.id;
-          const targetId = typeof l.target === "string" ? l.target : l.target.id;
-          return sourceId === d.id || targetId === d.id ? 1 : 0.1;
+          const src = typeof l.source === "string" ? l.source : l.source.id;
+          const tgt = typeof l.target === "string" ? l.target : l.target.id;
+          return src === d.id || tgt === d.id ? 1 : 0.1;
         });
       })
+      .on("mousemove", (event) => {
+        setTooltip((prev) => (prev ? { ...prev, x: event.clientX, y: event.clientY } : null));
+      })
       .on("mouseout", () => {
+        setTooltip(null);
         node.style("opacity", 1);
         link.style("opacity", 0.6);
       });
 
-    // Add circles
+    // Circles
     node
       .append("circle")
       .attr("r", (d) => d.size * mobileScale)
       .attr("fill", (d) => d.color)
-      .attr("stroke", "#fff")
+      .attr("stroke", "hsl(var(--background))")
       .attr("stroke-width", 2);
 
-    // Add risk indicators for threats
+    // Risk indicators
     node
-      .filter((d) => d.type === "threat" && d.riskScore && d.riskScore > 0)
+      .filter((d) => d.type === "threat" && d.riskScore != null && d.riskScore > 0)
       .append("circle")
       .attr("r", (d) => (d.size + 5) * mobileScale)
       .attr("fill", "none")
@@ -738,40 +737,34 @@ const ArchitectureNavigator: React.FC = () => {
       .attr("stroke-width", 3)
       .attr("stroke-dasharray", "5,5");
 
-    // Add labels
+    // Labels
     node
       .append("text")
       .attr("text-anchor", "middle")
       .attr("dy", (d) => (d.size + 20) * mobileScale)
       .attr("font-size", (d) => {
-        const baseSizes = {
+        const sizes: Record<string, number> = {
           architecture: 14,
           component: 12,
           threat: 10,
           mitigation: 9,
-          default: 10,
         };
-        const size = baseSizes[d.type] || baseSizes.default;
-        return `${size * mobileScale}px`;
+        return `${(sizes[d.type] || 10) * mobileScale}px`;
       })
       .attr("font-weight", (d) => (d.type === "architecture" ? "bold" : "normal"))
-      .attr("fill", () => {
-        // Check if dark mode is active
-        const isDarkMode = document.documentElement.classList.contains("dark");
-        return isDarkMode ? "#e5e7eb" : "#374151"; // Light gray for dark mode, dark gray for light mode
-      })
+      .attr("fill", "hsl(var(--foreground))")
       .text((d) => {
-        const maxLength = isMobile
+        const max = isMobile
           ? d.type === "architecture"
             ? 15
             : 10
           : d.type === "architecture"
             ? 20
             : 15;
-        return d.name.length > maxLength ? d.name.substring(0, maxLength) + "..." : d.name;
+        return d.name.length > max ? d.name.substring(0, max) + "..." : d.name;
       });
 
-    // Add type indicators
+    // Type letter
     node
       .append("text")
       .attr("text-anchor", "middle")
@@ -781,34 +774,28 @@ const ArchitectureNavigator: React.FC = () => {
       .attr("fill", "#fff")
       .text((d) => d.type.charAt(0).toUpperCase());
 
-    // Update positions on simulation tick
+    // Tick
     simulation.on("tick", () => {
       link
         .attr("x1", (d) => (d.source as GraphNode).x || 0)
         .attr("y1", (d) => (d.source as GraphNode).y || 0)
         .attr("x2", (d) => (d.target as GraphNode).x || 0)
         .attr("y2", (d) => (d.target as GraphNode).y || 0);
-
       node.attr("transform", (d) => `translate(${d.x || 0},${d.y || 0})`);
     });
 
-    // Initial zoom to fit - with delay to ensure nodes are positioned
+    // Fit to view after initial layout
     setTimeout(() => {
       const bounds = (g.node() as SVGGElement)?.getBBox();
       if (bounds && bounds.width > 0 && bounds.height > 0) {
-        const fullWidth = dimensions.width;
-        const fullHeight = dimensions.height;
-        const width = bounds.width;
-        const height = bounds.height;
-        const midX = bounds.x + width / 2;
-        const midY = bounds.y + height / 2;
-        const scale = Math.min(fullWidth / width, fullHeight / height) * 0.6;
-        const translate = [fullWidth / 2 - scale * midX, fullHeight / 2 - scale * midY];
-
+        const scale =
+          Math.min(dimensions.width / bounds.width, dimensions.height / bounds.height) * 0.6;
+        const tx = dimensions.width / 2 - scale * (bounds.x + bounds.width / 2);
+        const ty = dimensions.height / 2 - scale * (bounds.y + bounds.height / 2);
         svg
           .transition()
           .duration(1000)
-          .call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
+          .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
       }
     }, 1000);
 
@@ -817,42 +804,48 @@ const ArchitectureNavigator: React.FC = () => {
     };
   }, [filteredData, dimensions]);
 
-  // Control functions
+  // Zoom controls using stored ref
   const zoomIn = useCallback(() => {
-    if (svgRef.current) {
-      d3.select(svgRef.current)
-        .transition()
-        .call(
-          d3.zoom<SVGSVGElement, unknown>().scaleBy as (selection: unknown, scale: number) => void,
-          1.5,
-        );
+    if (svgRef.current && zoomRef.current) {
+      d3.select(svgRef.current).transition().duration(300).call(zoomRef.current.scaleBy, 1.5);
     }
   }, []);
 
   const zoomOut = useCallback(() => {
-    if (svgRef.current) {
+    if (svgRef.current && zoomRef.current) {
       d3.select(svgRef.current)
         .transition()
-        .call(
-          d3.zoom<SVGSVGElement, unknown>().scaleBy as (selection: unknown, scale: number) => void,
-          1 / 1.5,
-        );
+        .duration(300)
+        .call(zoomRef.current.scaleBy, 1 / 1.5);
     }
   }, []);
 
   const resetZoom = useCallback(() => {
-    if (svgRef.current) {
+    if (svgRef.current && zoomRef.current) {
       d3.select(svgRef.current)
         .transition()
-        .call(
-          d3.zoom<SVGSVGElement, unknown>().transform as (
-            selection: unknown,
-            transform: d3.ZoomTransform,
-          ) => void,
-          d3.zoomIdentity,
-        );
+        .duration(300)
+        .call(zoomRef.current.transform, d3.zoomIdentity);
     }
   }, []);
+
+  const centerView = useCallback(() => {
+    if (svgRef.current && zoomRef.current) {
+      const svg = d3.select(svgRef.current);
+      const g = svg.select("g");
+      const bounds = (g.node() as SVGGElement)?.getBBox();
+      if (bounds && bounds.width > 0 && bounds.height > 0) {
+        const scale =
+          Math.min(dimensions.width / bounds.width, dimensions.height / bounds.height) * 0.6;
+        const tx = dimensions.width / 2 - scale * (bounds.x + bounds.width / 2);
+        const ty = dimensions.height / 2 - scale * (bounds.y + bounds.height / 2);
+        svg
+          .transition()
+          .duration(750)
+          .call(zoomRef.current.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+      }
+    }
+  }, [dimensions]);
 
   const toggleSimulation = useCallback(() => {
     if (simulationRef.current) {
@@ -865,267 +858,289 @@ const ArchitectureNavigator: React.FC = () => {
     }
   }, [isSimulationRunning]);
 
-  const centerView = useCallback(() => {
-    if (svgRef.current) {
-      const svg = d3.select(svgRef.current);
-      const g = svg.select("g");
-      const bounds = (g.node() as SVGGElement)?.getBBox();
-
-      if (bounds && bounds.width > 0 && bounds.height > 0) {
-        const fullWidth = dimensions.width;
-        const fullHeight = dimensions.height;
-        const width = bounds.width;
-        const height = bounds.height;
-        const midX = bounds.x + width / 2;
-        const midY = bounds.y + height / 2;
-        const scale = Math.min(fullWidth / width, fullHeight / height) * 0.6;
-        const translate = [fullWidth / 2 - scale * midX, fullHeight / 2 - scale * midY];
-
-        svg
-          .transition()
-          .duration(750)
-          .call(
-            d3.zoom<SVGSVGElement, unknown>().transform as (
-              selection: unknown,
-              transform: d3.ZoomTransform,
-            ) => void,
-            d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale),
-          );
-      }
-    }
-  }, [dimensions]);
-
   const toggleFullscreen = useCallback(async () => {
     try {
-      if (!document.fullscreenElement) {
-        // Enter fullscreen
-        await document.documentElement.requestFullscreen();
+      if (!document.fullscreenElement && explorerRef.current) {
+        await explorerRef.current.requestFullscreen();
         setIsFullscreen(true);
-      } else {
-        // Exit fullscreen
+      } else if (document.fullscreenElement) {
         await document.exitFullscreen();
         setIsFullscreen(false);
       }
-    } catch (error) {
-      console.error("Error toggling fullscreen:", error);
-      // Fallback to CSS-only fullscreen
+    } catch {
       setIsFullscreen(!isFullscreen);
     }
   }, [isFullscreen]);
 
-  // Listen for fullscreen changes
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", handler);
+    return () => document.removeEventListener("fullscreenchange", handler);
   }, []);
 
-  // Early return for debugging
   if (nodes.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <h3 className="text-lg font-semibold mb-2">No Data Available</h3>
-          <p className="text-muted-foreground">
-            No architecture data found. Check the console for details.
-          </p>
-          <div className="mt-4 text-sm text-muted-foreground">
-            <p>Architectures: {Object.keys(architecturesData).length}</p>
-            <p>Framework Components: {frameworkData.length}</p>
-            <p>Threats: {Object.keys(threatsData).length}</p>
-            <p>Mitigations: {Object.keys(mitigationsData).length}</p>
-          </div>
+          <p className="text-muted-foreground">No architecture data found.</p>
         </div>
       </div>
     );
   }
 
+  const detailPath = selectedNode ? getDetailPath(selectedNode) : null;
+
   return (
     <div
+      ref={explorerRef}
       className={cn(
-        "flex flex-col lg:flex-row gap-4 h-full",
-        isFullscreen && "fixed inset-0 z-[9999] bg-background p-4",
+        "flex flex-col lg:flex-row gap-3 h-full",
+        isFullscreen && "fixed inset-0 z-[9999] bg-background p-3",
       )}
     >
+      {/* Mobile sidebar toggle */}
+      <div className="lg:hidden flex items-center gap-2 mb-1">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          aria-label={sidebarOpen ? "Collapse controls" : "Expand controls"}
+          className="gap-1"
+        >
+          {sidebarOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+          Controls
+        </Button>
+        <span className="text-xs text-muted-foreground">
+          {filteredData.nodes.length} nodes, {filteredData.links.length} links
+        </span>
+      </div>
+
       {/* Controls Panel */}
       <div
-        className={cn("lg:w-80 space-y-4", isFullscreen && "lg:w-72 max-h-screen overflow-y-auto")}
+        className={cn(
+          "lg:w-72 space-y-3 shrink-0 overflow-y-auto",
+          !sidebarOpen && "hidden lg:block",
+          isFullscreen && "max-h-screen",
+        )}
       >
         <Card>
-          <CardContent className="p-4">
-            <div className="space-y-4">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search nodes..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
+          <CardContent className="p-3 space-y-3">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search nodes..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 pr-8 h-8 text-sm"
+                aria-label="Search graph nodes"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label="Clear search"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            {debouncedSearch && filteredData.nodes.length === 0 && (
+              <p className="text-xs text-muted-foreground">No matching nodes found.</p>
+            )}
 
-              {/* Controls */}
-              <div className="grid grid-cols-2 gap-2">
-                <Button onClick={zoomIn} variant="outline" size="sm" title="Zoom In">
-                  <ZoomIn className="h-4 w-4" />
-                </Button>
-                <Button onClick={zoomOut} variant="outline" size="sm" title="Zoom Out">
-                  <ZoomOut className="h-4 w-4" />
-                </Button>
-                <Button onClick={centerView} variant="outline" size="sm" title="Center View">
-                  <Target className="h-4 w-4" />
-                </Button>
-                <Button onClick={resetZoom} variant="outline" size="sm" title="Reset Zoom">
-                  <RotateCcw className="h-4 w-4" />
-                </Button>
+            {/* View controls */}
+            <div>
+              <div className="text-xs font-medium text-muted-foreground mb-1.5">Navigation</div>
+              <div className="grid grid-cols-4 gap-1.5">
                 <Button
-                  onClick={toggleFullscreen}
+                  onClick={zoomIn}
                   variant="outline"
                   size="sm"
-                  title="Toggle Fullscreen"
-                  className="col-span-2"
+                  aria-label="Zoom in"
+                  className="h-7 px-0"
                 >
-                  {isFullscreen ? (
-                    <Minimize className="h-4 w-4 mr-2" />
-                  ) : (
-                    <Maximize className="h-4 w-4 mr-2" />
-                  )}
-                  {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                  <ZoomIn className="h-3.5 w-3.5" />
                 </Button>
                 <Button
-                  onClick={toggleSimulation}
+                  onClick={zoomOut}
                   variant="outline"
                   size="sm"
-                  title={isSimulationRunning ? "Pause Animation" : "Start Animation"}
-                  className="col-span-2"
+                  aria-label="Zoom out"
+                  className="h-7 px-0"
                 >
-                  {isSimulationRunning ? (
-                    <Pause className="h-4 w-4 mr-2" />
-                  ) : (
-                    <Play className="h-4 w-4 mr-2" />
-                  )}
-                  {isSimulationRunning ? "Pause" : "Start"}
+                  <ZoomOut className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  onClick={centerView}
+                  variant="outline"
+                  size="sm"
+                  aria-label="Fit to view"
+                  className="h-7 px-0 text-xs"
+                >
+                  Fit
+                </Button>
+                <Button
+                  onClick={resetZoom}
+                  variant="outline"
+                  size="sm"
+                  aria-label="Reset zoom"
+                  className="h-7 px-0"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
                 </Button>
               </div>
+            </div>
 
-              {/* Filters */}
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm">Show/Hide</h4>
-                {Object.entries(filters).map(([type, enabled]) => (
+            {/* Simulation + Fullscreen */}
+            <div className="flex gap-1.5">
+              <Button
+                onClick={toggleSimulation}
+                variant="outline"
+                size="sm"
+                aria-label={isSimulationRunning ? "Pause simulation" : "Resume simulation"}
+                className="flex-1 h-7 text-xs gap-1"
+              >
+                {isSimulationRunning ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+                {isSimulationRunning ? "Pause" : "Play"}
+              </Button>
+              <Button
+                onClick={toggleFullscreen}
+                variant="outline"
+                size="sm"
+                aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                className="flex-1 h-7 text-xs gap-1"
+              >
+                {isFullscreen ? <Minimize className="h-3 w-3" /> : <Maximize className="h-3 w-3" />}
+                {isFullscreen ? "Exit" : "Fullscreen"}
+              </Button>
+            </div>
+
+            {/* Filters */}
+            <div>
+              <div className="text-xs font-medium text-muted-foreground mb-1.5">Show / Hide</div>
+              <div className="grid grid-cols-2 gap-y-1.5 gap-x-3">
+                {(Object.entries(filters) as [string, boolean][]).map(([type, enabled]) => (
                   <label key={type} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={enabled}
-                      onChange={() => setFilters((prev) => ({ ...prev, [type]: !prev[type] }))}
-                      className="rounded"
+                      onCheckedChange={() =>
+                        setFilters((prev) => ({ ...prev, [type]: !prev[type] }))
+                      }
+                      aria-label={`Toggle ${type} nodes`}
+                      className="h-3.5 w-3.5"
                     />
-                    <span className="text-sm capitalize">{type}s</span>
+                    <span className="flex items-center gap-1.5 text-xs capitalize">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: NODE_COLORS[type as keyof typeof NODE_COLORS] }}
+                      />
+                      {type}s
+                    </span>
                   </label>
                 ))}
               </div>
-
-              {/* Instructions */}
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm">Instructions</h4>
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <p>• Click nodes to select and see details</p>
-                  <p>• Drag nodes to reposition them</p>
-                  <p>• Use mouse wheel to zoom</p>
-                  <p>• Click empty space to deselect</p>
-                </div>
-              </div>
-
-              {/* Legend */}
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm">Legend</h4>
-                <div className="space-y-1 text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full bg-blue-500"></div>
-                    <span>Architecture</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full bg-green-500"></div>
-                    <span>Component</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full bg-red-500"></div>
-                    <span>Threat</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full bg-orange-500"></div>
-                    <span>Mitigation</span>
-                  </div>
-                </div>
-              </div>
             </div>
+
+            {/* Help */}
+            <details
+              open={helpOpen}
+              onToggle={(e) => setHelpOpen((e.target as HTMLDetailsElement).open)}
+            >
+              <summary className="text-xs font-medium text-muted-foreground cursor-pointer select-none">
+                Help
+              </summary>
+              <div className="text-xs text-muted-foreground space-y-0.5 mt-1.5">
+                <p>Click a node to select it and highlight connections.</p>
+                <p>Drag nodes to reposition. They stay where you drop them.</p>
+                <p>Scroll to zoom. Click empty space to deselect all.</p>
+                <p>On touch devices, pinch to zoom and drag to pan.</p>
+              </div>
+            </details>
           </CardContent>
         </Card>
 
         {/* Selected Node Details */}
         {selectedNode && (
           <Card>
-            <CardContent className="p-4 max-h-80 overflow-y-auto">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-4 h-4 rounded-full"
-                    style={{ backgroundColor: selectedNode.color }}
-                  />
-                  <h3 className="font-semibold">{selectedNode.name}</h3>
-                </div>
+            <CardContent className="p-3 space-y-2.5 max-h-96 overflow-y-auto">
+              <div className="flex items-center gap-2">
+                <span
+                  className="w-3 h-3 rounded-full shrink-0"
+                  style={{ backgroundColor: selectedNode.color }}
+                />
+                <h3 className="font-semibold text-sm leading-tight">{selectedNode.name}</h3>
+              </div>
 
-                <Badge variant="outline" className="capitalize">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="capitalize text-xs">
                   {selectedNode.type}
                 </Badge>
-
-                <p className="text-sm text-muted-foreground">{selectedNode.description}</p>
-
-                {selectedNode.riskScore && (
-                  <div>
-                    <div className="text-sm font-medium mb-1">Risk Score</div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-muted rounded-full h-2">
-                        <div
-                          className={cn(
-                            "h-2 rounded-full",
-                            selectedNode.riskScore >= 8
-                              ? "bg-red-500"
-                              : selectedNode.riskScore >= 6
-                                ? "bg-orange-500"
-                                : "bg-yellow-500",
-                          )}
-                          style={{ width: `${(selectedNode.riskScore / 10) * 100}%` }}
-                        />
-                      </div>
-                      <span className="text-sm">{selectedNode.riskScore}/10</span>
-                    </div>
-                  </div>
-                )}
-
-                {selectedNode.tags && selectedNode.tags.length > 0 && (
-                  <div>
-                    <div className="text-sm font-medium mb-1">Tags</div>
-                    <div className="flex flex-wrap gap-1">
-                      {selectedNode.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <span className="text-xs text-muted-foreground">
+                  {connectedCount} connection{connectedCount !== 1 ? "s" : ""}
+                </span>
               </div>
+
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {selectedNode.description}
+              </p>
+
+              {selectedNode.riskScore != null && selectedNode.riskScore > 0 && (
+                <div>
+                  <div className="text-xs font-medium mb-1">Risk Score</div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 bg-muted rounded-full h-1.5">
+                      <div
+                        className={cn(
+                          "h-1.5 rounded-full",
+                          selectedNode.riskScore >= 8
+                            ? "bg-red-500"
+                            : selectedNode.riskScore >= 6
+                              ? "bg-orange-500"
+                              : "bg-yellow-500",
+                        )}
+                        style={{ width: `${(selectedNode.riskScore / 10) * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-mono">{selectedNode.riskScore}/10</span>
+                  </div>
+                </div>
+              )}
+
+              {selectedNode.tags && selectedNode.tags.length > 0 && (
+                <div>
+                  <div className="text-xs font-medium mb-1">Tags</div>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedNode.tags.slice(0, 8).map((tag) => (
+                      <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0">
+                        {tag}
+                      </Badge>
+                    ))}
+                    {selectedNode.tags.length > 8 && (
+                      <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                        +{selectedNode.tags.length - 8}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {detailPath && (
+                <Link
+                  to={detailPath}
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
+                >
+                  View full details <ExternalLink className="h-3 w-3" />
+                </Link>
+              )}
             </CardContent>
           </Card>
         )}
       </div>
 
-      {/* Visualization */}
-      <div className="flex-1 min-h-0" ref={containerRef}>
+      {/* Graph */}
+      <div className="flex-1 min-h-0 relative" ref={containerRef}>
         <Card className="h-full">
           <CardContent className="p-0 h-full relative overflow-hidden">
             <svg
@@ -1133,9 +1148,22 @@ const ArchitectureNavigator: React.FC = () => {
               width={dimensions.width}
               height={dimensions.height}
               className="w-full h-full block"
+              role="img"
+              aria-label="Interactive architecture explorer graph showing architectures, components, threats, and mitigations"
             />
           </CardContent>
         </Card>
+
+        {/* Tooltip */}
+        {tooltip && (
+          <div
+            className="fixed z-50 pointer-events-none px-2.5 py-1.5 rounded bg-popover border shadow-sm text-xs"
+            style={{ left: tooltip.x + 12, top: tooltip.y - 8 }}
+          >
+            <div className="font-medium">{tooltip.name}</div>
+            <div className="text-muted-foreground capitalize">{tooltip.type}</div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1143,5 +1171,4 @@ const ArchitectureNavigator: React.FC = () => {
 
 export default ArchitectureNavigator;
 
-// Export with old name for compatibility
 export const HierarchicalArchitectureNavigator = ArchitectureNavigator;

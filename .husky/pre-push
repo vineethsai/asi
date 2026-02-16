@@ -1,0 +1,15 @@
+echo "Running pre-push checks..."
+
+echo "→ TypeScript type check"
+npm run typecheck || { echo "Type check failed. Push aborted."; exit 1; }
+
+echo "→ Lint check"
+npm run lint || { echo "Lint check failed. Push aborted."; exit 1; }
+
+echo "→ Format check"
+npm run format:check || { echo "Format check failed. Run 'npm run format' to fix. Push aborted."; exit 1; }
+
+echo "→ Data integrity check"
+npm run check:data || { echo "Data integrity check failed. Push aborted."; exit 1; }
+
+echo "All pre-push checks passed."

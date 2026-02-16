@@ -629,7 +629,7 @@ export const ControlDetail = () => {
         onClose={handleMobileMenuClose}
       />
 
-      <section className="py-8 bg-background min-h-screen">
+      <section id="main-content" className="py-8 bg-background min-h-screen">
         <div className="container px-4 md:px-6 max-w-7xl">
           {/* Breadcrumb */}
           <Link
@@ -662,7 +662,7 @@ export const ControlDetail = () => {
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 mb-1">
-                    <Shield className="h-4 w-4 text-blue-500" />
+                    <Shield className="h-4 w-4 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">Phases</span>
                   </div>
                   <div className="text-2xl font-bold">

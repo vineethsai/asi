@@ -24,17 +24,6 @@ export interface ObjectiveGroup {
   ai_tech: AITechnique[];
 }
 
-export type ObjectiveCategory =
-  | "Common Manipulation Risks"
-  | "Data-Related Risks"
-  | "Downstream / Impact Risks";
-
-export const objectiveCategoryColors: Record<ObjectiveCategory, string> = {
-  "Common Manipulation Risks": "#ef4444",
-  "Data-Related Risks": "#f59e0b",
-  "Downstream / Impact Risks": "#8b5cf6",
-};
-
 const rawData = taxonomyRaw as Record<string, unknown>;
 
 function parseObjectiveGroups(): ObjectiveGroup[] {
@@ -66,8 +55,6 @@ function parseObjectiveGroups(): ObjectiveGroup[] {
 }
 
 export const ciscoTaxonomyData: ObjectiveGroup[] = parseObjectiveGroups();
-
-export const ciscoTaxonomyVersion: string = (rawData as Record<string, string>).version || "1.0.0";
 
 export function getTaxonomyStats() {
   let totalTechniques = 0;

@@ -4,6 +4,7 @@ declare module "@/components/ui/icon" {
     name?: string;
     color?: string;
     size?: number;
+    className?: string;
   }
   export const Icon: FC<IconProps>;
   export default Icon;

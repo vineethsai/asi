@@ -60,44 +60,27 @@ export function OwaspAgenticTop10Content() {
   return (
     <>
       <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <Shield className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold">OWASP Top 10 for Agentic Applications</h1>
-        </div>
-        <p className="text-muted-foreground max-w-3xl">
+        <h1 className="text-2xl font-bold tracking-tight">OWASP Agentic AI Top 10</h1>
+        <p className="mt-1 text-muted-foreground">
           The definitive guide to the most critical security risks in AI agentic systems. Each entry
           provides descriptions, common vulnerabilities, attack scenarios, and actionable
           mitigations for securing autonomous AI agents.
         </p>
-        <div className="flex gap-2 mt-3">
-          <Badge variant="outline">Version 2026</Badge>
-          <Badge variant="outline">OWASP GenAI Security Project</Badge>
-        </div>
       </div>
 
-      {/* At a Glance Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
+      <div className="flex flex-wrap gap-6 text-sm text-muted-foreground mb-6">
         {agenticTop10Data.map((entry) => (
-          <Card
+          <span
             key={entry.id}
-            className="cursor-pointer hover:shadow-md transition-shadow"
+            className="cursor-pointer hover:text-foreground"
             onClick={() => {
               setExpandedId(expandedId === entry.id ? null : entry.id);
               const el = document.getElementById(`entry-${entry.id}`);
               if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
             }}
           >
-            <CardContent className="p-3 text-center">
-              <div
-                className="w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center text-white"
-                style={{ backgroundColor: entry.color }}
-              >
-                {iconMap[entry.icon] || <Shield className="h-5 w-5" />}
-              </div>
-              <div className="font-mono text-xs font-bold mb-1">{entry.code}</div>
-              <div className="text-xs leading-tight">{entry.name}</div>
-            </CardContent>
-          </Card>
+            <strong className="text-foreground">{entry.code}</strong> {entry.name}
+          </span>
         ))}
       </div>
 
@@ -130,12 +113,9 @@ export function OwaspAgenticTop10Content() {
               <AccordionItem value={entry.id} className="border-none">
                 <AccordionTrigger className="px-6 py-4 hover:no-underline">
                   <div className="flex items-center gap-3 text-left w-full">
-                    <div
-                      className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white"
-                      style={{ backgroundColor: entry.color }}
-                    >
+                    <span className="text-muted-foreground flex-shrink-0">
                       {iconMap[entry.icon] || <Shield className="h-5 w-5" />}
-                    </div>
+                    </span>
                     <div>
                       <div className="flex items-center gap-2 mb-0.5">
                         <Badge variant="outline" className="font-mono text-xs">
@@ -162,7 +142,7 @@ export function OwaspAgenticTop10Content() {
                   {/* Common Examples */}
                   <div className="mb-6">
                     <h3 className="font-semibold text-sm flex items-center gap-2 mb-3">
-                      <CircleAlert className="h-4 w-4 text-orange-500" />
+                      <CircleAlert className="h-4 w-4 text-muted-foreground" />
                       Common Examples
                     </h3>
                     <ul className="space-y-2">
@@ -178,7 +158,7 @@ export function OwaspAgenticTop10Content() {
                   {/* Attack Scenarios */}
                   <div className="mb-6">
                     <h3 className="font-semibold text-sm flex items-center gap-2 mb-3">
-                      <Target className="h-4 w-4 text-red-500" />
+                      <Target className="h-4 w-4 text-muted-foreground" />
                       Attack Scenarios
                     </h3>
                     <div className="grid gap-3 md:grid-cols-2">
@@ -196,13 +176,13 @@ export function OwaspAgenticTop10Content() {
                   {/* Prevention Guidelines */}
                   <div className="mb-6">
                     <h3 className="font-semibold text-sm flex items-center gap-2 mb-3">
-                      <CircleCheck className="h-4 w-4 text-green-500" />
+                      <CircleCheck className="h-4 w-4 text-muted-foreground" />
                       Prevention & Mitigation Guidelines
                     </h3>
                     <ul className="space-y-2">
                       {entry.preventionGuidelines.map((g, i) => (
                         <li key={i} className="text-sm text-muted-foreground flex gap-2">
-                          <CircleCheck className="h-3.5 w-3.5 text-green-500 flex-shrink-0 mt-0.5" />
+                          <CircleCheck className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
                           {g}
                         </li>
                       ))}
@@ -212,7 +192,7 @@ export function OwaspAgenticTop10Content() {
                   {/* Cross References */}
                   <div className="mb-4">
                     <h3 className="font-semibold text-sm flex items-center gap-2 mb-3">
-                      <BookOpen className="h-4 w-4 text-blue-500" />
+                      <BookOpen className="h-4 w-4 text-muted-foreground" />
                       Cross References
                     </h3>
                     <div className="flex flex-wrap gap-2">
@@ -236,7 +216,7 @@ export function OwaspAgenticTop10Content() {
                   {entry.references.length > 0 && (
                     <div>
                       <h3 className="font-semibold text-sm flex items-center gap-2 mb-2">
-                        <ExternalLink className="h-4 w-4" />
+                        <ExternalLink className="h-4 w-4 text-muted-foreground" />
                         References
                       </h3>
                       <ul className="space-y-1">

@@ -14,6 +14,12 @@ interface SidebarNavProps {
   onClose: () => void;
 }
 
+function getLevelMarginClass(level?: number): string {
+  if (!level || level === 0) return "";
+  if (level === 1) return "ml-3";
+  return "ml-6";
+}
+
 const SidebarNav: React.FC<SidebarNavProps> = ({ type, activeId, isOpen, onClose }) => {
   const [isDesktopOpen, setIsDesktopOpen] = useState(false);
   const location = useLocation();
@@ -226,7 +232,7 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ type, activeId, isOpen, onClose
               <nav aria-label={`${type} Navigation`}>
                 <ul className="space-y-1">
                   {items.map((item) => (
-                    <li key={item.id} className={item.level ? `ml-${item.level * 4}` : ""}>
+                    <li key={item.id} className={getLevelMarginClass(item.level)}>
                       <Link
                         to={item.path}
                         className={cn(

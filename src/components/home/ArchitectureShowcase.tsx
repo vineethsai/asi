@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { ArrowRight, Network } from "lucide-react";
-import ArchitectureDiagram from "@/components/visual/ArchitectureDiagrams";
+import ArchitectureFlowDiagram from "@/components/visual/ArchitectureFlowDiagram";
 import { architecturesData } from "@/components/components/architecturesData";
 
 const ARCH_UI: Record<string, { name: string; complexity: string; useCase: string }> = {
@@ -80,8 +80,8 @@ export const ArchitectureShowcase = () => {
         {/* Content */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 border rounded-lg overflow-hidden">
           {/* Diagram */}
-          <div className="p-6 bg-muted/30 border-b lg:border-b-0 lg:border-r flex items-center justify-center min-h-[350px]">
-            <ArchitectureDiagram architectureId={active.id} className="w-full h-80" />
+          <div className="bg-muted/30 border-b lg:border-b-0 lg:border-r flex items-center justify-center min-h-[350px]">
+            <ArchitectureFlowDiagram architectureId={active.id} className="w-full h-[350px]" />
           </div>
 
           {/* Info */}
