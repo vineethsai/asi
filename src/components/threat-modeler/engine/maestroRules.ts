@@ -22,6 +22,29 @@ function escalateSeverity(
   return severity;
 }
 
+function inferMaestroLayers(profile?: NodeRiskProfile): MaestroLayer[] {
+  if (!profile) return [MaestroLayer.AgentFrameworks];
+  const layers: MaestroLayer[] = [];
+  if (profile.promptInjectionSurface || profile.functionCallSurface) {
+    layers.push(MaestroLayer.AgentFrameworks);
+  }
+  if (profile.isExecutionCapable || profile.toolAccessMode) {
+    layers.push(MaestroLayer.AgentFrameworks);
+    layers.push(MaestroLayer.DeploymentInfrastructure);
+  }
+  if (profile.handlesCredentials || profile.handlesPII || profile.handlesRegulatedData) {
+    layers.push(MaestroLayer.DataOperations);
+    layers.push(MaestroLayer.SecurityCompliance);
+  }
+  if (profile.dataSensitivity === "internal") {
+    layers.push(MaestroLayer.DataOperations);
+  }
+  if (layers.length === 0) {
+    layers.push(MaestroLayer.AgentFrameworks);
+  }
+  return [...new Set(layers)];
+}
+
 function analyzeLayerThreats(
   nodes: CanvasNode[],
   profiles?: Map<string, NodeRiskProfile>,
@@ -30,8 +53,14 @@ function analyzeLayerThreats(
   for (const node of nodes) {
     if (!node.data || node.type === "trustBoundary") continue;
     if (node.data.category === "actor" || node.data.category === "external") continue;
-    const layers = node.data.maestroLayers ?? [];
     const profile = profiles?.get(node.id);
+    const explicitLayers = node.data.maestroLayers ?? [];
+    const layers =
+      explicitLayers.length > 0
+        ? explicitLayers
+        : node.data.category === "custom"
+          ? inferMaestroLayers(profile)
+          : [];
     for (const layer of layers) {
       const layerThreats = MAESTRO_THREAT_CATALOG.filter((t) => t.layer === layer);
       for (const lt of layerThreats) {

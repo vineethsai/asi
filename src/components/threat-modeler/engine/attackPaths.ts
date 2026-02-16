@@ -28,12 +28,17 @@ export function findAttackPaths(
   }
 
   const nodeMap = new Map(nodes.map((n) => [n.id, n]));
-  const entryPoints = nodes.filter(
-    (n) =>
+  const entryPoints = nodes.filter((n) => {
+    if (
       n.data?.category === "actor" ||
       n.data?.category === "external" ||
-      n.data?.trustLevel === "untrusted",
-  );
+      n.data?.trustLevel === "untrusted"
+    )
+      return true;
+    const profile = profiles?.get(n.id);
+    if (profile?.isExternallyFacing) return true;
+    return false;
+  });
   const highValueTargets = nodes.filter((n) => {
     if (
       n.data?.category === "kc4" ||

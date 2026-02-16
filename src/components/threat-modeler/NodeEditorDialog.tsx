@@ -89,10 +89,11 @@ export default function NodeEditorDialog({
   const [dataSensitivity, setDataSensitivity] = useState<DataSensitivity | "">("");
 
   const nodeCategory = node?.data?.category;
-  const showToolFields = nodeCategory === "kc5";
-  const showPromptFields = nodeCategory === "kc3";
+  const isCustom = nodeCategory === "custom";
+  const showToolFields = nodeCategory === "kc5" || isCustom;
+  const showPromptFields = nodeCategory === "kc3" || isCustom;
   const showSensitivityField =
-    nodeCategory === "kc4" || nodeCategory === "kc5" || nodeCategory === "datastore";
+    nodeCategory === "kc4" || nodeCategory === "kc5" || nodeCategory === "datastore" || isCustom;
 
   useEffect(() => {
     if (node?.data) {

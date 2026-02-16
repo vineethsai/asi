@@ -692,7 +692,7 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
       const customComp = isCustom
         ? customComponents.find((c) => `custom-${c.id}` === item.id)
         : undefined;
-      const itemAny = item as Record<string, unknown>;
+      const itemAny = item as unknown as Record<string, unknown>;
       const newNode: CanvasNode = {
         id: genNodeId(),
         type: item.nodeType,
@@ -736,8 +736,38 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
         const beforeRiskScore = riskSummary?.overallScore ?? 0;
         const beforePathCount = attackPaths.length;
 
+        const simCustomThreats: GeneratedThreat[] = [];
+        for (const n of filteredNodes) {
+          if (n.data?.isCustom && n.data.customThreatIds) {
+            for (const cc of customComponents) {
+              for (const ct of cc.customThreats ?? []) {
+                if (n.data.customThreatIds.includes(ct.id)) {
+                  simCustomThreats.push({
+                    id: `custom-${ct.id}-${n.id}`,
+                    threatId: ct.id,
+                    name: ct.name,
+                    description: ct.description,
+                    severity:
+                      ct.severity === "high" ? "high" : ct.severity === "low" ? "low" : "medium",
+                    methodology: "custom",
+                    maestroLayer: ct.maestroLayer,
+                    affectedNodeIds: [n.id],
+                    affectedEdgeIds: [],
+                    inherited: false,
+                    mitigations: ct.mitigations ?? [],
+                  });
+                }
+              }
+            }
+          }
+        }
         const simProfiles = buildNodeProfiles(filteredNodes);
-        const simResult = runThreatAnalysis(filteredNodes, filteredEdges, methodology);
+        const simResult = runThreatAnalysis(
+          filteredNodes,
+          filteredEdges,
+          methodology,
+          simCustomThreats.length > 0 ? simCustomThreats : undefined,
+        );
         const simRisk = calculateModelRisk(filteredNodes, filteredEdges, simResult, simProfiles);
         const simPaths = findAttackPaths(
           filteredNodes,
@@ -759,7 +789,16 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
       setSelectedNodeId(node.id);
       setSelectedEdgeId(null);
     },
-    [whatIfActive, nodes, edges, methodology, analysisResult, riskSummary, attackPaths],
+    [
+      whatIfActive,
+      nodes,
+      edges,
+      methodology,
+      analysisResult,
+      riskSummary,
+      attackPaths,
+      customComponents,
+    ],
   );
 
   const onEdgeClick = useCallback((_: React.MouseEvent, edge: CanvasEdge) => {
@@ -1099,7 +1138,7 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
       const viewport = reactFlowInstance?.getViewport();
       const centerX = viewport ? (-viewport.x + 400) / (viewport.zoom || 1) : 300;
       const centerY = viewport ? (-viewport.y + 300) / (viewport.zoom || 1) : 200;
-      const itemAny = item as Record<string, unknown>;
+      const itemAny = item as unknown as Record<string, unknown>;
       const isCustom = item.category === "custom";
       const customComp = isCustom
         ? customComponents.find((c) => `custom-${c.id}` === item.id)

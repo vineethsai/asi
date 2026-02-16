@@ -55,11 +55,16 @@ function checkExcessiveAgency(
   const outgoingToolConnections = new Map<string, string[]>();
   for (const edge of edges) {
     const target = nodes.find((n) => n.id === edge.target);
-    if (
-      target?.data?.category === "kc5" ||
-      target?.data?.category === "kc6" ||
-      target?.data?.category === "external"
-    ) {
+    if (!target?.data) continue;
+    const tgtProfile = profiles?.get(edge.target);
+    const isToolLike =
+      target.data.category === "kc5" ||
+      target.data.category === "kc6" ||
+      target.data.category === "external" ||
+      tgtProfile?.isExecutionCapable ||
+      tgtProfile?.accessDanger === "critical" ||
+      tgtProfile?.accessDanger === "dangerous";
+    if (isToolLike) {
       if (!outgoingToolConnections.has(edge.source)) outgoingToolConnections.set(edge.source, []);
       outgoingToolConnections.get(edge.source)!.push(edge.target);
     }

@@ -115,7 +115,7 @@ function buildSingleProfile(node: CanvasNode): NodeRiskProfile {
     handlesPII: d?.dataSensitivity === "pii",
     handlesRegulatedData: d?.dataSensitivity === "regulated",
     isExecutionCapable: d?.toolAccessMode === "execute" || d?.toolAccessMode === "admin",
-    isExternallyFacing: d?.category === "external",
+    isExternallyFacing: d?.category === "external" || d?.trustLevel === "untrusted",
     promptInjectionSurface: !!d?.promptType,
     functionCallSurface: d?.promptType === "function-call",
   };

@@ -163,6 +163,146 @@ export function runConnectionAnalysis(
         });
       }
     }
+
+    // ── Profile-based fallback rules for custom/non-KC nodes ──────
+    // These rules use profiles instead of hardcoded categories so that
+    // custom components with correct metadata get the same analysis.
+
+    // Prompt injection: actor → any node with promptInjectionSurface (covers custom prompt nodes)
+    if (
+      srcCat === "actor" &&
+      tgtCat !== "kc1" &&
+      tgtCat !== "kc2" &&
+      tgtCat !== "kc3" &&
+      tgtProfile?.promptInjectionSurface
+    ) {
+      threats.push({
+        id: `conn-prompt-injection-custom-${edge.id}`,
+        name: "Prompt Injection Vector",
+        description: `User/Actor "${source.data.label}" has a direct data flow to "${target.data.label}" which accepts prompt input. This is a potential prompt injection vector.`,
+        severity: "high",
+        methodology: "connection",
+        affectedNodeIds: [edge.source, edge.target],
+        affectedEdgeIds: [edge.id!],
+        inherited: false,
+        mitigations: [
+          "Input validation and sanitization",
+          "Prompt hardening and instruction hierarchy",
+          "Content security filtering",
+        ],
+      });
+    }
+
+    // Tool misuse: any source → custom node with execution/tool capabilities (not already kc5/kc6)
+    if (
+      tgtCat !== "kc5" &&
+      tgtCat !== "kc6" &&
+      (tgtProfile?.isExecutionCapable ||
+        tgtProfile?.accessDanger === "dangerous" ||
+        tgtProfile?.accessDanger === "critical") &&
+      (srcCat === "kc1" ||
+        srcCat === "kc2" ||
+        srcProfile?.promptInjectionSurface ||
+        srcCat === "custom")
+    ) {
+      const danger = tgtProfile?.accessDanger ?? "guarded";
+      let severity: "critical" | "high" | "medium" | "low" = "high";
+      const mitigations = [
+        "Tool sandboxing and isolation",
+        "Permission boundaries per tool",
+        "Human-in-the-loop for destructive actions",
+      ];
+      if (danger === "critical" || danger === "dangerous") {
+        severity = "critical";
+        mitigations.push("Mandatory approval workflow for critical tool actions");
+      }
+      const riskLabel = tgtProfile?.toolRiskTier ? ` (risk: ${tgtProfile.toolRiskTier})` : "";
+      const accessLabel = tgtProfile?.toolAccessMode ? ` [${tgtProfile.toolAccessMode}]` : "";
+
+      threats.push({
+        id: `conn-tool-misuse-custom-${edge.id}`,
+        name: "Tool Misuse via Agent",
+        description: `"${source.data.label}" sends commands to "${target.data.label}"${riskLabel}${accessLabel}. A compromised agent could misuse tool capabilities.`,
+        severity,
+        methodology: "connection",
+        affectedNodeIds: [edge.source, edge.target],
+        affectedEdgeIds: [edge.id!],
+        inherited: false,
+        mitigations,
+      });
+
+      if (tgtProfile?.isExecutionCapable) {
+        threats.push({
+          id: `conn-code-exec-custom-${edge.id}`,
+          name: "Arbitrary Code Execution",
+          description: `"${source.data.label}" can execute code via "${target.data.label}". If the agent is compromised, arbitrary code could run on the host.`,
+          severity: "critical",
+          methodology: "connection",
+          affectedNodeIds: [edge.source, edge.target],
+          affectedEdgeIds: [edge.id!],
+          inherited: false,
+          mitigations: [
+            "Sandbox all code execution in isolated containers",
+            "Enforce strict resource limits (CPU, memory, network)",
+            "Block access to host filesystem and network",
+            "Code review / allow-listing for executed commands",
+          ],
+        });
+      }
+    }
+
+    // Function call injection: any functionCallSurface → any execution-capable target (not already kc3→kc5)
+    if (
+      !(srcCat === "kc3" && tgtCat === "kc5") &&
+      srcProfile?.functionCallSurface &&
+      (tgtProfile?.isExecutionCapable || tgtProfile?.toolAccessMode)
+    ) {
+      threats.push({
+        id: `conn-fn-call-injection-custom-${edge.id}`,
+        name: "Function Call Injection",
+        description: `Function Call Schema "${source.data.label}" connects to "${target.data.label}". An attacker could manipulate the function call schema to invoke unintended actions.`,
+        severity: "high",
+        methodology: "connection",
+        affectedNodeIds: [edge.source, edge.target],
+        affectedEdgeIds: [edge.id!],
+        inherited: false,
+        mitigations: [
+          "Validate function call parameters against strict schemas",
+          "Whitelist allowed function names and argument types",
+          "Log and audit all function call invocations",
+          "Implement rate limiting on tool invocations",
+        ],
+      });
+    }
+
+    // Memory poisoning: any agent/model/prompt → custom data store with dataSensitivity
+    if (
+      tgtCat !== "kc4" &&
+      (tgtProfile?.handlesCredentials ||
+        tgtProfile?.handlesPII ||
+        tgtProfile?.handlesRegulatedData) &&
+      (srcCat === "kc1" ||
+        srcCat === "kc2" ||
+        srcCat === "kc3" ||
+        srcProfile?.promptInjectionSurface)
+    ) {
+      threats.push({
+        id: `conn-data-poisoning-custom-${edge.id}`,
+        name: "Sensitive Data Poisoning",
+        description: `"${source.data.label}" writes to "${target.data.label}" which handles ${tgtProfile?.dataSensitivity} data. Compromised outputs could poison sensitive stored data.`,
+        severity: tgtProfile?.handlesCredentials ? "critical" : "high",
+        methodology: "connection",
+        affectedNodeIds: [edge.source, edge.target],
+        affectedEdgeIds: [edge.id!],
+        inherited: false,
+        mitigations: [
+          "Data validation and sanitization before storage",
+          "Output verification before storage",
+          "Data integrity checks and checksums",
+          "Access control on write operations",
+        ],
+      });
+    }
   }
   return threats;
 }
