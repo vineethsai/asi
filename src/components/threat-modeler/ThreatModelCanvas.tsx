@@ -346,6 +346,32 @@ function ThreatModelCanvasInner() {
     }
   }, [analysisMode, nodes, edges, doAnalysis]);
 
+  const deleteSelected = useCallback(() => {
+    const selectedNodes = nodes.filter((n) => n.selected);
+    const selectedEdges = edges.filter((e) => e.selected);
+    if (selectedNodes.length === 0 && selectedEdges.length === 0) {
+      if (selectedNodeId) {
+        setNodes((nds) => nds.filter((n) => n.id !== selectedNodeId) as CanvasNode[]);
+        setSelectedNodeId(null);
+      }
+      if (selectedEdgeId) {
+        setEdges((eds) => eds.filter((e) => e.id !== selectedEdgeId) as CanvasEdge[]);
+        setSelectedEdgeId(null);
+      }
+    } else {
+      const nodeIds = new Set(selectedNodes.map((n) => n.id));
+      setNodes((nds) => nds.filter((n) => !nodeIds.has(n.id)) as CanvasNode[]);
+      const edgeIds = new Set(selectedEdges.map((e) => e.id));
+      setEdges(
+        (eds) =>
+          eds.filter(
+            (e) => !edgeIds.has(e.id!) && !nodeIds.has(e.source) && !nodeIds.has(e.target),
+          ) as CanvasEdge[],
+      );
+    }
+    pushHistory(nodes, edges);
+  }, [nodes, edges, selectedNodeId, selectedEdgeId, setNodes, setEdges, pushHistory]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -408,32 +434,6 @@ function ThreatModelCanvasInner() {
     fitView,
     setNodes,
   ]);
-
-  const deleteSelected = useCallback(() => {
-    const selectedNodes = nodes.filter((n) => n.selected);
-    const selectedEdges = edges.filter((e) => e.selected);
-    if (selectedNodes.length === 0 && selectedEdges.length === 0) {
-      if (selectedNodeId) {
-        setNodes((nds) => nds.filter((n) => n.id !== selectedNodeId) as CanvasNode[]);
-        setSelectedNodeId(null);
-      }
-      if (selectedEdgeId) {
-        setEdges((eds) => eds.filter((e) => e.id !== selectedEdgeId) as CanvasEdge[]);
-        setSelectedEdgeId(null);
-      }
-    } else {
-      const nodeIds = new Set(selectedNodes.map((n) => n.id));
-      setNodes((nds) => nds.filter((n) => !nodeIds.has(n.id)) as CanvasNode[]);
-      const edgeIds = new Set(selectedEdges.map((e) => e.id));
-      setEdges(
-        (eds) =>
-          eds.filter(
-            (e) => !edgeIds.has(e.id!) && !nodeIds.has(e.source) && !nodeIds.has(e.target),
-          ) as CanvasEdge[],
-      );
-    }
-    pushHistory(nodes, edges);
-  }, [nodes, edges, selectedNodeId, selectedEdgeId, setNodes, setEdges, pushHistory]);
 
   const duplicateSelected = useCallback(() => {
     if (!selectedNodeId) return;
