@@ -1,217 +1,136 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  ArrowRight,
-  CheckCircle,
-  ShieldCheck,
-  Network,
-  Target,
-  Brain,
-  Shield,
-  Crosshair,
-} from "lucide-react";
+import { ArrowRight, Crosshair } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Text, Heading, Box, Grid } from "@radix-ui/themes";
+
+const terminalStats = [
+  { label: "AISVS Categories", value: 13, maxBar: 16 },
+  { label: "Threat Vectors", value: 15, maxBar: 16 },
+  { label: "Agent Components", value: 6, maxBar: 16 },
+  { label: "Security Controls", value: 16, maxBar: 16 },
+];
+
+const statusLines = [
+  "NIST AI RMF mapping loaded",
+  "MAESTRO threat modeling ready",
+  "5 architecture patterns analyzed",
+];
+
+function TerminalBar({ ratio }: { ratio: number }) {
+  const widthPercent = Math.round(ratio * 100);
+  return (
+    <span
+      className="term-bar"
+      style={{ width: `${widthPercent}%`, maxWidth: 120, minWidth: 16 }}
+      aria-hidden="true"
+    />
+  );
+}
 
 export const HeroSection = () => {
-  const features = [
-    {
-      icon: Network,
-      title: "NIST AI RMF Mapping",
-      description:
-        "Interactive D3.js visualization mapping NIST AI Risk Management Framework to OWASP AISVS",
-      color: "bg-blue-500",
-      link: "/nist-mapping",
-    },
-    {
-      icon: ShieldCheck,
-      title: "AISVS Security Standards",
-      description: "Comprehensive AI Security Verification Standard with 13 control categories",
-      color: "bg-green-500",
-      link: "/aisvs",
-    },
-    {
-      icon: Brain,
-      title: "Component Framework",
-      description: "Six key components of agentic systems with detailed threat analysis",
-      color: "bg-orange-500",
-      link: "/components",
-    },
-    {
-      icon: Target,
-      title: "Security Controls",
-      description: "Comprehensive security controls and mitigations for AI agentic systems",
-      color: "bg-purple-500",
-      link: "/controls",
-    },
-    {
-      icon: Crosshair,
-      title: "Threat Modeler",
-      description: "Interactive drag-and-drop threat modeling for agentic AI with MAESTRO analysis",
-      color: "bg-red-500",
-      link: "/threat-modeler",
-    },
-  ];
-
-  const stats = [
-    { number: "13", label: "AISVS Categories", color: "text-blue-600" },
-    { number: "15", label: "AI Threats", color: "text-red-600" },
-    { number: "6", label: "Key Components", color: "text-green-600" },
-    { number: "16", label: "Security Mitigations", color: "text-purple-600" },
-  ];
-
   return (
-    <section className="relative py-12 md:py-20 lg:py-28 overflow-hidden">
-      {/* Background gradients */}
-      <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-muted/30" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-secondary/20 via-transparent to-transparent" />
+    <section className="relative py-16 md:py-24 lg:py-32 overflow-hidden">
+      {/* Dot-grid background */}
+      <div className="hero-grid-bg absolute inset-0 text-foreground opacity-[0.03] dark:opacity-[0.05] pointer-events-none" />
 
-      {/* Floating particles effect */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-primary/20 rounded-full animate-pulse" />
-        <div className="absolute top-3/4 right-1/4 w-1 h-1 bg-secondary/30 rounded-full animate-pulse delay-1000" />
-        <div className="absolute top-1/2 left-3/4 w-1.5 h-1.5 bg-primary/15 rounded-full animate-pulse delay-500" />
-      </div>
-
-      <div className="container relative px-4 md:px-6">
-        <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
-          {/* Left column - Enhanced Content */}
-          <div className="flex flex-col justify-center space-y-8 max-w-2xl mx-auto lg:mx-0">
-            {/* Badge */}
-            <div className="flex justify-center lg:justify-start">
-              <Badge variant="secondary" className="px-4 py-2 text-sm font-medium">
-                <Network className="h-4 w-4 mr-2" />
-                NIST AI RMF Integration
-              </Badge>
-            </div>
-
-            {/* Main heading */}
-            <Box className="space-y-6 text-center lg:text-left">
-              <Heading
-                size="9"
-                className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl"
-              >
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary via-primary to-secondary">
-                  Secure Your
-                </span>
-                <br />
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-secondary via-primary to-primary">
-                  Agentic AI
-                </span>
-                <br />
-                <span className="text-foreground">Applications</span>
-              </Heading>
-              <Text size="5" className="text-lg text-muted-foreground md:text-xl leading-relaxed">
-                The most comprehensive OWASP guide for securing AI agentic systems. Features NIST AI
-                RMF mapping, advanced threat analysis, and cutting-edge security frameworks.
-              </Text>
-            </Box>
-
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Link to="/nist-mapping" className="w-full sm:w-auto">
-                <Button
-                  size="lg"
-                  className="w-full gap-2 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white font-semibold shadow-lg"
-                >
-                  <Network className="h-5 w-5" />
-                  NIST Mapping
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-              <Link to="/aisvs" className="w-full sm:w-auto">
-                <Button variant="outline" size="lg" className="w-full border-2 hover:bg-primary/5">
-                  <ShieldCheck className="h-4 w-4 mr-2" />
-                  AISVS Standards
-                </Button>
-              </Link>
-            </div>
-
-            {/* Stats */}
-            <Grid columns="4" gap="3" className="pt-4">
-              {stats.map((stat, i) => (
-                <Box key={i} className="text-center p-3 rounded-lg bg-muted/30 backdrop-blur-sm">
-                  <Text size="6" weight="bold" className={stat.color}>
-                    {stat.number}
-                  </Text>
-                  <Text size="2" className="text-muted-foreground">
-                    {stat.label}
-                  </Text>
-                </Box>
-              ))}
-            </Grid>
+      <div className="container relative px-4 md:px-6 max-w-4xl mx-auto">
+        <div className="flex flex-col items-center text-center space-y-8">
+          {/* Status badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border bg-muted/50 dark:bg-muted/30 backdrop-blur-sm">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+            <span className="font-mono text-xs tracking-wide text-muted-foreground">
+              OWASP Agentic Security Framework
+            </span>
           </div>
 
-          {/* Right column - Feature showcase */}
-          <div className="relative">
-            {/* Main feature cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {features.map((feature, i) => (
-                <Link key={i} to={feature.link} className="group">
-                  <Card className="h-full border-2 border-transparent hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:scale-105 bg-gradient-to-br from-background to-muted/20">
-                    <CardContent className="p-6 space-y-4">
-                      <div
-                        className={`w-12 h-12 rounded-lg ${feature.color} flex items-center justify-center text-white group-hover:scale-110 transition-transform duration-300`}
-                      >
-                        <feature.icon className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-lg mb-2 group-hover:text-primary transition-colors">
-                          {feature.title}
-                        </h3>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                          {feature.description}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
+          {/* Title */}
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
+            <span className="term-prompt font-mono font-normal text-3xl sm:text-4xl md:text-5xl lg:text-6xl">
+              {">"}&nbsp;
+            </span>
+            <span className="text-foreground">Agentic Security Hub</span>
+            <span className="animate-blink term-prompt font-mono font-normal">_</span>
+          </h1>
+
+          {/* Subtitle */}
+          <p className="max-w-2xl text-lg text-muted-foreground leading-relaxed md:text-xl">
+            Threat models, verification standards, and security controls for AI agent architectures.
+            Built on OWASP AISVS and NIST AI RMF.
+          </p>
+
+          {/* Terminal widget */}
+          <div className="w-full max-w-2xl terminal-window">
+            {/* Title bar */}
+            <div className="terminal-titlebar">
+              <div className="flex items-center gap-1.5">
+                <span className="terminal-dot bg-red-400 dark:bg-red-500" />
+                <span className="terminal-dot bg-amber-400 dark:bg-amber-500" />
+                <span className="terminal-dot bg-emerald-400 dark:bg-emerald-500" />
+              </div>
+              <span className="ml-3 text-xs text-muted-foreground font-mono">
+                ~/agentic-security
+              </span>
             </div>
 
-            {/* Central connecting element */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-16 h-16 rounded-full bg-primary/10 border-2 border-primary/20 flex items-center justify-center backdrop-blur-sm">
-                <Shield className="h-8 w-8 text-primary" />
+            {/* Terminal body */}
+            <div className="terminal-body text-foreground dark:text-slate-200">
+              {/* Command */}
+              <div className="mb-4">
+                <span className="term-prompt">$</span>{" "}
+                <span className="term-command">asi status</span>
+              </div>
+
+              {/* Stats with bars */}
+              <div className="space-y-2 mb-4">
+                {terminalStats.map((stat) => (
+                  <div key={stat.label} className="flex items-center gap-3">
+                    <span className="term-label w-40 text-right text-xs shrink-0">
+                      {stat.label}
+                    </span>
+                    <span className="term-value w-6 text-right text-xs">{stat.value}</span>
+                    <div className="flex-1 flex items-center">
+                      <TerminalBar ratio={stat.value / stat.maxBar} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Status lines */}
+              <div className="space-y-1 mb-4 border-t border-border/50 dark:border-slate-700/50 pt-3">
+                {statusLines.map((line) => (
+                  <div key={line} className="text-xs">
+                    <span className="term-success">[ok]</span>{" "}
+                    <span className="term-muted">{line}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Prompt with blinking cursor */}
+              <div>
+                <span className="term-prompt">$</span>{" "}
+                <span className="animate-blink term-prompt">_</span>
               </div>
             </div>
           </div>
+
+          {/* CTA buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 pt-2">
+            <Link to="/aisvs">
+              <Button size="lg" className="gap-2 font-semibold">
+                Explore Framework
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+            <Link to="/threat-modeler">
+              <Button variant="outline" size="lg" className="gap-2 border-2">
+                <Crosshair className="h-4 w-4" />
+                Threat Modeler
+              </Button>
+            </Link>
+          </div>
         </div>
-
-        {/* Quick navigation */}
-        <Box className="mt-16 lg:mt-20">
-          <Box className="text-center mb-8">
-            <Heading size="5" className="mb-2">
-              Quick Navigation
-            </Heading>
-            <Text className="text-muted-foreground">
-              Jump directly to the tools and resources you need
-            </Text>
-          </Box>
-
-          <Grid columns="6" gap="3">
-            {[
-              { label: "NIST Mapping", link: "/nist-mapping", icon: Network },
-              { label: "Threats", link: "/threats", icon: Shield },
-              { label: "Controls", link: "/controls", icon: CheckCircle },
-              { label: "AISVS", link: "/aisvs", icon: ShieldCheck },
-              { label: "Components", link: "/components", icon: Brain },
-              { label: "Threat Modeler", link: "/threat-modeler", icon: Crosshair },
-            ].map((item, i) => (
-              <Link key={i} to={item.link}>
-                <Button
-                  variant="outline"
-                  className="w-full h-auto p-4 flex flex-col gap-2 hover:bg-primary/5 hover:border-primary/30 transition-all duration-200"
-                >
-                  <item.icon className="h-5 w-5" />
-                  <span className="text-xs font-medium">{item.label}</span>
-                </Button>
-              </Link>
-            ))}
-          </Grid>
-        </Box>
       </div>
     </section>
   );

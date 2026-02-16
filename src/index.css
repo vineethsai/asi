@@ -620,6 +620,100 @@
   @apply top-4;
 }
 
+/* ===== Hero Terminal Styles (Warp-inspired) ===== */
+
+.hero-grid-bg {
+  background-image: radial-gradient(circle, currentColor 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.terminal-window {
+  @apply rounded-xl border overflow-hidden;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  background: hsl(var(--card));
+  border-color: hsl(var(--border));
+  box-shadow:
+    0 0 0 1px hsl(var(--border)),
+    0 8px 40px -12px rgba(0, 0, 0, 0.15);
+}
+
+.dark .terminal-window {
+  background: hsl(240 6% 9% / 0.95);
+  border-color: hsl(240 4% 18%);
+  box-shadow:
+    0 0 0 1px hsl(240 4% 18%),
+    0 0 60px -15px rgba(139, 92, 246, 0.08),
+    0 8px 40px -12px rgba(0, 0, 0, 0.4);
+}
+
+.terminal-titlebar {
+  @apply flex items-center gap-2 px-4 py-3 border-b;
+  border-color: hsl(var(--border));
+  background: hsl(var(--muted) / 0.5);
+}
+
+.dark .terminal-titlebar {
+  border-color: hsl(240 4% 15%);
+  background: hsl(240 6% 7% / 0.8);
+}
+
+.terminal-dot {
+  @apply w-3 h-3 rounded-full;
+}
+
+.terminal-body {
+  @apply p-5 text-sm leading-relaxed;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+@keyframes blink-cursor {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.animate-blink {
+  animation: blink-cursor 1s step-end infinite;
+}
+
+.term-prompt {
+  @apply text-violet-600 dark:text-violet-400 font-semibold;
+}
+
+.term-command {
+  @apply text-sky-600 dark:text-sky-400;
+}
+
+.term-label {
+  @apply text-amber-700 dark:text-amber-300;
+}
+
+.term-success {
+  @apply text-emerald-600 dark:text-emerald-400;
+}
+
+.term-value {
+  @apply text-cyan-600 dark:text-cyan-300 font-semibold;
+}
+
+.term-muted {
+  @apply text-slate-500 dark:text-slate-400;
+}
+
+.term-bar {
+  @apply inline-block h-3.5 rounded-sm;
+  background: linear-gradient(90deg, #8b5cf6, #06b6d4);
+}
+
+.dark .term-bar {
+  background: linear-gradient(90deg, #a78bfa, #22d3ee);
+}
+
 /* Respect reduced motion preferences */
 @media (prefers-reduced-motion: reduce) {
   *,
