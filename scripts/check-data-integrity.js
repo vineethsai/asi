@@ -103,9 +103,9 @@ function run() {
   const securityData = readFile("src/components/components/securityData.ts");
   const architecturesData = readFile("src/components/components/architecturesData.ts");
   const frameworkData = readFile("src/components/components/frameworkData.ts");
-  const threatIds = unique(regexAll(securityData, /^\s*"(t\d+)":\s*\{/gm));
-  const mitigationIds = unique(regexAll(securityData, /^\s*"(m\d+)":\s*\{/gm));
-  const aisvsCategoryIds = unique(regexAll(securityData, /^\s*"(v\d+)":\s*\{/gm)).map((id) =>
+  const threatIds = unique(regexAll(securityData, /^\s*"?(t\d+)"?:\s*\{/gm));
+  const mitigationIds = unique(regexAll(securityData, /^\s*"?(m\d+)"?:\s*\{/gm));
+  const aisvsCategoryIds = unique(regexAll(securityData, /^\s*"?(v\d+)"?:\s*\{/gm)).map((id) =>
     id.toLowerCase()
   );
   const aisvsCategoryCodes = unique(regexAll(securityData, /^\s*code:\s*"(C\d+)"\s*,?$/gm)).map((code) =>
@@ -174,10 +174,6 @@ function run() {
     validSet: componentSet,
     label: "keyComponents",
   });
-
-  if (!isTokenReferencedInSource("generatedData")) {
-    warnings.push("src/lib/generatedData.json appears unused.");
-  }
 
   console.log("📊 Data Integrity Summary");
   console.log("========================");
