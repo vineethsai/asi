@@ -582,6 +582,8 @@ function ThreatSankeyDiagram() {
   const { connectedThreats, frameworkItems, links, fwGroups } = useMemo(() => {
     const allThreats = Object.values(threatsData) as {
       id: string;
+      name?: string;
+      color?: string;
       asiMapping?: string[];
       ciscoMapping?: string[];
     }[];
@@ -697,7 +699,7 @@ function ThreatSankeyDiagram() {
     if (curFw) {
       groups.push({
         framework: curFw,
-        label: FLABEL[curFw] || curFw,
+        label: SANKEY_FLABEL[curFw] || curFw,
         startIdx: startI,
         endIdx: items.length - 1,
       });

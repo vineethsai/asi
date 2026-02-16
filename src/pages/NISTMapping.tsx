@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import * as d3 from "d3";
 import Header from "@/components/layout/Header";
@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { aisvsData } from "../components/components/securityData";
+import { aisvsData, type AISVSCategory } from "../components/components/securityData";
 import SidebarNav from "../components/layout/SidebarNav";
 import { Helmet } from "react-helmet";
 import {
@@ -64,6 +64,31 @@ interface NISTSubcategory {
   name: string;
   description: string;
   aisvsMapping: string[]; // AISVS category codes that map to this subcategory
+}
+
+type GraphNodeData = NISTFunction | NISTCategory | NISTSubcategory | AISVSCategory;
+
+interface GraphNode {
+  id: string;
+  type: "nist-function" | "nist-category" | "nist-subcategory" | "aisvs-category";
+  label: string;
+  description?: string;
+  color: string;
+  parentId?: string;
+  x?: number;
+  y?: number;
+  fx?: number | null;
+  fy?: number | null;
+  expanded?: boolean;
+  visible?: boolean;
+  data?: GraphNodeData;
+}
+
+interface GraphLink {
+  source: string;
+  target: string;
+  type: "hierarchy" | "mapping";
+  visible?: boolean;
 }
 
 // NIST AI RMF Data Structure
@@ -865,15 +890,7 @@ export const NISTMapping = () => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
-  const [selectedNodeData, setSelectedNodeData] = useState<{
-    id: string;
-    type: string;
-    label: string;
-    description?: string;
-    color: string;
-    parentId?: string;
-    data?: { categories?: NISTCategory[]; subcategories?: NISTSubcategory[]; description?: string };
-  } | null>(null);
+  const [selectedNodeData, setSelectedNodeData] = useState<GraphNode | null>(null);
   const [focusMode, setFocusMode] = useState<boolean>(false);
 
   // Convert AISVS data for easier access
@@ -1018,29 +1035,6 @@ export const NISTMapping = () => {
 
   // D3 Graph Data Structure
   const graphData = useMemo(() => {
-    interface GraphNode {
-      id: string;
-      type: "nist-function" | "nist-category" | "nist-subcategory" | "aisvs-category";
-      label: string;
-      description?: string;
-      color: string;
-      parentId?: string;
-      x?: number;
-      y?: number;
-      fx?: number | null;
-      fy?: number | null;
-      expanded?: boolean;
-      visible?: boolean;
-      data?: Record<string, unknown>;
-    }
-
-    interface GraphLink {
-      source: string;
-      target: string;
-      type: "hierarchy" | "mapping";
-      visible?: boolean;
-    }
-
     const nodes: GraphNode[] = [];
     const links: GraphLink[] = [];
 
@@ -1340,16 +1334,14 @@ export const NISTMapping = () => {
 
     // Create force simulation
     const simulation = d3
-      .forceSimulation(graphData.nodes)
+      .forceSimulation(graphData.nodes as d3.SimulationNodeDatum[])
       .force(
         "link",
         d3
-          .forceLink(graphData.links)
-          .id((d: GraphLink) =>
-            (d as { source: string; target: string; type: string }).type ? "" : "",
-          )
-          .distance((d: GraphLink) => ((d as { type: string }).type === "hierarchy" ? 100 : 200))
-          .strength((d: GraphLink) => ((d as { type: string }).type === "hierarchy" ? 0.8 : 0.3)),
+          .forceLink(graphData.links as unknown as d3.SimulationLinkDatum<d3.SimulationNodeDatum>[])
+          .id((d) => (d as unknown as GraphNode).id)
+          .distance((d) => ((d as unknown as GraphLink).type === "hierarchy" ? 100 : 200))
+          .strength((d) => ((d as unknown as GraphLink).type === "hierarchy" ? 0.8 : 0.3)),
       )
       .force("charge", d3.forceManyBody().strength(-300))
       .force("center", d3.forceCenter(width / 2, height / 2))
@@ -1378,21 +1370,7 @@ export const NISTMapping = () => {
       .style("cursor", "pointer")
       .call(
         d3
-          .drag<
-            SVGGElement,
-            {
-              type: string;
-              id: string;
-              color: string;
-              expanded?: boolean;
-              x?: number;
-              y?: number;
-              fx?: number | null;
-              fy?: number | null;
-              description?: string;
-              data?: { categories?: unknown[] };
-            }
-          >()
+          .drag<SVGGElement, GraphNode>()
           .on("start", (event, d) => {
             if (!event.active) simulation.alphaTarget(0.3).restart();
             d.fx = d.x;
@@ -1410,7 +1388,13 @@ export const NISTMapping = () => {
       );
 
     // Add node shapes based on type
-    node.each(function (d: { type: string; color: string; expanded?: boolean }) {
+    node.each(function (d: {
+      type: string;
+      color: string;
+      expanded?: boolean;
+      label: string;
+      description?: string;
+    }) {
       const nodeGroup = d3.select(this);
 
       if (d.type === "nist-function") {
@@ -1531,128 +1515,116 @@ export const NISTMapping = () => {
     });
 
     // Add click handlers for expansion and reverse mapping
-    node.on(
-      "click",
-      (
-        event,
-        d: { id: string; type: string; label: string; data?: { categories?: { id: string }[] } },
-      ) => {
-        event.stopPropagation();
+    node.on("click", (event, d: GraphNode) => {
+      event.stopPropagation();
 
-        // Check if this is the same node being clicked again
-        const isSameNode = selectedNode === d.id;
+      // Check if this is the same node being clicked again
+      const isSameNode = selectedNode === d.id;
 
-        if (d.type === "nist-function" || d.type === "nist-category") {
-          const newExpandedNodes = new Set(expandedNodes);
-          if (expandedNodes.has(d.id)) {
-            newExpandedNodes.delete(d.id);
-            // Also collapse all children
-            if (d.type === "nist-function") {
-              (d.data?.categories ?? []).forEach((cat: NISTCategory) => {
-                const catId = `${d.id}-${cat.id}`;
-                newExpandedNodes.delete(catId);
-              });
-            }
-          } else {
-            newExpandedNodes.add(d.id);
-          }
-          setExpandedNodes(newExpandedNodes);
-        } else if (d.type === "aisvs-category") {
-          // For AISVS categories, expand all NIST elements that map to this category
-          const newExpandedNodes = new Set(expandedNodes);
-
-          // Find all NIST subcategories that map to this AISVS category
-          nistAIRMF.forEach((func) => {
-            func.categories.forEach((cat) => {
-              cat.subcategories.forEach((sub) => {
-                if (sub.aisvsMapping.includes(d.label)) {
-                  // Expand the function and category to show this subcategory
-                  newExpandedNodes.add(func.id);
-                  newExpandedNodes.add(`${func.id}-${cat.id}`);
-                }
-              });
+      if (d.type === "nist-function" || d.type === "nist-category") {
+        const newExpandedNodes = new Set(expandedNodes);
+        if (expandedNodes.has(d.id)) {
+          newExpandedNodes.delete(d.id);
+          // Also collapse all children
+          if (d.type === "nist-function") {
+            ((d.data as NISTFunction)?.categories ?? []).forEach((cat: NISTCategory) => {
+              const catId = `${d.id}-${cat.id}`;
+              newExpandedNodes.delete(catId);
             });
-          });
-
-          setExpandedNodes(newExpandedNodes);
-        }
-
-        // Toggle focus mode for AISVS categories and NIST subcategories
-        if (d.type === "aisvs-category" || d.type === "nist-subcategory") {
-          if (isSameNode && focusMode) {
-            // If clicking the same node and already in focus mode, exit focus mode
-            setFocusMode(false);
-            setSelectedNode(null);
-            setSelectedNodeData(null);
-          } else {
-            // Enter focus mode for this node
-            setFocusMode(true);
-            setSelectedNode(d.id);
-            setSelectedNodeData(d);
           }
         } else {
-          // For other node types, just select without focus mode
+          newExpandedNodes.add(d.id);
+        }
+        setExpandedNodes(newExpandedNodes);
+      } else if (d.type === "aisvs-category") {
+        // For AISVS categories, expand all NIST elements that map to this category
+        const newExpandedNodes = new Set(expandedNodes);
+
+        // Find all NIST subcategories that map to this AISVS category
+        nistAIRMF.forEach((func) => {
+          func.categories.forEach((cat) => {
+            cat.subcategories.forEach((sub) => {
+              if (sub.aisvsMapping.includes(d.label)) {
+                // Expand the function and category to show this subcategory
+                newExpandedNodes.add(func.id);
+                newExpandedNodes.add(`${func.id}-${cat.id}`);
+              }
+            });
+          });
+        });
+
+        setExpandedNodes(newExpandedNodes);
+      }
+
+      // Toggle focus mode for AISVS categories and NIST subcategories
+      if (d.type === "aisvs-category" || d.type === "nist-subcategory") {
+        if (isSameNode && focusMode) {
+          // If clicking the same node and already in focus mode, exit focus mode
           setFocusMode(false);
+          setSelectedNode(null);
+          setSelectedNodeData(null);
+        } else {
+          // Enter focus mode for this node
+          setFocusMode(true);
           setSelectedNode(d.id);
           setSelectedNodeData(d);
         }
-      },
-    );
+      } else {
+        // For other node types, just select without focus mode
+        setFocusMode(false);
+        setSelectedNode(d.id);
+        setSelectedNodeData(d);
+      }
+    });
 
     // Add hover effects
     node
-      .on(
-        "mouseenter",
-        function (
-          event,
-          d: { x?: number; y?: number; label: string; description?: string; type: string },
-        ) {
-          d3.select(this).select("circle, rect").transition().duration(200).attr("opacity", 1);
+      .on("mouseenter", function (event, d: GraphNode) {
+        d3.select(this).select("circle, rect").transition().duration(200).attr("opacity", 1);
 
-          // Show tooltip
-          const tooltip = container
-            .append("g")
-            .attr("class", "tooltip")
-            .attr("transform", `translate(${d.x + 50}, ${d.y - 20})`);
+        // Show tooltip
+        const tooltip = container
+          .append("g")
+          .attr("class", "tooltip")
+          .attr("transform", `translate(${(d.x ?? 0) + 50}, ${(d.y ?? 0) - 20})`);
 
-          const _rect = tooltip
-            .append("rect")
-            .attr("x", 0)
-            .attr("y", 0)
-            .attr("width", 200)
-            .attr("height", 40)
-            .attr("rx", 5)
-            .attr("fill", () => {
-              // Check if dark mode is active
-              const isDarkMode = document.documentElement.classList.contains("dark");
-              return isDarkMode ? "#111827" : "#000000"; // Very dark gray for dark mode, black for light mode
-            })
-            .attr("opacity", 0.9)
-            .attr("stroke", () => {
-              // Check if dark mode is active
-              const isDarkMode = document.documentElement.classList.contains("dark");
-              return isDarkMode ? "#374151" : "#ffffff"; // Border for better visibility
-            })
-            .attr("stroke-width", 1);
+        const _rect = tooltip
+          .append("rect")
+          .attr("x", 0)
+          .attr("y", 0)
+          .attr("width", 200)
+          .attr("height", 40)
+          .attr("rx", 5)
+          .attr("fill", () => {
+            // Check if dark mode is active
+            const isDarkMode = document.documentElement.classList.contains("dark");
+            return isDarkMode ? "#111827" : "#000000"; // Very dark gray for dark mode, black for light mode
+          })
+          .attr("opacity", 0.9)
+          .attr("stroke", () => {
+            // Check if dark mode is active
+            const isDarkMode = document.documentElement.classList.contains("dark");
+            return isDarkMode ? "#374151" : "#ffffff"; // Border for better visibility
+          })
+          .attr("stroke-width", 1);
 
-          tooltip
-            .append("text")
-            .attr("x", 10)
-            .attr("y", 15)
-            .attr("fill", "white")
-            .attr("font-size", "12px")
-            .attr("font-weight", "bold")
-            .text(d.label);
+        tooltip
+          .append("text")
+          .attr("x", 10)
+          .attr("y", 15)
+          .attr("fill", "white")
+          .attr("font-size", "12px")
+          .attr("font-weight", "bold")
+          .text(d.label);
 
-          tooltip
-            .append("text")
-            .attr("x", 10)
-            .attr("y", 30)
-            .attr("fill", "white")
-            .attr("font-size", "10px")
-            .text(d.description?.substring(0, 30) + "...");
-        },
-      )
+        tooltip
+          .append("text")
+          .attr("x", 10)
+          .attr("y", 30)
+          .attr("fill", "white")
+          .attr("font-size", "10px")
+          .text(d.description?.substring(0, 30) + "...");
+      })
       .on("mouseleave", function (event, d: { type: string }) {
         d3.select(this)
           .select("circle, rect")
@@ -1672,13 +1644,17 @@ export const NISTMapping = () => {
         container.selectAll(".tooltip").remove();
       });
 
-    // Update positions on simulation tick
+    // Update positions on simulation tick (D3 mutates source/target from strings to objects)
+    type SimulatedLink = {
+      source: { x: number; y: number };
+      target: { x: number; y: number };
+    };
     simulation.on("tick", () => {
       link
-        .attr("x1", (d: { source: { x: number }; target: { x: number } }) => d.source.x)
-        .attr("y1", (d: { source: { y: number }; target: { y: number } }) => d.source.y)
-        .attr("x2", (d: { source: { x: number }; target: { x: number } }) => d.target.x)
-        .attr("y2", (d: { source: { y: number }; target: { y: number } }) => d.target.y);
+        .attr("x1", (d) => (d as unknown as SimulatedLink).source.x)
+        .attr("y1", (d) => (d as unknown as SimulatedLink).source.y)
+        .attr("x2", (d) => (d as unknown as SimulatedLink).target.x)
+        .attr("y2", (d) => (d as unknown as SimulatedLink).target.y);
 
       node.attr(
         "transform",
@@ -2739,10 +2715,11 @@ export const NISTMapping = () => {
                                   <div className="flex items-center gap-2 text-sm">
                                     <span className="font-medium">Contains:</span>
                                     <Badge variant="secondary">
-                                      {selectedNodeData.data.categories.length} categories
+                                      {(selectedNodeData.data as NISTFunction).categories.length}{" "}
+                                      categories
                                     </Badge>
                                     <Badge variant="secondary">
-                                      {selectedNodeData.data.categories.reduce(
+                                      {(selectedNodeData.data as NISTFunction).categories.reduce(
                                         (total: number, cat: NISTCategory) =>
                                           total + cat.subcategories.length,
                                         0,
@@ -2807,9 +2784,11 @@ export const NISTMapping = () => {
                                         Maturity Level
                                       </h6>
                                       <p className="text-xs text-teal-700 dark:text-teal-300">
-                                        {selectedNodeData.data.subcategories.length > 6
+                                        {(selectedNodeData.data as NISTCategory).subcategories
+                                          .length > 6
                                           ? "Advanced"
-                                          : selectedNodeData.data.subcategories.length > 3
+                                          : (selectedNodeData.data as NISTCategory).subcategories
+                                                .length > 3
                                             ? "Intermediate"
                                             : "Foundational"}
                                       </p>
@@ -2819,7 +2798,8 @@ export const NISTMapping = () => {
                                   <div className="flex items-center gap-2 text-sm">
                                     <span className="font-medium">Contains:</span>
                                     <Badge variant="secondary">
-                                      {selectedNodeData.data.subcategories.length} subcategories
+                                      {(selectedNodeData.data as NISTCategory).subcategories.length}{" "}
+                                      subcategories
                                     </Badge>
                                     <Badge variant="outline">Click to expand</Badge>
                                   </div>
@@ -2869,41 +2849,42 @@ export const NISTMapping = () => {
                                     <h5 className="font-medium text-sm mb-3 text-blue-800 dark:text-blue-200">
                                       🔗 AISVS Security Mappings
                                     </h5>
-                                    {selectedNodeData.data.aisvsMapping.length > 0 ? (
+                                    {(selectedNodeData.data as NISTSubcategory).aisvsMapping
+                                      .length > 0 ? (
                                       <div className="space-y-2">
                                         <p className="text-xs text-blue-700 dark:text-blue-300 mb-3">
                                           This NIST subcategory directly supports the following
                                           AISVS security controls:
                                         </p>
                                         <div className="flex flex-wrap gap-2">
-                                          {selectedNodeData.data.aisvsMapping.map(
-                                            (aisvsCode: string) => {
-                                              const aisvsCategory = getAISVSCategory(aisvsCode);
-                                              return aisvsCategory ? (
-                                                <Link
-                                                  key={aisvsCode}
-                                                  to="/aisvs"
-                                                  className="no-underline"
-                                                >
-                                                  <Badge
-                                                    variant="default"
-                                                    className="text-xs hover:opacity-80 transition-all duration-200 cursor-pointer transform hover:scale-105"
-                                                    style={{ backgroundColor: aisvsCategory.color }}
-                                                  >
-                                                    {aisvsCode}: {aisvsCategory.name.split(" &")[0]}
-                                                  </Badge>
-                                                </Link>
-                                              ) : (
+                                          {(
+                                            selectedNodeData.data as NISTSubcategory
+                                          ).aisvsMapping.map((aisvsCode: string) => {
+                                            const aisvsCategory = getAISVSCategory(aisvsCode);
+                                            return aisvsCategory ? (
+                                              <Link
+                                                key={aisvsCode}
+                                                to="/aisvs"
+                                                className="no-underline"
+                                              >
                                                 <Badge
-                                                  key={aisvsCode}
-                                                  variant="outline"
-                                                  className="text-xs"
+                                                  variant="default"
+                                                  className="text-xs hover:opacity-80 transition-all duration-200 cursor-pointer transform hover:scale-105"
+                                                  style={{ backgroundColor: aisvsCategory.color }}
                                                 >
-                                                  {aisvsCode}
+                                                  {aisvsCode}: {aisvsCategory.name.split(" &")[0]}
                                                 </Badge>
-                                              );
-                                            },
-                                          )}
+                                              </Link>
+                                            ) : (
+                                              <Badge
+                                                key={aisvsCode}
+                                                variant="outline"
+                                                className="text-xs"
+                                              >
+                                                {aisvsCode}
+                                              </Badge>
+                                            );
+                                          })}
                                         </div>
                                         <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 italic">
                                           💡 Click on any AISVS badge above to explore detailed
@@ -2929,11 +2910,14 @@ export const NISTMapping = () => {
                                         Implementation Complexity
                                       </h6>
                                       <p className="text-xs text-slate-700 dark:text-slate-300">
-                                        {selectedNodeData.data.aisvsMapping.length > 3
+                                        {(selectedNodeData.data as NISTSubcategory).aisvsMapping
+                                          .length > 3
                                           ? "High - Multi-domain"
-                                          : selectedNodeData.data.aisvsMapping.length > 1
+                                          : (selectedNodeData.data as NISTSubcategory).aisvsMapping
+                                                .length > 1
                                             ? "Medium - Cross-functional"
-                                            : selectedNodeData.data.aisvsMapping.length === 1
+                                            : (selectedNodeData.data as NISTSubcategory)
+                                                  .aisvsMapping.length === 1
                                               ? "Medium - Focused"
                                               : "Low - Policy-based"}
                                       </p>
@@ -2943,7 +2927,8 @@ export const NISTMapping = () => {
                                         Security Impact
                                       </h6>
                                       <p className="text-xs text-emerald-700 dark:text-emerald-300">
-                                        {selectedNodeData.data.aisvsMapping.length > 0
+                                        {(selectedNodeData.data as NISTSubcategory).aisvsMapping
+                                          .length > 0
                                           ? "Direct security control alignment"
                                           : "Governance and process focused"}
                                       </p>
@@ -3130,16 +3115,22 @@ export const NISTMapping = () => {
                                     </p>
                                   </div>
 
-                                  {selectedNodeData.data.subCategories && (
+                                  {(selectedNodeData.data as AISVSCategory).subCategories && (
                                     <div className="flex items-center gap-2 text-sm">
                                       <span className="font-medium">Contains:</span>
                                       <Badge variant="secondary">
-                                        {selectedNodeData.data.subCategories.length} subcategories
+                                        {
+                                          (selectedNodeData.data as AISVSCategory).subCategories
+                                            .length
+                                        }{" "}
+                                        subcategories
                                       </Badge>
                                       <Badge variant="outline">
-                                        {selectedNodeData.data.subCategories.length > 5
+                                        {(selectedNodeData.data as AISVSCategory).subCategories
+                                          .length > 5
                                           ? "Comprehensive"
-                                          : selectedNodeData.data.subCategories.length > 3
+                                          : (selectedNodeData.data as AISVSCategory).subCategories
+                                                .length > 3
                                             ? "Moderate"
                                             : "Focused"}{" "}
                                         scope
@@ -3158,45 +3149,46 @@ export const NISTMapping = () => {
                               </h4>
 
                               {selectedNodeData.type === "nist-subcategory" &&
-                                selectedNodeData.data.aisvsMapping.length > 0 && (
+                                (selectedNodeData.data as NISTSubcategory).aisvsMapping.length >
+                                  0 && (
                                   <div className="space-y-3">
                                     <div>
                                       <h5 className="font-medium text-sm mb-2">
                                         Maps to AISVS Categories:
                                       </h5>
                                       <div className="space-y-2">
-                                        {selectedNodeData.data.aisvsMapping.map(
-                                          (aisvsCode: string) => {
-                                            const aisvsCategory = getAISVSCategory(aisvsCode);
-                                            return aisvsCategory ? (
+                                        {(
+                                          selectedNodeData.data as NISTSubcategory
+                                        ).aisvsMapping.map((aisvsCode: string) => {
+                                          const aisvsCategory = getAISVSCategory(aisvsCode);
+                                          return aisvsCategory ? (
+                                            <div
+                                              key={aisvsCode}
+                                              className="flex items-center gap-2 p-2 border rounded"
+                                            >
                                               <div
-                                                key={aisvsCode}
-                                                className="flex items-center gap-2 p-2 border rounded"
-                                              >
-                                                <div
-                                                  className="w-3 h-3 rounded-full"
-                                                  style={{ backgroundColor: aisvsCategory.color }}
-                                                ></div>
-                                                <div className="flex-1">
-                                                  <div className="font-medium text-sm">
-                                                    {aisvsCategory.code}
-                                                  </div>
-                                                  <div className="text-xs text-muted-foreground">
-                                                    {aisvsCategory.name.split(" &")[0]}
-                                                  </div>
+                                                className="w-3 h-3 rounded-full"
+                                                style={{ backgroundColor: aisvsCategory.color }}
+                                              ></div>
+                                              <div className="flex-1">
+                                                <div className="font-medium text-sm">
+                                                  {aisvsCategory.code}
                                                 </div>
-                                                <Link to="/aisvs">
-                                                  <Badge
-                                                    variant="outline"
-                                                    className="text-xs cursor-pointer hover:bg-accent"
-                                                  >
-                                                    View Details
-                                                  </Badge>
-                                                </Link>
+                                                <div className="text-xs text-muted-foreground">
+                                                  {aisvsCategory.name.split(" &")[0]}
+                                                </div>
                                               </div>
-                                            ) : null;
-                                          },
-                                        )}
+                                              <Link to="/aisvs">
+                                                <Badge
+                                                  variant="outline"
+                                                  className="text-xs cursor-pointer hover:bg-accent"
+                                                >
+                                                  View Details
+                                                </Badge>
+                                              </Link>
+                                            </div>
+                                          ) : null;
+                                        })}
                                       </div>
                                     </div>
                                   </div>

@@ -791,7 +791,7 @@ function ThreatModelCanvasInner() {
   );
 
   const miniMapNodeColor = useCallback(
-    (n: { data?: CanvasNodeData }) => {
+    (n: { data: Record<string, unknown> }) => {
       const nd = n.data as unknown as CanvasNodeData;
       if (heatMapActive && nd?.threats?.length) {
         const hasHigh = nd.threats.some((t: ThreatBadge) => t.severity === "high");
