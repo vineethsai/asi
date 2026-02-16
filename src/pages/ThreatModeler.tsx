@@ -34,10 +34,16 @@ export default function ThreatModelerPage() {
           </div>
           <div className="flex items-center gap-2">
             <a
+              href="/threat-modeler-guide"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Guide
+            </a>
+            <a
               href="/interactive"
               className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
-              Back to Interactive Hub
+              Interactive Hub
             </a>
             <a
               href="/"

@@ -1,10 +1,15 @@
 import type { CanvasNode, CanvasEdge, GeneratedThreat } from "../types";
+import type { NodeRiskProfile } from "./nodeProfile";
 
-export function runTopologyAnalysis(nodes: CanvasNode[], edges: CanvasEdge[]): GeneratedThreat[] {
+export function runTopologyAnalysis(
+  nodes: CanvasNode[],
+  edges: CanvasEdge[],
+  profiles?: Map<string, NodeRiskProfile>,
+): GeneratedThreat[] {
   const threats: GeneratedThreat[] = [];
   threats.push(...checkUnboundedComponents(nodes));
-  threats.push(...checkExcessiveAgency(nodes, edges));
-  threats.push(...checkMissingHITL(nodes, edges));
+  threats.push(...checkExcessiveAgency(nodes, edges, profiles));
+  threats.push(...checkMissingHITL(nodes, edges, profiles));
   threats.push(...checkSinglePointsOfFailure(nodes, edges));
   threats.push(...checkMissingObservability(nodes));
   return threats;
@@ -41,7 +46,11 @@ function checkUnboundedComponents(nodes: CanvasNode[]): GeneratedThreat[] {
   return threats;
 }
 
-function checkExcessiveAgency(nodes: CanvasNode[], edges: CanvasEdge[]): GeneratedThreat[] {
+function checkExcessiveAgency(
+  nodes: CanvasNode[],
+  edges: CanvasEdge[],
+  profiles?: Map<string, NodeRiskProfile>,
+): GeneratedThreat[] {
   const threats: GeneratedThreat[] = [];
   const outgoingToolConnections = new Map<string, string[]>();
   for (const edge of edges) {
@@ -55,15 +64,36 @@ function checkExcessiveAgency(nodes: CanvasNode[], edges: CanvasEdge[]): Generat
       outgoingToolConnections.get(edge.source)!.push(edge.target);
     }
   }
+
+  const DANGER_WEIGHT: Record<string, number> = {
+    critical: 2,
+    dangerous: 1.5,
+    guarded: 1,
+    safe: 0.5,
+  };
+
   for (const [nodeId, targets] of outgoingToolConnections) {
-    if (targets.length >= 3) {
+    let weightedCount = targets.length;
+    if (profiles) {
+      weightedCount = targets.reduce((sum, tid) => {
+        const p = profiles.get(tid);
+        return sum + (p ? (DANGER_WEIGHT[p.accessDanger] ?? 1) : 1);
+      }, 0);
+    }
+    if (weightedCount >= 3) {
       const node = nodes.find((n) => n.id === nodeId);
       if (!node?.data || node.type === "trustBoundary") continue;
+      const hasCriticalTool = profiles
+        ? targets.some((tid) => {
+            const p = profiles.get(tid);
+            return p?.accessDanger === "critical" || p?.accessDanger === "dangerous";
+          })
+        : false;
       threats.push({
         id: `topo-excessive-agency-${nodeId}`,
         name: "Excessive Agency",
-        description: `"${node.data.label}" has access to ${targets.length} tools/external systems. Consider restricting capabilities.`,
-        severity: "high",
+        description: `"${node.data.label}" has access to ${targets.length} tools/external systems (weighted score: ${Math.round(weightedCount)}).${hasCriticalTool ? " Includes high-risk tools." : ""} Consider restricting capabilities.`,
+        severity: hasCriticalTool ? "critical" : "high",
         methodology: "topology",
         affectedNodeIds: [nodeId, ...targets],
         affectedEdgeIds: [],
@@ -72,6 +102,7 @@ function checkExcessiveAgency(nodes: CanvasNode[], edges: CanvasEdge[]): Generat
           "Apply least-privilege principle",
           "Limit tool access per agent",
           "Require approval for sensitive tool calls",
+          ...(hasCriticalTool ? ["Isolate critical tools behind approval gates"] : []),
         ],
       });
     }
@@ -79,13 +110,23 @@ function checkExcessiveAgency(nodes: CanvasNode[], edges: CanvasEdge[]): Generat
   return threats;
 }
 
-function checkMissingHITL(nodes: CanvasNode[], edges: CanvasEdge[]): GeneratedThreat[] {
+function checkMissingHITL(
+  nodes: CanvasNode[],
+  edges: CanvasEdge[],
+  profiles?: Map<string, NodeRiskProfile>,
+): GeneratedThreat[] {
   const threats: GeneratedThreat[] = [];
   const hasActor = nodes.some((n) => n.data?.category === "actor");
-  const highPrivilegeNodes = nodes.filter(
-    (n) =>
-      n.data?.category === "kc6" || (n.data?.category === "kc5" && n.data.trustLevel !== "trusted"),
-  );
+
+  const highPrivilegeNodes = nodes.filter((n) => {
+    if (!n.data || n.type === "trustBoundary") return false;
+    if (n.data.category === "kc6") return true;
+    if (n.data.category === "kc5" && n.data.trustLevel !== "trusted") return true;
+    const profile = profiles?.get(n.id);
+    if (profile?.isExecutionCapable || profile?.accessDanger === "critical") return true;
+    return false;
+  });
+
   for (const hpNode of highPrivilegeNodes) {
     const hasDirectActorConnection = edges.some(
       (e) =>
@@ -94,11 +135,13 @@ function checkMissingHITL(nodes: CanvasNode[], edges: CanvasEdge[]): GeneratedTh
           ?.category === "actor",
     );
     if (!hasDirectActorConnection && !hasActor) {
+      const profile = profiles?.get(hpNode.id);
+      const isExec = profile?.isExecutionCapable;
       threats.push({
         id: `topo-no-hitl-${hpNode.id}`,
         name: "Missing Human-in-the-Loop",
-        description: `"${hpNode.data?.label}" performs privileged operations without human oversight.`,
-        severity: "high",
+        description: `"${hpNode.data?.label}" performs privileged operations without human oversight.${isExec ? " This component can execute code, making unsupervised operation especially dangerous." : ""}`,
+        severity: isExec ? "critical" : "high",
         methodology: "topology",
         affectedNodeIds: [hpNode.id],
         affectedEdgeIds: [],
@@ -107,6 +150,7 @@ function checkMissingHITL(nodes: CanvasNode[], edges: CanvasEdge[]): GeneratedTh
           "Add human approval step for sensitive operations",
           "Implement HITL approval workflow",
           "Add confirmation prompts for destructive actions",
+          ...(isExec ? ["Require human review before code execution"] : []),
         ],
       });
     }

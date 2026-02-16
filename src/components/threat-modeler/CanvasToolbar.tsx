@@ -29,7 +29,10 @@ import {
   HelpCircle,
   Crosshair,
   FileCode,
+  BookOpen,
+  FileType,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import type { AnalysisMode } from "./types";
 import { ARCHITECTURE_TEMPLATES } from "./templates";
 
@@ -46,6 +49,7 @@ interface CanvasToolbarProps {
   onExportJSON: () => void;
   onExportPNG: () => void;
   onExportMarkdown: () => void;
+  onExportSVG: () => void;
   onExportCSV: () => void;
   onExportSARIF: () => void;
   onImportJSON: () => void;
@@ -93,6 +97,7 @@ function ToolbarButton({
           className={`h-7 w-7 p-0 ${destructive ? "text-destructive" : ""}`}
           onClick={onClick}
           disabled={disabled}
+          aria-label={label}
         >
           <Icon className="h-3.5 w-3.5" />
         </Button>
@@ -117,6 +122,7 @@ export default function CanvasToolbar({
   canRedo,
   onExportJSON,
   onExportPNG,
+  onExportSVG,
   onExportMarkdown,
   onExportCSV,
   onExportSARIF,
@@ -138,7 +144,8 @@ export default function CanvasToolbar({
 }: CanvasToolbarProps) {
   return (
     <TooltipProvider delayDuration={0}>
-      <div className="h-10 border-b bg-background/95 backdrop-blur-sm flex items-center gap-1.5 px-2 shrink-0 overflow-x-auto">
+      <div className="h-10 border-b bg-background/95 backdrop-blur-sm flex items-center gap-1 px-2 shrink-0 overflow-x-auto relative z-10">
+        {/* Analysis Section */}
         <span className="text-[10px] font-semibold text-primary px-1.5 py-0.5 rounded bg-primary/10 shrink-0">
           MAESTRO
         </span>
@@ -171,6 +178,7 @@ export default function CanvasToolbar({
               className="h-7 text-xs gap-1"
               onClick={onAnalyze}
               disabled={isAnalyzing}
+              aria-label="Run Threat Analysis"
             >
               <Play className="h-3 w-3" /> Analyze
             </Button>
@@ -184,14 +192,30 @@ export default function CanvasToolbar({
           </TooltipContent>
         </Tooltip>
 
-        <div className="h-5 w-px bg-border" />
+        <ToolbarButton
+          icon={Flame}
+          label={`Heat Map ${heatMapActive ? "(On)" : "(Off)"}`}
+          description="Color-code components by threat severity — red = high risk, green = low risk"
+          onClick={onToggleHeatMap}
+          active={heatMapActive}
+        />
+        <ToolbarButton
+          icon={Crosshair}
+          label={`What-If Mode ${whatIfActive ? "(On)" : "(Off)"}`}
+          description="Click a component to simulate its removal and see how the threat landscape changes"
+          onClick={onWhatIf}
+          active={whatIfActive}
+        />
 
+        <div className="h-5 w-px bg-border mx-0.5" />
+
+        {/* Build Section */}
         <Tooltip>
           <TooltipTrigger asChild>
             <div>
               <Select onValueChange={onLoadTemplate}>
                 <SelectTrigger className="h-7 w-32 text-[11px]">
-                  <SelectValue placeholder="Load Template" />
+                  <SelectValue placeholder="Templates" />
                 </SelectTrigger>
                 <SelectContent>
                   {ARCHITECTURE_TEMPLATES.map((t) => (
@@ -219,6 +243,7 @@ export default function CanvasToolbar({
               size="sm"
               className="h-7 text-xs gap-1"
               onClick={onCreateCustom}
+              aria-label="Create Custom Component"
             >
               <Plus className="h-3 w-3" /> Custom
             </Button>
@@ -232,8 +257,9 @@ export default function CanvasToolbar({
           </TooltipContent>
         </Tooltip>
 
-        <div className="h-5 w-px bg-border" />
+        <div className="h-5 w-px bg-border mx-0.5" />
 
+        {/* Edit Section */}
         <ToolbarButton
           icon={Undo2}
           label="Undo"
@@ -262,27 +288,11 @@ export default function CanvasToolbar({
           active={snapToGrid}
         />
 
-        <div className="h-5 w-px bg-border" />
-
-        <ToolbarButton
-          icon={Flame}
-          label={`Heat Map ${heatMapActive ? "(On)" : "(Off)"}`}
-          description="Color-code components by threat severity \u2014 red = high risk, green = low risk"
-          onClick={onToggleHeatMap}
-          active={heatMapActive}
-        />
-        <ToolbarButton
-          icon={Crosshair}
-          label={`What-If Mode ${whatIfActive ? "(On)" : "(Off)"}`}
-          description="Click a component to simulate its removal and see how the threat landscape changes"
-          onClick={onWhatIf}
-          active={whatIfActive}
-        />
-
         <div className="flex-1" />
 
         {saveIndicator && <span className="text-[9px] text-muted-foreground">{saveIndicator}</span>}
 
+        {/* Storage Section */}
         <ToolbarButton
           icon={Save}
           label="Save Model"
@@ -296,8 +306,9 @@ export default function CanvasToolbar({
           onClick={onLoadModel}
         />
 
-        <div className="h-5 w-px bg-border" />
+        <div className="h-5 w-px bg-border mx-0.5" />
 
+        {/* Import/Export Section */}
         <ToolbarButton
           icon={Upload}
           label="Import JSON"
@@ -323,6 +334,12 @@ export default function CanvasToolbar({
           onClick={onExportPNG}
         />
         <ToolbarButton
+          icon={FileType}
+          label="Export SVG"
+          description="Save the canvas as a scalable SVG vector image"
+          onClick={onExportSVG}
+        />
+        <ToolbarButton
           icon={FileText}
           label="Export Markdown"
           description="Generate a comprehensive threat model report in Markdown format"
@@ -341,7 +358,7 @@ export default function CanvasToolbar({
           onClick={onExportSARIF}
         />
 
-        <div className="h-5 w-px bg-border" />
+        <div className="h-5 w-px bg-border mx-0.5" />
 
         <ToolbarButton
           icon={HelpCircle}
@@ -349,6 +366,21 @@ export default function CanvasToolbar({
           description="Show a guided tour and keyboard shortcut reference"
           onClick={onToggleOnboarding}
         />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Link to="/threat-modeler-guide" target="_blank">
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" aria-label="Full Guide">
+                <BookOpen className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="max-w-52">
+            <p className="text-xs font-semibold">Full Guide</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              Open the comprehensive Threat Modeler guide in a new tab
+            </p>
+          </TooltipContent>
+        </Tooltip>
         <ToolbarButton
           icon={Trash2}
           label="Clear Canvas"

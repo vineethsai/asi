@@ -91,6 +91,7 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ type, activeId, isOpen, onClose
     { name: "NIST Mapping", path: "/nist-mapping" },
     { name: "Taxonomy", path: "/taxonomy" },
     { name: "Threat Modeler", path: "/threat-modeler" },
+    { name: "Threat Modeler Guide", path: "/threat-modeler-guide" },
     { name: "Implementation Guide", path: "/implementation" },
     { name: "About", path: "/about" },
   ];

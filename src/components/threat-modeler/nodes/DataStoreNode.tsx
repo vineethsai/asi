@@ -8,7 +8,11 @@ function DataStoreNode({ data, selected }: NodeProps) {
   const threatCount = nodeData.threats?.length ?? 0;
 
   return (
-    <div className={`relative min-w-[140px] ${selected ? "ring-2 ring-primary rounded-lg" : ""}`}>
+    <div
+      role="group"
+      aria-label={`${nodeData.label} - data store`}
+      className={`relative min-w-[140px] ${selected ? "ring-2 ring-primary rounded-lg" : ""}`}
+    >
       <Handle type="target" position={Position.Top} className="!bg-muted-foreground !w-2 !h-2" />
       <Handle type="target" position={Position.Left} className="!bg-muted-foreground !w-2 !h-2" />
       <div className="border-2 border-purple-500/40 bg-purple-500/10 rounded-sm px-3 py-2 flex items-center gap-2">

@@ -1,4 +1,5 @@
 import type { CanvasNode, CanvasEdge, GeneratedThreat } from "../types";
+import type { NodeRiskProfile } from "./nodeProfile";
 
 export interface AttackPath {
   id: string;
@@ -17,6 +18,7 @@ export function findAttackPaths(
   nodes: CanvasNode[],
   edges: CanvasEdge[],
   threats: GeneratedThreat[],
+  profiles?: Map<string, NodeRiskProfile>,
 ): AttackPath[] {
   const paths: AttackPath[] = [];
   const adjacency = new Map<string, { target: string; edgeId: string }[]>();
@@ -32,10 +34,18 @@ export function findAttackPaths(
       n.data?.category === "external" ||
       n.data?.trustLevel === "untrusted",
   );
-  const highValueTargets = nodes.filter(
-    (n) =>
-      n.data?.category === "kc4" || n.data?.category === "kc6" || n.data?.category === "datastore",
-  );
+  const highValueTargets = nodes.filter((n) => {
+    if (
+      n.data?.category === "kc4" ||
+      n.data?.category === "kc6" ||
+      n.data?.category === "datastore"
+    )
+      return true;
+    const profile = profiles?.get(n.id);
+    if (profile?.handlesCredentials || profile?.handlesRegulatedData) return true;
+    if (profile?.isExecutionCapable) return true;
+    return false;
+  });
 
   for (const entry of entryPoints) {
     for (const target of highValueTargets) {
@@ -58,7 +68,11 @@ export function findAttackPaths(
         if (pathThreats.length === 0) continue;
 
         const severityScores = { critical: 10, high: 7, medium: 4, low: 1 };
-        const score = pathThreats.reduce((sum, t) => sum + (severityScores[t.severity] ?? 0), 0);
+        const maxProfileMultiplier = profiles
+          ? Math.max(...path.map((nid) => profiles.get(nid)?.inherentRiskMultiplier ?? 1.0))
+          : 1.0;
+        const rawScore = pathThreats.reduce((sum, t) => sum + (severityScores[t.severity] ?? 0), 0);
+        const score = Math.round(rawScore * maxProfileMultiplier);
         const maxSeverity = pathThreats.reduce(
           (max, t) => {
             const order = { critical: 4, high: 3, medium: 2, low: 1 };

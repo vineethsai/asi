@@ -15,6 +15,14 @@ import {
   Shield,
   Box,
   FileText,
+  FileSearch,
+  Terminal,
+  Mail,
+  CreditCard,
+  Eye,
+  Pencil,
+  Cpu,
+  MousePointerClick,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -23,8 +31,17 @@ import {
   type PaletteGroup,
   type PaletteItem,
   type CustomComponentDefinition,
+  type ToolAccessMode,
+  type ToolRiskTier,
+  type PromptType,
   MaestroLayer,
 } from "./types";
+
+export interface PaletteItemWithMeta extends PaletteItem {
+  toolAccessMode?: ToolAccessMode;
+  toolRiskTier?: ToolRiskTier;
+  promptType?: PromptType;
+}
 
 const ICON_MAP: Record<string, React.ElementType> = {
   brain: Brain,
@@ -38,6 +55,13 @@ const ICON_MAP: Record<string, React.ElementType> = {
   shield: Shield,
   box: Box,
   "file-text": FileText,
+  "file-search": FileSearch,
+  terminal: Terminal,
+  mail: Mail,
+  "credit-card": CreditCard,
+  eye: Eye,
+  pencil: Pencil,
+  cpu: Cpu,
 };
 
 const BUILT_IN_GROUPS: PaletteGroup[] = [
@@ -138,6 +162,54 @@ const BUILT_IN_GROUPS: PaletteGroup[] = [
         nodeType: "agentComponent",
       },
       {
+        id: "kc3-system-prompt",
+        label: "System Prompt",
+        description: "System-level instructions",
+        category: "kc3",
+        componentId: "kc3.5",
+        maestroLayers: [MaestroLayer.AgentFrameworks],
+        icon: "file-text",
+        color: "#eab308",
+        nodeType: "agentComponent",
+        promptType: "system",
+      } as PaletteItemWithMeta,
+      {
+        id: "kc3-user-prompt",
+        label: "User Prompt Template",
+        description: "User input template",
+        category: "kc3",
+        componentId: "kc3.6",
+        maestroLayers: [MaestroLayer.AgentFrameworks],
+        icon: "file-text",
+        color: "#eab308",
+        nodeType: "agentComponent",
+        promptType: "user",
+      } as PaletteItemWithMeta,
+      {
+        id: "kc3-few-shot",
+        label: "Few-Shot Template",
+        description: "Few-shot example prompt",
+        category: "kc3",
+        componentId: "kc3.7",
+        maestroLayers: [MaestroLayer.AgentFrameworks],
+        icon: "lightbulb",
+        color: "#eab308",
+        nodeType: "agentComponent",
+        promptType: "few-shot",
+      } as PaletteItemWithMeta,
+      {
+        id: "kc3-fn-call",
+        label: "Function Call Schema",
+        description: "Function/tool call definition",
+        category: "kc3",
+        componentId: "kc3.8",
+        maestroLayers: [MaestroLayer.AgentFrameworks],
+        icon: "terminal",
+        color: "#eab308",
+        nodeType: "agentComponent",
+        promptType: "function-call",
+      } as PaletteItemWithMeta,
+      {
         id: "kc3-guardrail",
         label: "Guardrail / Safety Filter",
         description: "Input/output safety filter",
@@ -207,17 +279,6 @@ const BUILT_IN_GROUPS: PaletteGroup[] = [
         nodeType: "agentComponent",
       },
       {
-        id: "kc5-search",
-        label: "Search Tool",
-        description: "Web/data search",
-        category: "kc5",
-        componentId: "kc5.2",
-        maestroLayers: [MaestroLayer.AgentFrameworks],
-        icon: "wrench",
-        color: "#ec4899",
-        nodeType: "agentComponent",
-      },
-      {
         id: "kc5-mcp",
         label: "MCP Server",
         description: "Model Context Protocol server",
@@ -228,6 +289,203 @@ const BUILT_IN_GROUPS: PaletteGroup[] = [
         color: "#ec4899",
         nodeType: "agentComponent",
       },
+    ],
+  },
+  {
+    id: "kc5-ro",
+    label: "KC5 Read-Only Tools",
+    color: "#10b981",
+    items: [
+      {
+        id: "kc5-file-reader",
+        label: "File Reader",
+        description: "Read-only file access",
+        category: "kc5",
+        componentId: "kc5.ro.1",
+        maestroLayers: [MaestroLayer.AgentFrameworks],
+        icon: "file-search",
+        color: "#10b981",
+        nodeType: "agentComponent",
+        toolAccessMode: "read-only",
+        toolRiskTier: "benign",
+      } as PaletteItemWithMeta,
+      {
+        id: "kc5-web-scraper",
+        label: "Web Scraper",
+        description: "Read-only web content retrieval",
+        category: "kc5",
+        componentId: "kc5.ro.2",
+        maestroLayers: [MaestroLayer.AgentFrameworks],
+        icon: "eye",
+        color: "#10b981",
+        nodeType: "agentComponent",
+        toolAccessMode: "read-only",
+        toolRiskTier: "benign",
+      } as PaletteItemWithMeta,
+      {
+        id: "kc5-search",
+        label: "Search Tool",
+        description: "Web/data search (read-only)",
+        category: "kc5",
+        componentId: "kc5.ro.3",
+        maestroLayers: [MaestroLayer.AgentFrameworks],
+        icon: "file-search",
+        color: "#10b981",
+        nodeType: "agentComponent",
+        toolAccessMode: "read-only",
+        toolRiskTier: "benign",
+      } as PaletteItemWithMeta,
+      {
+        id: "kc5-db-query",
+        label: "Database Query (Read)",
+        description: "Read-only database access",
+        category: "kc5",
+        componentId: "kc5.ro.4",
+        maestroLayers: [MaestroLayer.AgentFrameworks, MaestroLayer.DataOperations],
+        icon: "database",
+        color: "#10b981",
+        nodeType: "agentComponent",
+        toolAccessMode: "read-only",
+        toolRiskTier: "benign",
+      } as PaletteItemWithMeta,
+    ],
+  },
+  {
+    id: "kc5-rw",
+    label: "KC5 Read-Write Tools",
+    color: "#f59e0b",
+    items: [
+      {
+        id: "kc5-db-rw",
+        label: "Database (Read-Write)",
+        description: "Full database access",
+        category: "kc5",
+        componentId: "kc5.rw.1",
+        maestroLayers: [MaestroLayer.AgentFrameworks, MaestroLayer.DataOperations],
+        icon: "database",
+        color: "#f59e0b",
+        nodeType: "agentComponent",
+        toolAccessMode: "read-write",
+        toolRiskTier: "sensitive",
+      } as PaletteItemWithMeta,
+      {
+        id: "kc5-file-mgr",
+        label: "File Manager",
+        description: "Read-write file system access",
+        category: "kc5",
+        componentId: "kc5.rw.2",
+        maestroLayers: [MaestroLayer.AgentFrameworks],
+        icon: "pencil",
+        color: "#f59e0b",
+        nodeType: "agentComponent",
+        toolAccessMode: "read-write",
+        toolRiskTier: "sensitive",
+      } as PaletteItemWithMeta,
+      {
+        id: "kc5-crm-api",
+        label: "CRM API",
+        description: "Customer data read-write",
+        category: "kc5",
+        componentId: "kc5.rw.3",
+        maestroLayers: [MaestroLayer.AgentFrameworks],
+        icon: "wrench",
+        color: "#f59e0b",
+        nodeType: "agentComponent",
+        toolAccessMode: "read-write",
+        toolRiskTier: "sensitive",
+      } as PaletteItemWithMeta,
+    ],
+  },
+  {
+    id: "kc5-exec",
+    label: "KC5 Execute Tools",
+    color: "#ef4444",
+    items: [
+      {
+        id: "kc5-code-interpreter",
+        label: "Code Interpreter",
+        description: "Executes generated code",
+        category: "kc5",
+        componentId: "kc5.ex.1",
+        maestroLayers: [MaestroLayer.AgentFrameworks, MaestroLayer.DeploymentInfrastructure],
+        icon: "terminal",
+        color: "#ef4444",
+        nodeType: "agentComponent",
+        toolAccessMode: "execute",
+        toolRiskTier: "destructive",
+      } as PaletteItemWithMeta,
+      {
+        id: "kc5-shell",
+        label: "Shell Executor",
+        description: "Shell command execution",
+        category: "kc5",
+        componentId: "kc5.ex.2",
+        maestroLayers: [MaestroLayer.AgentFrameworks, MaestroLayer.DeploymentInfrastructure],
+        icon: "terminal",
+        color: "#ef4444",
+        nodeType: "agentComponent",
+        toolAccessMode: "execute",
+        toolRiskTier: "destructive",
+      } as PaletteItemWithMeta,
+      {
+        id: "kc5-sandbox",
+        label: "Sandboxed Runtime",
+        description: "Isolated code execution",
+        category: "kc5",
+        componentId: "kc5.ex.3",
+        maestroLayers: [MaestroLayer.AgentFrameworks, MaestroLayer.DeploymentInfrastructure],
+        icon: "cpu",
+        color: "#ef4444",
+        nodeType: "agentComponent",
+        toolAccessMode: "execute",
+        toolRiskTier: "sensitive",
+      } as PaletteItemWithMeta,
+    ],
+  },
+  {
+    id: "kc5-ext",
+    label: "KC5 External APIs",
+    color: "#dc2626",
+    items: [
+      {
+        id: "kc5-email",
+        label: "Email Sender",
+        description: "Sends emails externally",
+        category: "kc5",
+        componentId: "kc5.ext.1",
+        maestroLayers: [MaestroLayer.AgentFrameworks],
+        icon: "mail",
+        color: "#dc2626",
+        nodeType: "agentComponent",
+        toolAccessMode: "write-only",
+        toolRiskTier: "critical",
+      } as PaletteItemWithMeta,
+      {
+        id: "kc5-payment",
+        label: "Payment API",
+        description: "Payment processing",
+        category: "kc5",
+        componentId: "kc5.ext.2",
+        maestroLayers: [MaestroLayer.AgentFrameworks],
+        icon: "credit-card",
+        color: "#dc2626",
+        nodeType: "agentComponent",
+        toolAccessMode: "write-only",
+        toolRiskTier: "critical",
+      } as PaletteItemWithMeta,
+      {
+        id: "kc5-deploy",
+        label: "Deployment Trigger",
+        description: "Triggers deployments",
+        category: "kc5",
+        componentId: "kc5.ext.3",
+        maestroLayers: [MaestroLayer.AgentFrameworks, MaestroLayer.DeploymentInfrastructure],
+        icon: "server",
+        color: "#dc2626",
+        nodeType: "agentComponent",
+        toolAccessMode: "execute",
+        toolRiskTier: "critical",
+      } as PaletteItemWithMeta,
     ],
   },
   {
@@ -311,11 +569,13 @@ const BUILT_IN_GROUPS: PaletteGroup[] = [
 interface ComponentPaletteProps {
   customComponents: CustomComponentDefinition[];
   onCreateCustom: () => void;
+  onAddComponent?: (item: PaletteItem) => void;
 }
 
 export default function ComponentPalette({
   customComponents,
   onCreateCustom,
+  onAddComponent,
 }: ComponentPaletteProps) {
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
@@ -355,6 +615,10 @@ export default function ComponentPalette({
   const onDragStart = (event: React.DragEvent, item: PaletteItem) => {
     event.dataTransfer.setData("application/reactflow-item", JSON.stringify(item));
     event.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleClickToAdd = (item: PaletteItem) => {
+    if (onAddComponent) onAddComponent(item);
   };
 
   return (
@@ -402,11 +666,24 @@ export default function ComponentPalette({
                         key={item.id}
                         draggable
                         onDragStart={(e) => onDragStart(e, item)}
-                        className="flex items-center gap-1.5 px-1.5 py-1 rounded cursor-grab hover:bg-accent active:cursor-grabbing text-xs border border-transparent hover:border-border transition-all"
+                        className="flex items-center gap-1.5 px-1.5 py-1 rounded cursor-grab hover:bg-accent active:cursor-grabbing text-xs border border-transparent hover:border-border transition-all group/item"
                         title={item.description}
                       >
                         <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: item.color }} />
-                        <span className="truncate">{item.label}</span>
+                        <span className="truncate flex-1">{item.label}</span>
+                        {onAddComponent && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleClickToAdd(item);
+                            }}
+                            className="hidden group-hover/item:flex h-4 w-4 items-center justify-center rounded bg-primary/10 hover:bg-primary/20 text-primary shrink-0"
+                            aria-label={`Add ${item.label} to canvas`}
+                            title="Click to add to canvas"
+                          >
+                            <MousePointerClick className="h-2.5 w-2.5" />
+                          </button>
+                        )}
                       </div>
                     );
                   })}
@@ -439,11 +716,24 @@ export default function ComponentPalette({
                         key={item.id}
                         draggable
                         onDragStart={(e) => onDragStart(e, item)}
-                        className="flex items-center gap-1.5 px-1.5 py-1 rounded cursor-grab hover:bg-accent active:cursor-grabbing text-xs border border-dashed border-transparent hover:border-border transition-all"
+                        className="flex items-center gap-1.5 px-1.5 py-1 rounded cursor-grab hover:bg-accent active:cursor-grabbing text-xs border border-dashed border-transparent hover:border-border transition-all group/item"
                         title={item.description}
                       >
                         <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: item.color }} />
-                        <span className="truncate">{item.label}</span>
+                        <span className="truncate flex-1">{item.label}</span>
+                        {onAddComponent && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleClickToAdd(item);
+                            }}
+                            className="hidden group-hover/item:flex h-4 w-4 items-center justify-center rounded bg-primary/10 hover:bg-primary/20 text-primary shrink-0"
+                            aria-label={`Add ${item.label} to canvas`}
+                            title="Click to add to canvas"
+                          >
+                            <MousePointerClick className="h-2.5 w-2.5" />
+                          </button>
+                        )}
                       </div>
                     );
                   })}

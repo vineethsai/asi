@@ -1,4 +1,5 @@
 import type { CanvasNode, CanvasEdge, ThreatAnalysisResult } from "../types";
+import type { NodeRiskProfile } from "./nodeProfile";
 
 export interface ComponentRiskScore {
   nodeId: string;
@@ -26,6 +27,7 @@ export function calculateModelRisk(
   nodes: CanvasNode[],
   edges: CanvasEdge[],
   result: ThreatAnalysisResult,
+  profiles?: Map<string, NodeRiskProfile>,
 ): ModelRiskSummary {
   const componentScores: ComponentRiskScore[] = [];
   const connectionCount = new Map<string, number>();
@@ -35,13 +37,24 @@ export function calculateModelRisk(
     connectionCount.set(edge.target, (connectionCount.get(edge.target) ?? 0) + 1);
   }
 
+  const SENSITIVITY_SURFACE: Record<string, number> = {
+    credentials: 20,
+    regulated: 15,
+    pii: 10,
+    internal: 5,
+    none: 0,
+  };
+
   for (const node of nodes) {
     if (!node.data || node.type === "trustBoundary") continue;
     const nodeThreats = result.threats.filter((t) => t.affectedNodeIds.includes(node.id));
-    const inherentRisk = nodeThreats.reduce(
+    const profile = profiles?.get(node.id);
+    const riskMultiplier = profile?.inherentRiskMultiplier ?? 1.0;
+    const rawInherentRisk = nodeThreats.reduce(
       (sum, t) => sum + (SEVERITY_WEIGHTS[t.severity] ?? 0),
       0,
     );
+    const inherentRisk = Math.round(rawInherentRisk * riskMultiplier);
     const mitigatedCount = nodeThreats.filter((t) => t.mitigations.length > 0).length;
     const mitigatedRisk = mitigatedCount * 2;
     const connections = connectionCount.get(node.id) ?? 0;
@@ -51,7 +64,10 @@ export function calculateModelRisk(
         : node.data.trustLevel === "semi-trusted"
           ? 1.0
           : 0.7;
-    const attackSurface = Math.round(connections * trustMultiplier * 10);
+    const sensitivityBonus = profile?.dataSensitivity
+      ? (SENSITIVITY_SURFACE[profile.dataSensitivity] ?? 0)
+      : 0;
+    const attackSurface = Math.round(connections * trustMultiplier * 10) + sensitivityBonus;
 
     componentScores.push({
       nodeId: node.id,

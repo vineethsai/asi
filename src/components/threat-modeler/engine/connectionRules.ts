@@ -1,6 +1,11 @@
 import type { CanvasNode, CanvasEdge, GeneratedThreat } from "../types";
+import type { NodeRiskProfile } from "./nodeProfile";
 
-export function runConnectionAnalysis(nodes: CanvasNode[], edges: CanvasEdge[]): GeneratedThreat[] {
+export function runConnectionAnalysis(
+  nodes: CanvasNode[],
+  edges: CanvasEdge[],
+  profiles?: Map<string, NodeRiskProfile>,
+): GeneratedThreat[] {
   const threats: GeneratedThreat[] = [];
   const nodeMap = new Map(nodes.map((n) => [n.id, n]));
   for (const edge of edges) {
@@ -9,6 +14,8 @@ export function runConnectionAnalysis(nodes: CanvasNode[], edges: CanvasEdge[]):
     if (!source?.data || !target?.data) continue;
     const srcCat = source.data.category;
     const tgtCat = target.data.category;
+    const srcProfile = profiles?.get(edge.source);
+    const tgtProfile = profiles?.get(edge.target);
     if (srcCat === "actor" && (tgtCat === "kc1" || tgtCat === "kc2" || tgtCat === "kc3")) {
       threats.push({
         id: `conn-prompt-injection-${edge.id}`,
@@ -27,19 +34,77 @@ export function runConnectionAnalysis(nodes: CanvasNode[], edges: CanvasEdge[]):
       });
     }
     if ((srcCat === "kc2" || srcCat === "kc1") && (tgtCat === "kc5" || tgtCat === "kc6")) {
+      const danger = tgtProfile?.accessDanger ?? "guarded";
+
+      let severity: "critical" | "high" | "medium" | "low" = "high";
+      const mitigations = [
+        "Tool sandboxing and isolation",
+        "Permission boundaries per tool",
+        "Human-in-the-loop for destructive actions",
+      ];
+
+      if (danger === "critical" || danger === "dangerous") {
+        severity = "critical";
+        mitigations.push("Mandatory approval workflow for critical tool actions");
+      }
+      if (danger === "safe") {
+        severity = "medium";
+      }
+
+      const riskLabel = tgtProfile?.toolRiskTier ? ` (risk: ${tgtProfile.toolRiskTier})` : "";
+      const accessLabel = tgtProfile?.toolAccessMode ? ` [${tgtProfile.toolAccessMode}]` : "";
+
       threats.push({
         id: `conn-tool-misuse-${edge.id}`,
         name: "Tool Misuse via Agent",
-        description: `"${source.data.label}" sends commands to "${target.data.label}". A compromised agent could misuse tool capabilities.`,
+        description: `"${source.data.label}" sends commands to "${target.data.label}"${riskLabel}${accessLabel}. A compromised agent could misuse tool capabilities.`,
+        severity,
+        methodology: "connection",
+        affectedNodeIds: [edge.source, edge.target],
+        affectedEdgeIds: [edge.id!],
+        inherited: false,
+        mitigations,
+      });
+
+      if (tgtProfile?.isExecutionCapable) {
+        threats.push({
+          id: `conn-code-exec-${edge.id}`,
+          name: "Arbitrary Code Execution",
+          description: `"${source.data.label}" can execute code via "${target.data.label}". If the agent is compromised, arbitrary code could run on the host.`,
+          severity: "critical",
+          methodology: "connection",
+          affectedNodeIds: [edge.source, edge.target],
+          affectedEdgeIds: [edge.id!],
+          inherited: false,
+          mitigations: [
+            "Sandbox all code execution in isolated containers",
+            "Enforce strict resource limits (CPU, memory, network)",
+            "Block access to host filesystem and network",
+            "Code review / allow-listing for executed commands",
+          ],
+        });
+      }
+    }
+
+    if (
+      srcCat === "kc3" &&
+      tgtCat === "kc5" &&
+      (srcProfile?.functionCallSurface ?? source.data.promptType === "function-call")
+    ) {
+      threats.push({
+        id: `conn-fn-call-injection-${edge.id}`,
+        name: "Function Call Injection",
+        description: `Function Call Schema "${source.data.label}" connects to tool "${target.data.label}". An attacker could manipulate the function call schema to invoke unintended tool actions.`,
         severity: "high",
         methodology: "connection",
         affectedNodeIds: [edge.source, edge.target],
         affectedEdgeIds: [edge.id!],
         inherited: false,
         mitigations: [
-          "Tool sandboxing and isolation",
-          "Permission boundaries per tool",
-          "Human-in-the-loop for destructive actions",
+          "Validate function call parameters against strict schemas",
+          "Whitelist allowed function names and argument types",
+          "Log and audit all function call invocations",
+          "Implement rate limiting on tool invocations",
         ],
       });
     }

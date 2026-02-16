@@ -7,7 +7,7 @@ export const ArchitectureGraphSection = () => {
         <div className="mb-8">
           <h2 className="text-xl font-semibold tracking-tight">Architecture Explorer</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Interactive visualization of AI agent architectures and NIST AI RMF mapping.
+            Click an architecture to explore its components, threats, and mitigations.
           </p>
         </div>
 
@@ -21,7 +21,8 @@ export const ArchitectureGraphSection = () => {
         </div>
 
         <p className="mt-3 text-xs text-muted-foreground">
-          Click nodes to expand or collapse. Drag to pan, scroll to zoom.
+          Click architecture nodes to expand. Click components to reveal threats. Drag to pan,
+          scroll to zoom.
         </p>
       </div>
     </section>

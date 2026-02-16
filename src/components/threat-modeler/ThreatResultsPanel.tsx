@@ -11,6 +11,7 @@ import {
   Search,
   SlidersHorizontal,
   ClipboardCheck,
+  Crosshair,
 } from "lucide-react";
 import {
   type ThreatAnalysisResult,
@@ -22,6 +23,9 @@ import {
 import type { ModelRiskSummary } from "./engine/riskScoring";
 import type { AttackPath } from "./engine/attackPaths";
 import type { AISVSCoverageResult } from "./engine/aisvsMapping";
+import type { ComplianceViolation } from "./engine/dataFlowCompliance";
+import type { ComplianceGapReport } from "./engine/complianceGap";
+import type { AttackSurfaceScore } from "./engine/attackSurface";
 import ReportDashboard from "./ReportDashboard";
 import AttackPathPanel from "./AttackPathPanel";
 import CompliancePanel from "./CompliancePanel";
@@ -36,6 +40,18 @@ interface ThreatResultsPanelProps {
   onToggleShowMitigated?: () => void;
   totalBeforeMitigation?: number;
   aisvsResult?: AISVSCoverageResult | null;
+  complianceViolations?: ComplianceViolation[];
+  complianceGapReport?: ComplianceGapReport | null;
+  attackSurfaceScores?: AttackSurfaceScore[];
+  onPathClick?: (path: AttackPath) => void;
+  whatIfResult?: {
+    removedNodeLabel: string;
+    beforeCount: number;
+    afterCount: number;
+    beforeRisk: number;
+    afterRisk: number;
+    eliminatedPaths: number;
+  } | null;
 }
 
 const SEVERITY_CONFIG = {
@@ -82,6 +98,11 @@ export default function ThreatResultsPanel({
   onToggleShowMitigated,
   totalBeforeMitigation,
   aisvsResult,
+  complianceViolations,
+  complianceGapReport,
+  attackSurfaceScores,
+  onPathClick,
+  whatIfResult,
 }: ThreatResultsPanelProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("all");
   const [expandedThreats, setExpandedThreats] = useState<Set<string>>(new Set());
@@ -259,14 +280,64 @@ export default function ThreatResultsPanel({
         </div>
       </div>
 
+      {/* What-If Result Banner */}
+      {whatIfResult && (
+        <div className="p-2 border-b bg-orange-500/10 border-orange-500/30 space-y-1">
+          <div className="flex items-center gap-1">
+            <Crosshair className="h-3 w-3 text-orange-500" />
+            <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400">
+              What-If: Remove "{whatIfResult.removedNodeLabel}"
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-1 text-center">
+            <div className="rounded bg-background p-1">
+              <p className="text-[9px] text-muted-foreground">Threats</p>
+              <p className="text-xs font-bold">
+                {whatIfResult.beforeCount} → {whatIfResult.afterCount}
+              </p>
+              <p
+                className={`text-[9px] font-semibold ${whatIfResult.afterCount < whatIfResult.beforeCount ? "text-green-600" : "text-muted-foreground"}`}
+              >
+                {whatIfResult.afterCount < whatIfResult.beforeCount
+                  ? `−${whatIfResult.beforeCount - whatIfResult.afterCount}`
+                  : "No change"}
+              </p>
+            </div>
+            <div className="rounded bg-background p-1">
+              <p className="text-[9px] text-muted-foreground">Risk</p>
+              <p className="text-xs font-bold">
+                {whatIfResult.beforeRisk} → {whatIfResult.afterRisk}
+              </p>
+              <p
+                className={`text-[9px] font-semibold ${whatIfResult.afterRisk < whatIfResult.beforeRisk ? "text-green-600" : "text-muted-foreground"}`}
+              >
+                {whatIfResult.afterRisk < whatIfResult.beforeRisk
+                  ? `−${whatIfResult.beforeRisk - whatIfResult.afterRisk}`
+                  : "No change"}
+              </p>
+            </div>
+            <div className="rounded bg-background p-1">
+              <p className="text-[9px] text-muted-foreground">Paths</p>
+              <p className="text-xs font-bold">
+                {whatIfResult.eliminatedPaths > 0 ? `−${whatIfResult.eliminatedPaths}` : "0"}
+              </p>
+              <p className="text-[9px] text-muted-foreground">eliminated</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === "dashboard" ? (
         <ReportDashboard
           result={result}
           riskSummary={riskSummary ?? null}
           aisvsResult={aisvsResult ?? null}
+          attackSurfaceScores={attackSurfaceScores}
+          complianceViolations={complianceViolations}
+          complianceGapReport={complianceGapReport}
         />
       ) : activeTab === "paths" ? (
-        <AttackPathPanel paths={attackPaths ?? []} nodes={nodes ?? []} />
+        <AttackPathPanel paths={attackPaths ?? []} nodes={nodes ?? []} onPathClick={onPathClick} />
       ) : activeTab === "compliance" && aisvsResult ? (
         <CompliancePanel result={aisvsResult} />
       ) : (

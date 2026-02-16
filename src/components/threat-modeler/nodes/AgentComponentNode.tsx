@@ -43,6 +43,21 @@ const CATEGORY_DEFAULTS: Record<string, { icon: string; bgClass: string; borderC
   custom: { icon: "box", bgClass: "bg-gray-500/10", borderClass: "border-gray-500/40" },
 };
 
+const ACCESS_MODE_LABELS: Record<string, { short: string; className: string }> = {
+  "read-only": { short: "RO", className: "bg-green-500/20 text-green-700 dark:text-green-400" },
+  "read-write": { short: "RW", className: "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400" },
+  "write-only": { short: "WO", className: "bg-orange-500/20 text-orange-700 dark:text-orange-400" },
+  execute: { short: "EXEC", className: "bg-red-500/20 text-red-700 dark:text-red-400" },
+  admin: { short: "ADMIN", className: "bg-purple-500/20 text-purple-700 dark:text-purple-400" },
+};
+
+const RISK_TIER_LABELS: Record<string, { className: string }> = {
+  benign: { className: "bg-green-500/20 text-green-700 dark:text-green-400" },
+  sensitive: { className: "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400" },
+  destructive: { className: "bg-red-500/20 text-red-700 dark:text-red-400" },
+  critical: { className: "bg-red-600/30 text-red-800 dark:text-red-300 font-bold" },
+};
+
 function AgentComponentNode({ data, selected }: NodeProps) {
   const nodeData = data as unknown as CanvasNodeData;
   const defaults = CATEGORY_DEFAULTS[nodeData.category] ?? CATEGORY_DEFAULTS.custom;
@@ -51,8 +66,15 @@ function AgentComponentNode({ data, selected }: NodeProps) {
   const inheritedThreats = nodeData.threats?.filter((t) => t.inherited) ?? [];
   const highSeverity = nodeData.threats?.filter((t) => t.severity === "high").length ?? 0;
 
+  const accessModeInfo = nodeData.toolAccessMode
+    ? ACCESS_MODE_LABELS[nodeData.toolAccessMode]
+    : null;
+  const riskTierInfo = nodeData.toolRiskTier ? RISK_TIER_LABELS[nodeData.toolRiskTier] : null;
+
   return (
     <div
+      role="group"
+      aria-label={`${nodeData.label} - ${nodeData.category} component`}
       className={`relative rounded-lg border-2 p-3 min-w-[160px] max-w-[220px] shadow-sm transition-all ${defaults.bgClass} ${selected ? "ring-2 ring-primary border-primary" : defaults.borderClass} ${highSeverity > 0 ? "ring-1 ring-red-400/50" : ""}`}
     >
       <Handle type="target" position={Position.Top} className="!bg-muted-foreground !w-2 !h-2" />
@@ -62,11 +84,27 @@ function AgentComponentNode({ data, selected }: NodeProps) {
           <IconComp className="h-4 w-4 text-foreground" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold leading-tight truncate">{nodeData.label}</p>
+          <div className="flex items-center gap-1">
+            <p className="text-xs font-semibold leading-tight truncate">{nodeData.label}</p>
+            {accessModeInfo && (
+              <span
+                className={`text-[7px] px-1 py-0.5 rounded font-bold shrink-0 ${accessModeInfo.className}`}
+              >
+                {accessModeInfo.short}
+              </span>
+            )}
+          </div>
           {nodeData.description && (
             <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">
               {nodeData.description}
             </p>
+          )}
+          {riskTierInfo && nodeData.toolRiskTier && (
+            <span
+              className={`text-[7px] px-1 py-0.5 rounded mt-0.5 inline-block ${riskTierInfo.className}`}
+            >
+              {nodeData.toolRiskTier}
+            </span>
           )}
         </div>
       </div>

@@ -62,7 +62,7 @@ function DataFlowEdge(props: EdgeProps) {
           className="nodrag nopan"
         >
           <div
-            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-medium border bg-background/90 backdrop-blur-sm shadow-sm ${selected ? "border-primary" : "border-border"}`}
+            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-medium border bg-background/90 backdrop-blur-sm shadow-sm ${selected ? "border-primary" : "border-border"} group/edge relative`}
           >
             {encrypted ? (
               <Lock className="h-2.5 w-2.5 text-green-500" />
@@ -76,6 +76,15 @@ function DataFlowEdge(props: EdgeProps) {
                 {threatCount}
               </span>
             )}
+            <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 hidden group-hover/edge:block z-50 w-48 p-2 rounded-md border bg-popover text-popover-foreground shadow-md text-[10px] space-y-0.5">
+              <p className="font-semibold text-xs">{label}</p>
+              <p>Protocol: {edgeData?.protocol ?? "HTTPS"}</p>
+              <p>Encrypted: {encrypted ? "Yes" : "No"}</p>
+              <p>Auth: {edgeData?.authentication ?? "None"}</p>
+              <p>Classification: {classification}</p>
+              {containsPII && <p className="text-orange-500 font-semibold">Contains PII</p>}
+              {edgeData?.bidirectional && <p>Bidirectional: Yes</p>}
+            </div>
           </div>
         </div>
       </EdgeLabelRenderer>

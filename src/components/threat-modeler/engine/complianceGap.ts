@@ -1,5 +1,6 @@
 import { aisvsData } from "@/components/components/securityData";
 import type { CanvasNode, CanvasEdge, GeneratedThreat } from "../types";
+import type { NodeRiskProfile } from "./nodeProfile";
 
 export interface ComplianceGapItem {
   requirementCode: string;
@@ -26,6 +27,7 @@ export function runComplianceGapAnalysis(
   nodes: CanvasNode[],
   edges: CanvasEdge[],
   threats: GeneratedThreat[],
+  profiles?: Map<string, NodeRiskProfile>,
 ): ComplianceGapReport {
   const items: ComplianceGapItem[] = [];
   let met = 0,
@@ -43,6 +45,17 @@ export function runComplianceGapAnalysis(
   const hasTrustBoundary = nodes.some((n) => n.type === "trustBoundary");
   const hasHITL = nodes.some((n) => n.data?.category === "actor");
   const _threatNames = threats.map((t) => t.name.toLowerCase()).join(" ");
+
+  // Profile-derived flags
+  const hasCredentialNodes = profiles
+    ? Array.from(profiles.values()).some((p) => p.handlesCredentials)
+    : false;
+  const hasRegulatedNodes = profiles
+    ? Array.from(profiles.values()).some((p) => p.handlesRegulatedData)
+    : false;
+  const hasExecNodes = profiles
+    ? Array.from(profiles.values()).some((p) => p.isExecutionCapable)
+    : false;
 
   for (const [, category] of Object.entries(aisvsData)) {
     for (const subCat of category.subCategories ?? []) {
@@ -107,6 +120,77 @@ export function runComplianceGapAnalysis(
         });
       }
     }
+  }
+
+  // Profile-driven compliance requirements
+  if (hasCredentialNodes || hasRegulatedNodes) {
+    const credStatus: "met" | "partial" | "gap" =
+      hasEncryption && hasAuth ? "met" : hasEncryption || hasAuth ? "partial" : "gap";
+    items.push({
+      requirementCode: "META-CRED-1",
+      requirementTitle: "Credential & Regulated Data Protection",
+      categoryName: "Metadata-Driven Requirements",
+      level: 1,
+      status: credStatus,
+      relevantThreats: [],
+      recommendation:
+        credStatus === "met"
+          ? "Encryption and authentication in place for sensitive flows"
+          : "Ensure all data flows involving credentials or regulated data have both encryption and authentication. Add credential rotation and key management policies.",
+    });
+    if (credStatus === "met") met++;
+    else if (credStatus === "partial") partial++;
+    else gaps++;
+
+    const auditStatus: "met" | "partial" | "gap" = hasLogging ? "met" : "gap";
+    items.push({
+      requirementCode: "META-CRED-2",
+      requirementTitle: "Audit Trail for Sensitive Data Access",
+      categoryName: "Metadata-Driven Requirements",
+      level: 2,
+      status: auditStatus,
+      relevantThreats: [],
+      recommendation:
+        auditStatus === "met"
+          ? "Logging/monitoring present for audit trail"
+          : "Add comprehensive audit logging for all access to credential and regulated data stores.",
+    });
+    if (auditStatus === "met") met++;
+    else gaps++;
+  }
+
+  if (hasExecNodes) {
+    const sandboxStatus: "met" | "partial" | "gap" = hasTrustBoundary ? "partial" : "gap";
+    items.push({
+      requirementCode: "META-EXEC-1",
+      requirementTitle: "Code Execution Sandboxing",
+      categoryName: "Metadata-Driven Requirements",
+      level: 1,
+      status: sandboxStatus,
+      relevantThreats: [],
+      recommendation:
+        sandboxStatus === "partial"
+          ? "Trust boundaries exist but verify execution-capable components are isolated within them."
+          : "Execution-capable components detected. Add sandboxing, resource limits, and code review controls.",
+    });
+    if (sandboxStatus === "partial") partial++;
+    else gaps++;
+
+    const reviewStatus: "met" | "partial" | "gap" = hasHITL ? "partial" : "gap";
+    items.push({
+      requirementCode: "META-EXEC-2",
+      requirementTitle: "Human Review for Code Execution",
+      categoryName: "Metadata-Driven Requirements",
+      level: 2,
+      status: reviewStatus,
+      relevantThreats: [],
+      recommendation:
+        reviewStatus === "partial"
+          ? "Human actors present but verify they approve code execution actions."
+          : "No human oversight for execution-capable components. Add human-in-the-loop approval for code execution.",
+    });
+    if (reviewStatus === "partial") partial++;
+    else gaps++;
   }
 
   const totalChecks = items.length;

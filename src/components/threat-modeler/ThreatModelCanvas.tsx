@@ -39,6 +39,15 @@ import {
   MaestroLayer,
 } from "./types";
 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import AgentComponentNode from "./nodes/AgentComponentNode";
 import ActorNode from "./nodes/ActorNode";
 import DataStoreNode from "./nodes/DataStoreNode";
@@ -58,13 +67,16 @@ import OnboardingOverlay from "./OnboardingOverlay";
 import AibomImportDialog from "./AibomImportDialog";
 import NodeEditorDialog from "./NodeEditorDialog";
 
-import { runThreatAnalysis } from "./engine/threatEngine";
+import { runThreatAnalysis, buildNodeProfiles } from "./engine/threatEngine";
 import { enrichThreatsWithSecurityData } from "./engine/dataIntegration";
 import { calculateModelRisk, type ModelRiskSummary } from "./engine/riskScoring";
 import { findAttackPaths, type AttackPath } from "./engine/attackPaths";
 import { filterMitigatedThreats } from "./engine/mitigationCatalog";
 import { runAISVSMapping, type AISVSCoverageResult } from "./engine/aisvsMapping";
-import { exportCanvasPNG } from "./export/exportPNG";
+import { runDataFlowComplianceCheck, type ComplianceViolation } from "./engine/dataFlowCompliance";
+import { runComplianceGapAnalysis, type ComplianceGapReport } from "./engine/complianceGap";
+import { calculateAttackSurface, type AttackSurfaceScore } from "./engine/attackSurface";
+import { exportCanvasPNG, exportCanvasSVG } from "./export/exportPNG";
 import { exportThreatsCSV } from "./export/exportCSV";
 import { exportSARIF } from "./export/exportSARIF";
 import { downloadMarkdownReport } from "./export/exportMarkdown";
@@ -151,6 +163,17 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
   const [showAibomImport, setShowAibomImport] = useState(false);
   const [aisvsResult, setAisvsResult] = useState<AISVSCoverageResult | null>(null);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
+  const [complianceViolations, setComplianceViolations] = useState<ComplianceViolation[]>([]);
+  const [complianceGapReport, setComplianceGapReport] = useState<ComplianceGapReport | null>(null);
+  const [attackSurfaceScores, setAttackSurfaceScores] = useState<AttackSurfaceScore[]>([]);
+  const [whatIfResult, setWhatIfResult] = useState<{
+    removedNodeLabel: string;
+    beforeCount: number;
+    afterCount: number;
+    beforeRisk: number;
+    afterRisk: number;
+    eliminatedPaths: number;
+  } | null>(null);
 
   const [history, setHistory] = useState<HistoryEntry[]>([{ nodes: [], edges: [] }]);
   const [historyIndex, setHistoryIndex] = useState(0);
@@ -223,18 +246,29 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
     localStorage.setItem("threat-modeler-custom-components", JSON.stringify(customComponents));
   }, [customComponents]);
 
+  const MAX_HISTORY = 50;
+
   const pushHistory = useCallback(
     (newNodes: CanvasNode[], newEdges: CanvasEdge[]) => {
       if (historyDebounceRef.current) clearTimeout(historyDebounceRef.current);
       historyDebounceRef.current = setTimeout(() => {
-        setHistory((prev) => [
-          ...prev.slice(0, historyIndex + 1),
-          {
-            nodes: JSON.parse(JSON.stringify(newNodes)),
-            edges: JSON.parse(JSON.stringify(newEdges)),
-          },
-        ]);
-        setHistoryIndex((prev) => prev + 1);
+        setHistory((prev) => {
+          const trimmed = prev.slice(0, historyIndex + 1);
+          const next = [
+            ...trimmed,
+            {
+              nodes: JSON.parse(JSON.stringify(newNodes)),
+              edges: JSON.parse(JSON.stringify(newEdges)),
+            },
+          ];
+          if (next.length > MAX_HISTORY) {
+            const overflow = next.length - MAX_HISTORY;
+            setHistoryIndex((i) => Math.max(0, i - overflow + 1));
+            return next.slice(overflow);
+          }
+          setHistoryIndex(next.length - 1);
+          return next;
+        });
       }, 300);
     },
     [historyIndex],
@@ -275,94 +309,137 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
   const doAnalysis = useCallback(() => {
     setIsAnalyzing(true);
     requestAnimationFrame(() => {
-      const customThreats: GeneratedThreat[] = [];
-      for (const node of nodes) {
-        if (node.data?.isCustom && node.data.customThreatIds) {
-          for (const cc of customComponents) {
-            for (const ct of cc.customThreats ?? []) {
-              if (node.data.customThreatIds.includes(ct.id)) {
-                customThreats.push({
-                  id: `custom-${ct.id}-${node.id}`,
-                  threatId: ct.id,
-                  name: ct.name,
-                  description: ct.description,
-                  severity:
-                    ct.severity === "high" ? "high" : ct.severity === "low" ? "low" : "medium",
-                  methodology: "custom",
-                  maestroLayer: ct.maestroLayer,
-                  affectedNodeIds: [node.id],
-                  affectedEdgeIds: [],
-                  inherited: false,
-                  mitigations: ct.mitigations ?? [],
-                });
+      try {
+        const customThreats: GeneratedThreat[] = [];
+        for (const node of nodes) {
+          if (node.data?.isCustom && node.data.customThreatIds) {
+            for (const cc of customComponents) {
+              for (const ct of cc.customThreats ?? []) {
+                if (node.data.customThreatIds.includes(ct.id)) {
+                  customThreats.push({
+                    id: `custom-${ct.id}-${node.id}`,
+                    threatId: ct.id,
+                    name: ct.name,
+                    description: ct.description,
+                    severity:
+                      ct.severity === "high" ? "high" : ct.severity === "low" ? "low" : "medium",
+                    methodology: "custom",
+                    maestroLayer: ct.maestroLayer,
+                    affectedNodeIds: [node.id],
+                    affectedEdgeIds: [],
+                    inherited: false,
+                    mitigations: ct.mitigations ?? [],
+                  });
+                }
               }
             }
           }
         }
-      }
 
-      let result = runThreatAnalysis(
-        nodes as CanvasNode[],
-        edges as CanvasEdge[],
-        methodology,
-        customThreats.length > 0 ? customThreats : undefined,
-      );
-      result = {
-        ...result,
-        threats: enrichThreatsWithSecurityData(result.threats),
-        summary: { ...result.summary, mitigated: 0 },
-      };
-      setFullAnalysisResult(result);
-      setAnalysisResult(result);
+        let result = runThreatAnalysis(
+          nodes as CanvasNode[],
+          edges as CanvasEdge[],
+          methodology,
+          customThreats.length > 0 ? customThreats : undefined,
+        );
+        const profiles = buildNodeProfiles(nodes as CanvasNode[]);
 
-      const risk = calculateModelRisk(nodes as CanvasNode[], edges as CanvasEdge[], result);
-      setRiskSummary(risk);
-
-      const paths = findAttackPaths(nodes as CanvasNode[], edges as CanvasEdge[], result.threats);
-      setAttackPaths(paths);
-
-      const aisvsCoverage = runAISVSMapping(result.threats);
-      setAisvsResult(aisvsCoverage);
-
-      const threatsByNode = new Map<string, ThreatBadge[]>();
-      const threatsByEdge = new Map<string, ThreatBadge[]>();
-      for (const threat of result.threats) {
-        const badge: ThreatBadge = {
-          threatId: threat.id,
-          name: threat.name,
-          severity:
-            threat.severity === "critical"
-              ? "high"
-              : (threat.severity as "high" | "medium" | "low"),
-          inherited: threat.inherited,
-          source: threat.sourceNodeId,
+        result = {
+          ...result,
+          threats: enrichThreatsWithSecurityData(result.threats),
+          summary: { ...result.summary, mitigated: 0 },
         };
-        for (const nId of threat.affectedNodeIds) {
-          if (!threatsByNode.has(nId)) threatsByNode.set(nId, []);
-          threatsByNode.get(nId)!.push(badge);
+        setFullAnalysisResult(result);
+        setAnalysisResult(result);
+
+        const risk = calculateModelRisk(
+          nodes as CanvasNode[],
+          edges as CanvasEdge[],
+          result,
+          profiles,
+        );
+        setRiskSummary(risk);
+
+        const paths = findAttackPaths(
+          nodes as CanvasNode[],
+          edges as CanvasEdge[],
+          result.threats,
+          profiles,
+        );
+        setAttackPaths(paths);
+
+        const aisvsCoverage = runAISVSMapping(result.threats);
+        setAisvsResult(aisvsCoverage);
+
+        const dfcViolations = runDataFlowComplianceCheck(
+          nodes as CanvasNode[],
+          edges as CanvasEdge[],
+          profiles,
+        );
+        setComplianceViolations(dfcViolations);
+
+        const gapReport = runComplianceGapAnalysis(
+          nodes as CanvasNode[],
+          edges as CanvasEdge[],
+          result.threats,
+          profiles,
+        );
+        setComplianceGapReport(gapReport);
+
+        const surfaceScores = calculateAttackSurface(
+          nodes as CanvasNode[],
+          edges as CanvasEdge[],
+          profiles,
+        );
+        setAttackSurfaceScores(surfaceScores);
+
+        const threatsByNode = new Map<string, ThreatBadge[]>();
+        const threatsByEdge = new Map<string, ThreatBadge[]>();
+        for (const threat of result.threats) {
+          const badge: ThreatBadge = {
+            threatId: threat.id,
+            name: threat.name,
+            severity:
+              threat.severity === "critical"
+                ? "high"
+                : (threat.severity as "high" | "medium" | "low"),
+            inherited: threat.inherited,
+            source: threat.sourceNodeId,
+          };
+          for (const nId of threat.affectedNodeIds) {
+            if (!threatsByNode.has(nId)) threatsByNode.set(nId, []);
+            threatsByNode.get(nId)!.push(badge);
+          }
+          for (const eId of threat.affectedEdgeIds) {
+            if (!threatsByEdge.has(eId)) threatsByEdge.set(eId, []);
+            threatsByEdge.get(eId)!.push(badge);
+          }
         }
-        for (const eId of threat.affectedEdgeIds) {
-          if (!threatsByEdge.has(eId)) threatsByEdge.set(eId, []);
-          threatsByEdge.get(eId)!.push(badge);
+        setNodes(
+          (nds) =>
+            nds.map((n) => ({
+              ...n,
+              data: { ...n.data, threats: threatsByNode.get(n.id) ?? [] },
+            })) as CanvasNode[],
+        );
+        setEdges(
+          (eds) =>
+            eds.map((e) => ({
+              ...e,
+              data: { ...e.data, threats: threatsByEdge.get(e.id!) ?? [] },
+            })) as CanvasEdge[],
+        );
+        setIsAnalyzing(false);
+        if (analysisModeRef.current !== "live") {
+          const violationMsg =
+            dfcViolations.length > 0 ? `, ${dfcViolations.length} compliance violations` : "";
+          toast.success(`Analysis complete - ${result.summary.total} threats found${violationMsg}`);
         }
-      }
-      setNodes(
-        (nds) =>
-          nds.map((n) => ({
-            ...n,
-            data: { ...n.data, threats: threatsByNode.get(n.id) ?? [] },
-          })) as CanvasNode[],
-      );
-      setEdges(
-        (eds) =>
-          eds.map((e) => ({
-            ...e,
-            data: { ...e.data, threats: threatsByEdge.get(e.id!) ?? [] },
-          })) as CanvasEdge[],
-      );
-      setIsAnalyzing(false);
-      if (analysisModeRef.current !== "live") {
-        toast.success(`Analysis complete - ${result.summary.total} threats found`);
+      } catch (err) {
+        setIsAnalyzing(false);
+        const message = err instanceof Error ? err.message : "Unknown error";
+        toast.error(`Analysis failed: ${message}`);
+        console.error("Threat analysis error:", err);
       }
     });
   }, [nodes, edges, methodology, customComponents, setNodes, setEdges]);
@@ -539,14 +616,26 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
   }, [nodes, edges, setNodes, pushHistory]);
 
   const groupInBoundary = useCallback(() => {
-    if (!selectedNodeId) return;
-    const node = nodes.find((n) => n.id === selectedNodeId);
-    if (!node) return;
+    const selectedNodes = nodes.filter((n) => n.selected);
+    const targetNodes =
+      selectedNodes.length > 0
+        ? selectedNodes
+        : selectedNodeId
+          ? nodes.filter((n) => n.id === selectedNodeId)
+          : [];
+    if (targetNodes.length === 0) return;
+
+    const minX = Math.min(...targetNodes.map((n) => n.position.x));
+    const minY = Math.min(...targetNodes.map((n) => n.position.y));
+    const maxX = Math.max(...targetNodes.map((n) => n.position.x + 180));
+    const maxY = Math.max(...targetNodes.map((n) => n.position.y + 100));
+
+    const boundaryId = genNodeId();
     const boundary: CanvasNode = {
-      id: genNodeId(),
+      id: boundaryId,
       type: "trustBoundary",
-      position: { x: node.position.x - 20, y: node.position.y - 40 },
-      style: { width: 250, height: 180 },
+      position: { x: minX - 30, y: minY - 50 },
+      style: { width: maxX - minX + 60, height: maxY - minY + 80 },
       data: {
         label: "Trust Boundary",
         category: "trust-boundary",
@@ -555,8 +644,25 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
         threats: [],
       } as CanvasNodeData,
     };
-    setNodes((nds) => [...nds, boundary] as CanvasNode[]);
-    pushHistory([...nodes, boundary], edges);
+
+    const targetIds = new Set(targetNodes.map((n) => n.id));
+    setNodes((nds) => {
+      const updated = nds.map((n) => {
+        if (targetIds.has(n.id)) {
+          return {
+            ...n,
+            parentId: boundaryId,
+            position: {
+              x: n.position.x - boundary.position.x,
+              y: n.position.y - boundary.position.y,
+            },
+          };
+        }
+        return n;
+      }) as CanvasNode[];
+      return [boundary, ...updated];
+    });
+    pushHistory(nodes, edges);
   }, [selectedNodeId, nodes, edges, setNodes, pushHistory]);
 
   const handleAutoLayout = useCallback(() => {
@@ -586,6 +692,7 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
       const customComp = isCustom
         ? customComponents.find((c) => `custom-${c.id}` === item.id)
         : undefined;
+      const itemAny = item as Record<string, unknown>;
       const newNode: CanvasNode = {
         id: genNodeId(),
         type: item.nodeType,
@@ -602,6 +709,9 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
           threats: [],
           isCustom,
           customThreatIds: customComp?.customThreats?.map((t) => t.id),
+          toolAccessMode: itemAny.toolAccessMode as CanvasNodeData["toolAccessMode"],
+          toolRiskTier: itemAny.toolRiskTier as CanvasNodeData["toolRiskTier"],
+          promptType: itemAny.promptType as CanvasNodeData["promptType"],
         } as CanvasNodeData,
       };
       setNodes((nds) => [...nds, newNode] as CanvasNode[]);
@@ -614,13 +724,42 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
     (_: React.MouseEvent, node: CanvasNode) => {
       if (whatIfActive) {
         setWhatIfNodeId(node.id);
-        toast.info(`What-If: "${(node.data as CanvasNodeData)?.label}" marked compromised`);
+        const nodeLabel = (node.data as CanvasNodeData)?.label ?? "Unknown";
+        toast.info(`What-If: simulating removal of "${nodeLabel}"...`);
+
+        const filteredNodes = nodes.filter((n) => n.id !== node.id) as CanvasNode[];
+        const filteredEdges = edges.filter(
+          (e) => e.source !== node.id && e.target !== node.id,
+        ) as CanvasEdge[];
+
+        const beforeThreatCount = analysisResult?.summary.total ?? 0;
+        const beforeRiskScore = riskSummary?.overallScore ?? 0;
+        const beforePathCount = attackPaths.length;
+
+        const simProfiles = buildNodeProfiles(filteredNodes);
+        const simResult = runThreatAnalysis(filteredNodes, filteredEdges, methodology);
+        const simRisk = calculateModelRisk(filteredNodes, filteredEdges, simResult, simProfiles);
+        const simPaths = findAttackPaths(
+          filteredNodes,
+          filteredEdges,
+          simResult.threats,
+          simProfiles,
+        );
+
+        setWhatIfResult({
+          removedNodeLabel: nodeLabel,
+          beforeCount: beforeThreatCount,
+          afterCount: simResult.summary.total,
+          beforeRisk: beforeRiskScore,
+          afterRisk: simRisk.overallScore,
+          eliminatedPaths: beforePathCount - simPaths.length,
+        });
         return;
       }
       setSelectedNodeId(node.id);
       setSelectedEdgeId(null);
     },
-    [whatIfActive],
+    [whatIfActive, nodes, edges, methodology, analysisResult, riskSummary, attackPaths],
   );
 
   const onEdgeClick = useCallback((_: React.MouseEvent, edge: CanvasEdge) => {
@@ -714,15 +853,23 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
     [setNodes, setEdges, pushHistory, fitView],
   );
 
-  const clearCanvas = useCallback(() => {
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+  const doClearCanvas = useCallback(() => {
     setNodes([]);
     setEdges([]);
     setAnalysisResult(null);
     setRiskSummary(null);
     setAttackPaths([]);
     pushHistory([], []);
+    setShowClearConfirm(false);
     toast.info("Canvas cleared");
   }, [setNodes, setEdges, pushHistory]);
+
+  const clearCanvas = useCallback(() => {
+    if (nodes.length === 0) return;
+    setShowClearConfirm(true);
+  }, [nodes.length]);
 
   const exportJSON = useCallback(() => {
     const data = {
@@ -743,6 +890,26 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
     toast.success("JSON exported");
   }, [nodes, edges, analysisResult, methodology, customComponents]);
 
+  const [pendingImport, setPendingImport] = useState<{
+    nodes: CanvasNode[];
+    edges: CanvasEdge[];
+    analysisResult?: ThreatAnalysisResult;
+    methodology?: MethodologyMode;
+    customComponents?: CustomComponentDefinition[];
+  } | null>(null);
+
+  const applyImport = useCallback(() => {
+    if (!pendingImport) return;
+    if (pendingImport.nodes) setNodes(pendingImport.nodes);
+    if (pendingImport.edges) setEdges(pendingImport.edges);
+    if (pendingImport.analysisResult) setAnalysisResult(pendingImport.analysisResult);
+    if (pendingImport.methodology) setMethodology(pendingImport.methodology);
+    if (pendingImport.customComponents) setCustomComponents(pendingImport.customComponents);
+    pushHistory(pendingImport.nodes ?? [], pendingImport.edges ?? []);
+    setPendingImport(null);
+    toast.success("Model imported");
+  }, [pendingImport, setNodes, setEdges, pushHistory]);
+
   const importJSON = useCallback(() => {
     const input = document.createElement("input");
     input.type = "file";
@@ -754,20 +921,51 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
       reader.onload = (ev) => {
         try {
           const data = JSON.parse(ev.target?.result as string);
-          if (data.nodes) setNodes(data.nodes);
-          if (data.edges) setEdges(data.edges);
-          if (data.analysisResult) setAnalysisResult(data.analysisResult);
-          if (data.methodology) setMethodology(data.methodology);
-          if (data.customComponents) setCustomComponents(data.customComponents);
-          toast.success("Model imported");
+          if (!Array.isArray(data.nodes)) {
+            toast.error("Import failed: 'nodes' must be an array");
+            return;
+          }
+          const validNodes = data.nodes.every(
+            (n: Record<string, unknown>) => n.id && n.type && n.position && n.data,
+          );
+          if (!validNodes) {
+            toast.error("Import failed: each node must have id, type, position, and data");
+            return;
+          }
+          if (data.edges && !Array.isArray(data.edges)) {
+            toast.error("Import failed: 'edges' must be an array");
+            return;
+          }
+          const nodeIds = new Set((data.nodes as { id: string }[]).map((n) => n.id));
+          const invalidEdges = (data.edges ?? []).filter(
+            (e: { source: string; target: string }) =>
+              !nodeIds.has(e.source) || !nodeIds.has(e.target),
+          );
+          if (invalidEdges.length > 0) {
+            toast.error(
+              `Import failed: ${invalidEdges.length} edge(s) reference non-existent nodes`,
+            );
+            return;
+          }
+          if (nodes.length > 0) {
+            setPendingImport(data);
+          } else {
+            if (data.nodes) setNodes(data.nodes);
+            if (data.edges) setEdges(data.edges);
+            if (data.analysisResult) setAnalysisResult(data.analysisResult);
+            if (data.methodology) setMethodology(data.methodology);
+            if (data.customComponents) setCustomComponents(data.customComponents);
+            pushHistory(data.nodes ?? [], data.edges ?? []);
+            toast.success("Model imported");
+          }
         } catch {
-          toast.error("Import failed: invalid format");
+          toast.error("Import failed: invalid JSON format");
         }
       };
       reader.readAsText(file);
     };
     input.click();
-  }, [setNodes, setEdges]);
+  }, [setNodes, setEdges, nodes.length, pushHistory]);
 
   const handleExportPNG = useCallback(async () => {
     const el = document.querySelector(".react-flow") as HTMLElement;
@@ -780,6 +978,20 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
       toast.success("PNG exported");
     } catch {
       toast.error("PNG export failed");
+    }
+  }, []);
+
+  const handleExportSVG = useCallback(async () => {
+    const el = document.querySelector(".react-flow") as HTMLElement;
+    if (!el) {
+      toast.error("Canvas not found");
+      return;
+    }
+    try {
+      await exportCanvasSVG(el);
+      toast.success("SVG exported");
+    } catch {
+      toast.error("SVG export failed");
     }
   }, []);
 
@@ -814,8 +1026,8 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
     toast.success("Markdown report exported");
   }, [analysisResult, nodes, edges, riskSummary, attackPaths, aisvsResult]);
 
-  const handleSaveModel = useCallback((name: string) => {
-    toast.success(`Model "${name}" saved`);
+  const handleSaveModel = useCallback((name: string, description: string) => {
+    toast.success(`Model "${name}" saved${description ? ` - ${description}` : ""}`);
   }, []);
   const handleLoadModel = useCallback(
     (data: string) => {
@@ -880,6 +1092,44 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
       pushHistory(nodes, edges);
     },
     [setNodes, nodes, edges, pushHistory],
+  );
+
+  const handleAddComponentFromPalette = useCallback(
+    (item: PaletteItem) => {
+      const viewport = reactFlowInstance?.getViewport();
+      const centerX = viewport ? (-viewport.x + 400) / (viewport.zoom || 1) : 300;
+      const centerY = viewport ? (-viewport.y + 300) / (viewport.zoom || 1) : 200;
+      const itemAny = item as Record<string, unknown>;
+      const isCustom = item.category === "custom";
+      const customComp = isCustom
+        ? customComponents.find((c) => `custom-${c.id}` === item.id)
+        : undefined;
+      const newNode: CanvasNode = {
+        id: genNodeId(),
+        type: item.nodeType,
+        position: { x: centerX, y: centerY },
+        data: {
+          label: item.label,
+          description: item.description,
+          category: item.category,
+          componentId: item.componentId,
+          maestroLayers: item.maestroLayers,
+          trustLevel: customComp?.trustLevel ?? "semi-trusted",
+          icon: item.icon,
+          color: item.color,
+          threats: [],
+          isCustom,
+          customThreatIds: customComp?.customThreats?.map((t) => t.id),
+          toolAccessMode: itemAny.toolAccessMode as CanvasNodeData["toolAccessMode"],
+          toolRiskTier: itemAny.toolRiskTier as CanvasNodeData["toolRiskTier"],
+          promptType: itemAny.promptType as CanvasNodeData["promptType"],
+        } as CanvasNodeData,
+      };
+      setNodes((nds) => [...nds, newNode] as CanvasNode[]);
+      pushHistory([...nodes, newNode], edges);
+      toast.success(`Added "${item.label}" to canvas`);
+    },
+    [reactFlowInstance, customComponents, setNodes, nodes, edges, pushHistory],
   );
 
   const handleAibomImport = useCallback(
@@ -1036,6 +1286,7 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
       <ComponentPalette
         customComponents={customComponents}
         onCreateCustom={() => setShowCustomDialog(true)}
+        onAddComponent={handleAddComponentFromPalette}
       />
 
       <div className="flex-1 flex flex-col min-w-0">
@@ -1051,6 +1302,7 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
           canRedo={historyIndex < history.length - 1}
           onExportJSON={exportJSON}
           onExportPNG={handleExportPNG}
+          onExportSVG={handleExportSVG}
           onExportMarkdown={handleExportMarkdown}
           onExportCSV={handleExportCSV}
           onExportSARIF={handleExportSARIF}
@@ -1071,9 +1323,12 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
           onToggleSnapToGrid={() => setSnapToGrid((v) => !v)}
           onWhatIf={() => {
             setWhatIfActive((v) => !v);
-            if (whatIfActive) setWhatIfNodeId(null);
+            if (whatIfActive) {
+              setWhatIfNodeId(null);
+              setWhatIfResult(null);
+            }
             toast.info(
-              whatIfActive ? "What-If mode off" : "What-If: click a node to mark compromised",
+              whatIfActive ? "What-If mode off" : "What-If: click a node to simulate its removal",
             );
           }}
           isAnalyzing={isAnalyzing}
@@ -1128,9 +1383,9 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
                 className={`bg-background ${whatIfActive ? "ring-2 ring-orange-500/50 ring-inset" : ""}`}
               >
                 <Background
-                  variant={BackgroundVariant.Dots}
+                  variant={snapToGrid ? BackgroundVariant.Lines : BackgroundVariant.Dots}
                   gap={16}
-                  size={1}
+                  size={snapToGrid ? 0.5 : 1}
                   className="!bg-muted/30"
                 />
                 <Controls className="!bg-background !border !shadow-sm" />
@@ -1154,6 +1409,7 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
             setSelectedEdgeId(null);
           }}
           onEditEdge={(id) => setEditingEdgeId(id)}
+          onEditNode={(id) => setEditingNodeId(id)}
           allThreats={fullAnalysisResult?.threats}
           onToggleMitigation={handleToggleMitigation}
           onMitigationStatusChange={handleMitigationStatusChange}
@@ -1170,6 +1426,32 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
         onToggleShowMitigated={() => setShowMitigated((v) => !v)}
         totalBeforeMitigation={fullAnalysisResult?.threats.length ?? 0}
         aisvsResult={aisvsResult}
+        complianceViolations={complianceViolations}
+        complianceGapReport={complianceGapReport}
+        attackSurfaceScores={attackSurfaceScores}
+        onPathClick={(path) => {
+          const nodeIds = new Set(path.nodes);
+          setNodes(
+            (nds) => nds.map((n) => ({ ...n, selected: nodeIds.has(n.id) })) as CanvasNode[],
+          );
+          const pathEdges = new Set<string>();
+          for (let i = 0; i < path.nodes.length - 1; i++) {
+            for (const e of edges) {
+              if (
+                (e.source === path.nodes[i] && e.target === path.nodes[i + 1]) ||
+                (e.target === path.nodes[i] && e.source === path.nodes[i + 1])
+              ) {
+                pathEdges.add(e.id!);
+              }
+            }
+          }
+          setEdges(
+            (eds) => eds.map((e) => ({ ...e, selected: pathEdges.has(e.id!) })) as CanvasEdge[],
+          );
+          const targetNodes = nodes.filter((n) => nodeIds.has(n.id));
+          if (targetNodes.length > 0) fitView({ nodes: targetNodes, duration: 500, padding: 0.3 });
+        }}
+        whatIfResult={whatIfResult}
       />
 
       {editingEdge?.data && (
@@ -1216,6 +1498,122 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
       />
 
       {showOnboarding && <OnboardingOverlay onDismiss={handleDismissOnboarding} />}
+
+      {/* Loading overlay during analysis */}
+      {isAnalyzing && (
+        <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3 p-6 rounded-lg bg-background border shadow-lg">
+            <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+            <p className="text-sm font-medium">Analyzing threats...</p>
+            <p className="text-xs text-muted-foreground">Running MAESTRO 7-layer analysis</p>
+          </div>
+        </div>
+      )}
+
+      {/* Heat map legend */}
+      {heatMapActive && (
+        <div className="absolute bottom-4 left-64 z-40 bg-background/95 border rounded-lg p-2 shadow-sm">
+          <p className="text-[10px] font-semibold mb-1">Threat Heat Map</p>
+          <div className="flex items-center gap-2 text-[9px]">
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 rounded bg-red-500" /> High
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 rounded bg-orange-500" /> Medium
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 rounded bg-yellow-500" /> Low
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 rounded bg-gray-400" /> None
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Empty canvas CTA */}
+      {nodes.length === 0 && !analysisResult && !showOnboarding && (
+        <div
+          className="absolute inset-0 flex items-center justify-center pointer-events-none z-30"
+          style={{ left: "224px" }}
+        >
+          <div className="pointer-events-auto bg-background/95 border rounded-xl p-6 shadow-lg max-w-md text-center space-y-4">
+            <h3 className="text-lg font-bold">Get Started with Threat Modeling</h3>
+            <p className="text-sm text-muted-foreground">
+              Drag components from the palette, load a template, or import an existing model.
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {ARCHITECTURE_TEMPLATES.slice(0, 3).map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => loadTemplate(t.id)}
+                  className="p-3 border rounded-lg hover:bg-accent transition-colors text-left"
+                >
+                  <p className="text-xs font-semibold truncate">{t.name}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">
+                    {t.description}
+                  </p>
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2 justify-center">
+              <Button variant="outline" size="sm" onClick={importJSON}>
+                Import JSON
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowAibomImport(true)}>
+                Import AIBOM
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Clear canvas confirmation dialog */}
+      <Dialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Clear Canvas?</DialogTitle>
+            <DialogDescription>
+              This will remove all {nodes.length} components and {edges.length} connections. This
+              action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setShowClearConfirm(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" size="sm" onClick={doClearCanvas}>
+              Clear All
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import overwrite confirmation dialog */}
+      <Dialog
+        open={!!pendingImport}
+        onOpenChange={(open) => {
+          if (!open) setPendingImport(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Replace Current Model?</DialogTitle>
+            <DialogDescription>
+              Importing will replace your current model ({nodes.length} components, {edges.length}{" "}
+              connections). Save your current work first if needed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setPendingImport(null)}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={applyImport}>
+              Replace
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

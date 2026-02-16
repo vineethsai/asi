@@ -1,28 +1,49 @@
-import { type CanvasNode, type CanvasEdge, type GeneratedThreat } from "../types";
+import { type CanvasNode, type CanvasEdge, type GeneratedThreat, MaestroLayer } from "../types";
+import type { NodeRiskProfile } from "./nodeProfile";
 import { MAESTRO_THREAT_CATALOG, MAESTRO_CROSS_LAYER_THREATS } from "./maestroData";
 
-export function runMaestroAnalysis(nodes: CanvasNode[], edges: CanvasEdge[]): GeneratedThreat[] {
+export function runMaestroAnalysis(
+  nodes: CanvasNode[],
+  edges: CanvasEdge[],
+  profiles?: Map<string, NodeRiskProfile>,
+): GeneratedThreat[] {
   const threats: GeneratedThreat[] = [];
-  threats.push(...analyzeLayerThreats(nodes));
+  threats.push(...analyzeLayerThreats(nodes, profiles));
   threats.push(...analyzeCrossLayerThreats(nodes, edges));
+  if (profiles) threats.push(...analyzeFunctionCallSurface(nodes, profiles));
   return threats;
 }
 
-function analyzeLayerThreats(nodes: CanvasNode[]): GeneratedThreat[] {
+function escalateSeverity(
+  severity: "critical" | "high" | "medium" | "low",
+): "critical" | "high" | "medium" | "low" {
+  if (severity === "medium") return "high";
+  if (severity === "high") return "critical";
+  return severity;
+}
+
+function analyzeLayerThreats(
+  nodes: CanvasNode[],
+  profiles?: Map<string, NodeRiskProfile>,
+): GeneratedThreat[] {
   const threats: GeneratedThreat[] = [];
   for (const node of nodes) {
     if (!node.data || node.type === "trustBoundary") continue;
     if (node.data.category === "actor" || node.data.category === "external") continue;
     const layers = node.data.maestroLayers ?? [];
+    const profile = profiles?.get(node.id);
     for (const layer of layers) {
       const layerThreats = MAESTRO_THREAT_CATALOG.filter((t) => t.layer === layer);
       for (const lt of layerThreats) {
+        const shouldEscalate = profile && profile.inherentRiskMultiplier >= 2.0;
         threats.push({
           id: `${lt.id}__${node.id}`,
           threatId: lt.id,
           name: lt.name,
-          description: lt.description,
-          severity: lt.severity,
+          description: shouldEscalate
+            ? `${lt.description} [Elevated: high-risk component (${profile.accessDanger})]`
+            : lt.description,
+          severity: shouldEscalate ? escalateSeverity(lt.severity) : lt.severity,
           methodology: "MAESTRO",
           maestroLayer: lt.layer,
           affectedNodeIds: [node.id],
@@ -79,6 +100,35 @@ function analyzeCrossLayerThreats(nodes: CanvasNode[], edges: CanvasEdge[]): Gen
         }
       }
     }
+  }
+  return threats;
+}
+
+function analyzeFunctionCallSurface(
+  nodes: CanvasNode[],
+  profiles: Map<string, NodeRiskProfile>,
+): GeneratedThreat[] {
+  const threats: GeneratedThreat[] = [];
+  for (const node of nodes) {
+    const profile = profiles.get(node.id);
+    if (!profile || !profile.functionCallSurface) continue;
+    threats.push({
+      id: `maestro-fn-call-exploit__${node.id}`,
+      name: "Function Call Schema Exploitation",
+      description: `"${profile.label}" defines a function call schema. An attacker could craft inputs that manipulate the schema to invoke unintended functions or pass malicious arguments.`,
+      severity: "high",
+      methodology: "MAESTRO",
+      maestroLayer: MaestroLayer.AgentFrameworks,
+      affectedNodeIds: [node.id],
+      affectedEdgeIds: [],
+      inherited: false,
+      mitigations: [
+        "Validate all function call parameters against strict JSON schemas",
+        "Whitelist allowed function names",
+        "Implement function call rate limiting",
+        "Log and audit all function call invocations",
+      ],
+    });
   }
   return threats;
 }

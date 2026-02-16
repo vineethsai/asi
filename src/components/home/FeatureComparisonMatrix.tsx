@@ -1,7 +1,14 @@
-import React from "react";
+import { Link } from "react-router-dom";
 
 const FeatureComparisonMatrix = () => {
-  // Define strengths and weaknesses for each architecture type
+  const archColumns = [
+    { key: "sequential", label: "Sequential", path: "/architectures/sequential" },
+    { key: "hierarchical", label: "Hierarchical", path: "/architectures/hierarchical" },
+    { key: "collaborative", label: "Collaborative Swarm", path: "/architectures/collaborative" },
+    { key: "reactive", label: "Reactive", path: "/architectures/reactive" },
+    { key: "knowledge", label: "Knowledge-Intensive", path: "/architectures/knowledge_intensive" },
+  ];
+
   const features = [
     {
       category: "Implementation Complexity",
@@ -197,7 +204,6 @@ const FeatureComparisonMatrix = () => {
     },
   ];
 
-  // Define ideal use cases for each architecture
   const useCases = {
     sequential: [
       "Simple, well-defined workflows",
@@ -231,7 +237,6 @@ const FeatureComparisonMatrix = () => {
     ],
   };
 
-  // Function to render score with a colored dot indicator
   const renderScore = (score: number) => {
     const colors: Record<number, string> = {
       1: "bg-red-500",
@@ -251,13 +256,13 @@ const FeatureComparisonMatrix = () => {
 
   return (
     <div className="w-full overflow-x-auto">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
+      <div className="rounded-xl shadow-md overflow-hidden border border-border bg-card">
         {/* Matrix header with title */}
-        <div className="bg-gray-50 dark:bg-gray-900 p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
+        <div className="bg-muted p-4 border-b border-border">
+          <h2 className="text-xl font-semibold text-foreground">
             Agent Architecture Comparison Matrix
           </h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-muted-foreground mt-1">
             Comparative analysis of strengths and weaknesses across different agent architecture
             patterns
           </p>
@@ -267,171 +272,105 @@ const FeatureComparisonMatrix = () => {
         <div className="p-2 sm:p-4">
           {/* Score key */}
           <div className="mb-4 flex items-center gap-4 flex-wrap">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Score Key:</span>
+            <span className="text-sm font-medium text-foreground">Score Key:</span>
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-full bg-red-500"></div>
-              <span className="text-xs">1 (Poor)</span>
+              <span className="text-xs text-muted-foreground">1 (Poor)</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-full bg-orange-400"></div>
-              <span className="text-xs">2 (Fair)</span>
+              <span className="text-xs text-muted-foreground">2 (Fair)</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
-              <span className="text-xs">3 (Good)</span>
+              <span className="text-xs text-muted-foreground">3 (Good)</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-full bg-lime-500"></div>
-              <span className="text-xs">4 (Very Good)</span>
+              <span className="text-xs text-muted-foreground">4 (Very Good)</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-full bg-green-500"></div>
-              <span className="text-xs">5 (Excellent)</span>
+              <span className="text-xs text-muted-foreground">5 (Excellent)</span>
             </div>
           </div>
 
           {/* Comparison table */}
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-800">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/50">
                 <tr>
                   <th
                     scope="col"
-                    className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/6"
+                    className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider w-1/6"
                   >
                     Feature Category
                   </th>
-                  <th
-                    scope="col"
-                    className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/6"
-                  >
-                    Sequential
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/6"
-                  >
-                    Hierarchical
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/6"
-                  >
-                    Collaborative Swarm
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/6"
-                  >
-                    Reactive
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/6"
-                  >
-                    Knowledge-Intensive
-                  </th>
+                  {archColumns.map((col) => (
+                    <th
+                      key={col.key}
+                      scope="col"
+                      className="px-3 sm:px-6 py-3 text-left text-xs font-medium uppercase tracking-wider w-1/6"
+                    >
+                      <Link
+                        to={col.path}
+                        className="text-primary hover:text-primary/80 underline-offset-2 hover:underline"
+                      >
+                        {col.label}
+                      </Link>
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="divide-y divide-border">
                 {features.map((feature, index) => (
-                  <tr
-                    key={index}
-                    className={
-                      index % 2 === 0 ? "bg-gray-50 dark:bg-gray-900" : "bg-white dark:bg-gray-800"
-                    }
-                  >
+                  <tr key={index} className={index % 2 === 0 ? "bg-muted/30" : "bg-card"}>
                     <td className="px-3 sm:px-6 py-4">
-                      <div className="font-medium text-gray-900 dark:text-white">
-                        {feature.category}
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {feature.description}
-                      </div>
+                      <div className="font-medium text-foreground">{feature.category}</div>
+                      <div className="text-xs text-muted-foreground">{feature.description}</div>
                     </td>
-                    <td className="px-3 sm:px-6 py-4">
-                      <div className="mb-1">{renderScore(feature.sequential.score)}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {feature.sequential.note}
-                      </div>
-                    </td>
-                    <td className="px-3 sm:px-6 py-4">
-                      <div className="mb-1">{renderScore(feature.hierarchical.score)}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {feature.hierarchical.note}
-                      </div>
-                    </td>
-                    <td className="px-3 sm:px-6 py-4">
-                      <div className="mb-1">{renderScore(feature.collaborative.score)}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {feature.collaborative.note}
-                      </div>
-                    </td>
-                    <td className="px-3 sm:px-6 py-4">
-                      <div className="mb-1">{renderScore(feature.reactive.score)}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {feature.reactive.note}
-                      </div>
-                    </td>
-                    <td className="px-3 sm:px-6 py-4">
-                      <div className="mb-1">{renderScore(feature.knowledge.score)}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {feature.knowledge.note}
-                      </div>
-                    </td>
+                    {archColumns.map((col) => {
+                      const data = feature[col.key as keyof typeof feature] as {
+                        score: number;
+                        note: string;
+                      };
+                      return (
+                        <td key={col.key} className="px-3 sm:px-6 py-4">
+                          <div className="mb-1">{renderScore(data.score)}</div>
+                          <div className="text-xs text-muted-foreground">{data.note}</div>
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
 
-                {/* Ideal Use Cases row - special formatting */}
-                <tr className="bg-gray-50 dark:bg-gray-900">
+                {/* Ideal Use Cases row */}
+                <tr className="bg-muted/30">
                   <td className="px-3 sm:px-6 py-4">
-                    <div className="font-medium text-gray-900 dark:text-white">Ideal Use Cases</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                    <div className="font-medium text-foreground">Ideal Use Cases</div>
+                    <div className="text-xs text-muted-foreground">
                       Scenarios where this architecture excels
                     </div>
                   </td>
-                  <td className="px-3 sm:px-6 py-4">
-                    <ul className="list-disc pl-5 text-xs text-gray-700 dark:text-gray-300 space-y-1">
-                      {useCases.sequential.map((useCase, i) => (
-                        <li key={i}>{useCase}</li>
-                      ))}
-                    </ul>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4">
-                    <ul className="list-disc pl-5 text-xs text-gray-700 dark:text-gray-300 space-y-1">
-                      {useCases.hierarchical.map((useCase, i) => (
-                        <li key={i}>{useCase}</li>
-                      ))}
-                    </ul>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4">
-                    <ul className="list-disc pl-5 text-xs text-gray-700 dark:text-gray-300 space-y-1">
-                      {useCases.collaborative.map((useCase, i) => (
-                        <li key={i}>{useCase}</li>
-                      ))}
-                    </ul>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4">
-                    <ul className="list-disc pl-5 text-xs text-gray-700 dark:text-gray-300 space-y-1">
-                      {useCases.reactive.map((useCase, i) => (
-                        <li key={i}>{useCase}</li>
-                      ))}
-                    </ul>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4">
-                    <ul className="list-disc pl-5 text-xs text-gray-700 dark:text-gray-300 space-y-1">
-                      {useCases.knowledge.map((useCase, i) => (
-                        <li key={i}>{useCase}</li>
-                      ))}
-                    </ul>
-                  </td>
+                  {archColumns.map((col) => {
+                    const cases = useCases[col.key as keyof typeof useCases];
+                    return (
+                      <td key={col.key} className="px-3 sm:px-6 py-4">
+                        <ul className="list-disc pl-5 text-xs text-muted-foreground space-y-1">
+                          {cases.map((useCase, i) => (
+                            <li key={i}>{useCase}</li>
+                          ))}
+                        </ul>
+                      </td>
+                    );
+                  })}
                 </tr>
               </tbody>
             </table>
           </div>
 
           {/* Notes */}
-          <div className="mt-6 text-sm text-gray-500 dark:text-gray-400">
+          <div className="mt-6 text-sm text-muted-foreground">
             <p>
               <strong>Note:</strong> This comparison represents general architectural
               characteristics. Specific implementations may vary in their strengths and weaknesses.

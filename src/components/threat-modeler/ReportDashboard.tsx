@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
+import { AlertTriangle, ShieldAlert } from "lucide-react";
 import {
   type ThreatAnalysisResult,
   MAESTRO_LAYER_LABELS,
@@ -20,11 +21,17 @@ import {
 } from "./types";
 import type { ModelRiskSummary } from "./engine/riskScoring";
 import type { AISVSCoverageResult } from "./engine/aisvsMapping";
+import type { ComplianceViolation } from "./engine/dataFlowCompliance";
+import type { ComplianceGapReport } from "./engine/complianceGap";
+import type { AttackSurfaceScore } from "./engine/attackSurface";
 
 interface ReportDashboardProps {
   result: ThreatAnalysisResult;
   riskSummary: ModelRiskSummary | null;
   aisvsResult: AISVSCoverageResult | null;
+  attackSurfaceScores?: AttackSurfaceScore[];
+  complianceViolations?: ComplianceViolation[];
+  complianceGapReport?: ComplianceGapReport | null;
 }
 
 const SEVERITY_COLORS: Record<string, string> = {
@@ -34,10 +41,27 @@ const SEVERITY_COLORS: Record<string, string> = {
   low: "#3b82f6",
 };
 
+const SURFACE_RISK_COLORS: Record<string, string> = {
+  critical: "text-red-600 dark:text-red-400",
+  high: "text-orange-600 dark:text-orange-400",
+  medium: "text-yellow-600 dark:text-yellow-400",
+  low: "text-blue-600 dark:text-blue-400",
+};
+
+const VIOLATION_SEV_COLORS: Record<string, string> = {
+  critical: "bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400",
+  high: "bg-orange-500/10 border-orange-500/30 text-orange-600 dark:text-orange-400",
+  medium: "bg-yellow-500/10 border-yellow-500/30 text-yellow-600 dark:text-yellow-400",
+  low: "bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400",
+};
+
 export default function ReportDashboard({
   result,
   riskSummary,
   aisvsResult,
+  attackSurfaceScores,
+  complianceViolations,
+  complianceGapReport,
 }: ReportDashboardProps) {
   const severityData = [
     { name: "Critical", value: result.summary.critical, color: SEVERITY_COLORS.critical },
@@ -184,6 +208,116 @@ export default function ReportDashboard({
                 >
                   <span className="truncate">{risk.name}</span>
                   <span className="font-bold text-red-500 shrink-0 ml-2">{risk.score}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Data Flow Compliance Violations */}
+        {complianceViolations && complianceViolations.length > 0 && (
+          <div>
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1 flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3" />
+              Data Flow Violations ({complianceViolations.length})
+            </p>
+            <div className="space-y-1">
+              {complianceViolations.slice(0, 5).map((v) => (
+                <div
+                  key={v.id}
+                  className={`p-1.5 rounded border text-[10px] ${VIOLATION_SEV_COLORS[v.severity]}`}
+                >
+                  <p className="font-semibold">{v.name}</p>
+                  <p className="text-muted-foreground mt-0.5">{v.description}</p>
+                </div>
+              ))}
+              {complianceViolations.length > 5 && (
+                <p className="text-[9px] text-muted-foreground text-center">
+                  +{complianceViolations.length - 5} more violations
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Compliance Gap Summary */}
+        {complianceGapReport && (
+          <div>
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1 flex items-center gap-1">
+              <ShieldAlert className="h-3 w-3" />
+              AISVS Compliance Gaps
+            </p>
+            <div className="grid grid-cols-3 gap-1 text-center">
+              <div className="rounded bg-green-500/10 p-1.5">
+                <p className="text-sm font-bold text-green-600">
+                  {complianceGapReport.summary.met}
+                </p>
+                <p className="text-[8px] text-muted-foreground">Met</p>
+              </div>
+              <div className="rounded bg-yellow-500/10 p-1.5">
+                <p className="text-sm font-bold text-yellow-600">
+                  {complianceGapReport.summary.partial}
+                </p>
+                <p className="text-[8px] text-muted-foreground">Partial</p>
+              </div>
+              <div className="rounded bg-red-500/10 p-1.5">
+                <p className="text-sm font-bold text-red-600">{complianceGapReport.summary.gaps}</p>
+                <p className="text-[8px] text-muted-foreground">Gaps</p>
+              </div>
+            </div>
+            <div className="mt-1.5">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-muted-foreground">Coverage</span>
+                <Progress
+                  value={
+                    complianceGapReport.summary.totalChecks > 0
+                      ? Math.round(
+                          ((complianceGapReport.summary.met +
+                            complianceGapReport.summary.partial * 0.5) /
+                            complianceGapReport.summary.totalChecks) *
+                            100,
+                        )
+                      : 0
+                  }
+                  className="h-1.5 flex-1"
+                />
+                <span className="text-[9px] font-bold">
+                  {complianceGapReport.summary.totalChecks > 0
+                    ? Math.round(
+                        ((complianceGapReport.summary.met +
+                          complianceGapReport.summary.partial * 0.5) /
+                          complianceGapReport.summary.totalChecks) *
+                          100,
+                      )
+                    : 0}
+                  %
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Attack Surface Scores */}
+        {attackSurfaceScores && attackSurfaceScores.length > 0 && (
+          <div>
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">
+              Attack Surface (Top 5)
+            </p>
+            <div className="space-y-1">
+              {attackSurfaceScores.slice(0, 5).map((s) => (
+                <div
+                  key={s.nodeId}
+                  className="flex items-center justify-between text-xs p-1.5 rounded border bg-accent/20"
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span
+                      className={`text-[8px] font-bold uppercase ${SURFACE_RISK_COLORS[s.riskLevel]}`}
+                    >
+                      {s.riskLevel}
+                    </span>
+                    <span className="truncate">{s.label}</span>
+                  </div>
+                  <span className="font-bold shrink-0 ml-2">{s.score}</span>
                 </div>
               ))}
             </div>

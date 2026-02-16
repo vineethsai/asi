@@ -47,6 +47,17 @@ export type ComponentCategory =
 
 export type TrustLevel = "untrusted" | "semi-trusted" | "trusted";
 
+export type ToolAccessMode = "read-only" | "read-write" | "write-only" | "execute" | "admin";
+export type ToolRiskTier = "benign" | "sensitive" | "destructive" | "critical";
+export type PromptType =
+  | "system"
+  | "user"
+  | "few-shot"
+  | "chain-of-thought"
+  | "function-call"
+  | "multi-turn";
+export type DataSensitivity = "none" | "internal" | "pii" | "credentials" | "regulated";
+
 export interface ThreatBadge {
   threatId: string;
   name: string;
@@ -67,6 +78,10 @@ export interface CanvasNodeData {
   icon?: string;
   color?: string;
   threats: ThreatBadge[];
+  toolAccessMode?: ToolAccessMode;
+  toolRiskTier?: ToolRiskTier;
+  promptType?: PromptType;
+  dataSensitivity?: DataSensitivity;
   customMetadata?: Record<string, string>;
   isCustom?: boolean;
   customThreatIds?: string[];

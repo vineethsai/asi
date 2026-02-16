@@ -11,6 +11,8 @@ function ActorNode({ data, selected }: NodeProps) {
 
   return (
     <div
+      role="group"
+      aria-label={`${nodeData.label} - ${isExternal ? "external" : "actor"}`}
       className={`relative flex flex-col items-center gap-1 p-3 min-w-[100px] ${selected ? "ring-2 ring-primary rounded-lg" : ""}`}
     >
       <Handle type="target" position={Position.Top} className="!bg-muted-foreground !w-2 !h-2" />

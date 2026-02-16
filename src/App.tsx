@@ -25,6 +25,7 @@ const Implementation = React.lazy(() => import("./pages/Implementation"));
 const About = React.lazy(() => import("./pages/About"));
 const Taxonomy = React.lazy(() => import("./pages/Taxonomy"));
 const ThreatModeler = React.lazy(() => import("./pages/ThreatModeler"));
+const ThreatModelerGuide = React.lazy(() => import("./pages/ThreatModelerGuide"));
 
 import ScrollToTop from "@/components/layout/ScrollToTop";
 
@@ -69,6 +70,7 @@ const AppWithAnalytics = () => {
         <Route path="/about" element={<About />} />
         <Route path="/test-navigator" element={<TestNavigator />} />
         <Route path="/threat-modeler" element={<ThreatModeler />} />
+        <Route path="/threat-modeler-guide" element={<ThreatModelerGuide />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>

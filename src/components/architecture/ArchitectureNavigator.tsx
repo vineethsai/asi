@@ -13,8 +13,6 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
-  Play,
-  Pause,
   Maximize,
   Minimize,
   X,
@@ -25,6 +23,8 @@ import {
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
+// ── Types ──────────────────────────────────────────────────────────────────
+
 interface GraphNode extends d3.SimulationNodeDatum {
   id: string;
   name: string;
@@ -34,78 +34,73 @@ interface GraphNode extends d3.SimulationNodeDatum {
   size: number;
   riskScore?: number;
   tags?: string[];
-  group: number;
-  fx?: number | null;
-  fy?: number | null;
+  parentArchId?: string;
+  parentCompId?: string;
 }
 
 interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
   source: string | GraphNode;
   target: string | GraphNode;
   type: "arch-comp" | "comp-threat" | "threat-mitigation";
-  strength: number;
 }
 
-// Component data mapping from the parsed components with proper dot notation
+// ── Component data map ─────────────────────────────────────────────────────
+
 const componentDataMap: Record<string, { title: string; description: string }> = {
   "kc1.1": {
     title: "Large Language Models (LLMs)",
     description:
-      "Core cognitive engine utilizing pre-trained foundation models for reasoning, planning, and generation, primarily directed via prompt engineering. Operates within constraints like context window, latency, and cost.",
+      "Core cognitive engine utilizing pre-trained foundation models for reasoning, planning, and generation.",
   },
   "kc1.2": {
     title: "Multimodal LLMs (MLLMs)",
     description:
-      "LLMs capable of processing and/or generating information across multiple data types beyond text (e.g., images, audio), enabling agents to perform a wider variety of tasks.",
+      "LLMs capable of processing and/or generating information across multiple data types beyond text.",
   },
   "kc1.3": {
     title: "Small-Language Models (SLMs)",
     description:
-      "Language models with fewer parameters, trained on smaller, focused datasets, designed for specific tasks or use cases. Characterized by smaller weight space, parameter size, and context window compared to LLMs.",
+      "Language models with fewer parameters, trained on smaller, focused datasets, designed for specific tasks.",
   },
   "kc1.4": {
     title: "Fine-tuned Models",
     description:
-      "Language models (LLMs/MLLMs) that undergo additional training on specific datasets to specialize their capabilities, enhancing performance, adopting personas, or improving reliability for particular tasks.",
+      "Language models that undergo additional training on specific datasets to specialize their capabilities.",
   },
-
   "kc2.1": {
     title: "Workflows",
     description:
-      "Structured, pre-defined sequence of tasks or steps that agents follow to achieve a goal, defining the flow of information and actions. Can be linear, conditional, or iterative.",
+      "Structured, pre-defined sequence of tasks or steps that agents follow to achieve a goal.",
   },
   "kc2.2": {
     title: "Hierarchical Planning",
     description:
-      "Multiple agents collaborating via an orchestrator (router) that decomposes tasks, routes sub-tasks to specialized agents, and monitors performance.",
+      "Multiple agents collaborating via an orchestrator that decomposes tasks and routes sub-tasks.",
   },
   "kc2.3": {
     title: "Multi-agent Collaboration",
     description:
-      "Multiple agents working together, communicating and coordinating actions, sharing information and resources to achieve a common goal. Useful for complex tasks requiring diverse skills.",
+      "Multiple agents working together, communicating and coordinating actions to achieve a common goal.",
   },
-
   "kc3.1": {
     title: "Structured Planning / Execution",
     description:
-      "Focuses on decomposing tasks into a formal plan, defining sequences of actions (often involving tool calls), and executing the plan, sometimes with separate planner/executor components (e.g., ReWoo, LLM Compiler, Plan-and-Execute).",
+      "Focuses on decomposing tasks into a formal plan, defining sequences of actions and executing the plan.",
   },
   "kc3.2": {
     title: "ReAct (Reason + Act)",
     description:
-      "Dynamically interleaves reasoning steps with actions (like using tools or querying APIs) and updates reasoning based on feedback.",
+      "Dynamically interleaves reasoning steps with actions and updates reasoning based on feedback.",
   },
   "kc3.3": {
     title: "Chain of Thought (CoT)",
     description:
-      'Enhances reasoning quality by prompting step-by-step "thinking," inducing an LLM to generate a set of "thoughts" before arriving at a final action or conclusion.',
+      'Enhances reasoning quality by prompting step-by-step "thinking" before arriving at a final action.',
   },
   "kc3.4": {
     title: "Tree of Thoughts (ToT)",
-    description:
-      "Generalizes CoT by exploring multiple reasoning paths and plans in parallel with lookahead, backtracking, and self-evaluation.",
+    description: "Generalizes CoT by exploring multiple reasoning paths and plans in parallel.",
   },
-
   "kc4.1": {
     title: "In-agent session memory",
     description: "Memory limited to a single agent and a single session.",
@@ -130,48 +125,41 @@ const componentDataMap: Record<string, { title: string; description: string }> =
     title: "Cross-agent cross-user memory",
     description: "Memory shared across multiple agents and users.",
   },
-
   "kc5.1": {
     title: "Flexible Libraries / SDK Features",
-    description:
-      "Code-level building blocks (e.g., LangChain, CrewAI) or API capabilities (OpenAI Tool Use) offering high flexibility but requiring more coding effort.",
+    description: "Code-level building blocks (e.g., LangChain, CrewAI) offering high flexibility.",
   },
   "kc5.2": {
     title: "Managed Platforms / Services",
-    description:
-      "Vendor-provided solutions (e.g., Amazon Bedrock Agents, Microsoft Copilot Platform) handling infrastructure and simplifying setup, often with easier ecosystem integration and low-code interfaces.",
+    description: "Vendor-provided solutions handling infrastructure and simplifying setup.",
   },
   "kc5.3": {
     title: "Managed APIs",
     description:
-      "Vendor-hosted services (e.g., OpenAI Assistants API) providing higher-level abstractions, managing state and aspects of tool orchestration via API calls.",
+      "Vendor-hosted services providing higher-level abstractions, managing state via API calls.",
   },
-
   "kc6.1": {
     title: "API Access",
     description: "Agents utilizing LLM capabilities to interact with APIs.",
   },
   "kc6.1.1": {
     title: "Limited API Access",
-    description:
-      "Agent generates some parameters for a predefined API call. Compromise can lead to API attacks via LLM-generated parameters.",
+    description: "Agent generates some parameters for a predefined API call.",
   },
   "kc6.1.2": {
     title: "Extensive API Access",
-    description:
-      "Agent generates the entire API call. Compromise can lead to unwanted API calls and attacks.",
+    description: "Agent generates the entire API call.",
   },
   "kc6.2": {
     title: "Code Execution",
     description: "Agents utilizing LLM capabilities for code-related tasks.",
   },
   "kc6.2.1": {
-    title: "Limited Code Execution Capability",
-    description:
-      "Agent generates parameters for a predefined function. Compromise can lead to code injection.",
+    title: "Limited Code Execution",
+    description: "Agent generates parameters for a predefined function.",
   },
   "kc6.2.2": {
-    title: "Extensive Code Execution Capability",
+    title: "Extensive Code Execution",
     description: "Agent runs LLM-generated code. Compromise can lead to arbitrary code execution.",
   },
   "kc6.3": {
@@ -179,69 +167,61 @@ const componentDataMap: Record<string, { title: string; description: string }> =
     description: "Agents utilizing LLM capabilities to interact with databases.",
   },
   "kc6.3.1": {
-    title: "Limited Database Execution Capability",
-    description:
-      "Agent runs specific queries/commands with limited permissions (e.g., read-only, parameterized writes). Compromise can lead to data exfiltration or limited malicious writes.",
+    title: "Limited DB Execution",
+    description: "Agent runs specific queries with limited permissions.",
   },
   "kc6.3.2": {
-    title: "Extensive Database Execution Capability",
-    description:
-      "Agent generates and runs all CRUD operations. Compromise can lead to major data alteration, deletion, or leakage.",
+    title: "Extensive DB Execution",
+    description: "Agent generates and runs all CRUD operations.",
   },
   "kc6.3.3": {
-    title: "Agent Memory or Context Data Sources (RAG)",
-    description:
-      "Agent uses external datasources for context or updates records. Compromise can disrupt data or provide malformed information.",
+    title: "RAG Data Sources",
+    description: "Agent uses external datasources for context or updates records.",
   },
   "kc6.4": {
-    title: "Web Access Capabilities (Web-Use)",
-    description:
-      "Agent utilizing LLM for browser operations. Compromise (often from untrusted web content) can lead to unwanted operations on behalf of the user.",
+    title: "Web Access (Web-Use)",
+    description: "Agent utilizing LLM for browser operations.",
   },
   "kc6.5": {
-    title: "Controlling PC Operations (PC-Use)",
-    description:
-      "Agent utilizing LLM for OS operations, including file system. Compromise can lead to unwanted operations, data leakage, or malicious actions like encrypting files.",
+    title: "PC Operations (PC-Use)",
+    description: "Agent utilizing LLM for OS operations, including file system.",
   },
   "kc6.6": {
     title: "Operating Critical Systems",
-    description:
-      "Agent utilizing LLM to operate critical systems (e.g., SCADA). Compromise can cause catastrophic failures.",
+    description: "Agent utilizing LLM to operate critical systems (e.g., SCADA).",
   },
   "kc6.7": {
     title: "Access to IoT Devices",
-    description:
-      "Agent controlling IoT devices. Compromise could impact the operational environment or misuse devices.",
+    description: "Agent controlling IoT devices.",
   },
-
   kc1: {
     title: "Language Models (LLMs)",
     description:
-      'The core cognitive engine or "brain" of the agent (e.g., GPT-4, Claude), responsible for understanding, reasoning, planning, and generating responses. This includes various types of language models.',
+      'The core cognitive engine or "brain" of the agent, responsible for understanding, reasoning, planning, and generating responses.',
   },
   kc2: {
     title: "Orchestration (Control Flow)",
     description:
-      "Mechanisms that dictate the agent's overall behavior, information flow, and decision-making processes. The specific mechanism depends on the architecture and impacts responsiveness and efficiency.",
+      "Mechanisms that dictate the agent's overall behavior, information flow, and decision-making processes.",
   },
   kc3: {
     title: "Reasoning / Planning Paradigm",
     description:
-      "How agents utilize LLMs to solve complex tasks requiring multiple steps and strategic thinking by breaking down high-level tasks into smaller sub-tasks.",
+      "How agents utilize LLMs to solve complex tasks requiring multiple steps and strategic thinking.",
   },
   kc4: {
     title: "Memory Modules",
     description:
-      "Enable the agent to retain short-term (immediate context) and long-term information (past interactions, knowledge) for coherent and personalized interactions. Context sensitivity is used to reduce risk. RAG with vector databases is common for long-term memory.",
+      "Enable the agent to retain short-term and long-term information for coherent and personalized interactions.",
   },
   kc5: {
     title: "Tool Integration Frameworks",
     description:
-      "Allow agents to extend capabilities by using external tools (APIs, functions, data stores) to interact with the real world or other systems. Manages tool selection and use.",
+      "Allow agents to extend capabilities by using external tools to interact with the real world or other systems.",
   },
   kc6: {
-    title: "Operational Environment (Agencies)",
-    description: "API access, code execution, database operations",
+    title: "Operational Environment",
+    description: "API access, code execution, database operations.",
   },
 };
 
@@ -261,6 +241,8 @@ const getComponentDataById = (id: string) => {
   return searchInFramework(frameworkData);
 };
 
+// ── Constants ──────────────────────────────────────────────────────────────
+
 const NODE_COLORS = {
   architecture: "#3b82f6",
   component: "#22c55e",
@@ -269,9 +251,9 @@ const NODE_COLORS = {
 } as const;
 
 const LINK_COLORS = {
-  "arch-comp": "#3b82f6",
-  "comp-threat": "#ef4444",
-  "threat-mitigation": "#f59e0b",
+  "arch-comp": "#3b82f680",
+  "comp-threat": "#ef444460",
+  "threat-mitigation": "#f59e0b60",
 } as const;
 
 function getDetailPath(node: GraphNode): string | null {
@@ -298,21 +280,26 @@ function useDebounce<T>(value: T, delay: number): T {
   return debounced;
 }
 
+function truncate(text: string, max: number): string {
+  return text.length > max ? text.substring(0, max) + "\u2026" : text;
+}
+
+// ── Main Component ─────────────────────────────────────────────────────────
+
 const ArchitectureNavigator: React.FC = () => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const explorerRef = useRef<HTMLDivElement>(null);
-  const simulationRef = useRef<d3.Simulation<GraphNode, GraphLink> | null>(null);
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
 
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 200);
-  const [isSimulationRunning, setIsSimulationRunning] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [helpOpen, setHelpOpen] = useState(false);
+  const [expandedArchitectures, setExpandedArchitectures] = useState<Set<string>>(new Set());
+  const [expandedComponents, setExpandedComponents] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState({
     architecture: true,
     component: true,
@@ -327,7 +314,10 @@ const ArchitectureNavigator: React.FC = () => {
     type: string;
   } | null>(null);
 
-  // Build graph data
+  // ── All architectures ────────────────────────────────────────────────
+  const allArchitectures = useMemo(() => Object.values(architecturesData), []);
+
+  // ── Build graph data based on expanded state ─────────────────────────
   const { nodes, links } = useMemo(() => {
     const nodeMap = new Map<string, GraphNode>();
     const linkArray: GraphLink[] = [];
@@ -337,10 +327,8 @@ const ArchitectureNavigator: React.FC = () => {
       name: string,
       type: GraphNode["type"],
       description: string,
-      color: string,
       size: number,
-      riskScore?: number,
-      tags?: string[],
+      extra?: Partial<GraphNode>,
     ) => {
       if (!nodeMap.has(id)) {
         nodeMap.set(id, {
@@ -348,113 +336,79 @@ const ArchitectureNavigator: React.FC = () => {
           name,
           type,
           description,
-          color,
+          color: NODE_COLORS[type],
           size,
-          riskScore,
-          tags,
-          group: type === "architecture" ? 0 : type === "component" ? 1 : type === "threat" ? 2 : 3,
+          ...extra,
         });
       }
     };
 
-    const addLink = (
-      sourceId: string,
-      targetId: string,
-      type: GraphLink["type"],
-      strength: number = 1,
-    ) => {
-      linkArray.push({ source: sourceId, target: targetId, type, strength });
-    };
+    // Always add architecture nodes
+    allArchitectures.forEach((arch: Architecture) => {
+      addNode(arch.id, arch.name, "architecture", arch.description, 45, {
+        riskScore: arch.riskScore,
+        tags: arch.tags,
+      });
+    });
 
-    try {
-      Object.values(architecturesData).forEach((arch: Architecture) => {
-        addNode(
-          arch.id,
-          arch.name,
-          "architecture",
-          arch.description,
-          NODE_COLORS.architecture,
-          60,
-          arch.riskScore,
-          arch.tags,
-        );
+    // Add children for expanded architectures
+    expandedArchitectures.forEach((archId) => {
+      const arch = architecturesData[archId];
+      if (!arch) return;
 
-        (arch.keyComponents || []).forEach((compId) => {
-          const component = getComponentDataById(compId);
-          if (component) {
-            addNode(
-              compId,
-              component.title,
-              "component",
-              component.description || "",
-              NODE_COLORS.component,
-              40,
-              undefined,
-              (component as ComponentNode).threatCategories,
+      (arch.keyComponents || []).forEach((compId) => {
+        const comp = getComponentDataById(compId);
+        if (!comp) return;
+        addNode(compId, comp.title, "component", comp.description || "", 30, {
+          parentArchId: archId,
+          tags: (comp as ComponentNode).threatCategories,
+        });
+        linkArray.push({ source: archId, target: compId, type: "arch-comp" });
+
+        // Add threats/mitigations for expanded components
+        if (expandedComponents.has(compId)) {
+          (arch.threatIds || []).forEach((threatId) => {
+            const threat = threatsData[threatId];
+            if (!threat) return;
+            const normalizedCompId = compId.replace(/\./g, "-");
+            const mainCompId = compId.includes(".") ? compId.split(".")[0] : compId;
+            const affects = threat.componentIds?.some(
+              (tCompId) =>
+                tCompId === compId ||
+                tCompId === normalizedCompId ||
+                tCompId === mainCompId ||
+                tCompId.replace(/-/g, ".") === compId,
             );
-            addLink(arch.id, compId, "arch-comp", 2);
+            if (!affects) return;
 
-            (arch.threatIds || []).forEach((threatId) => {
-              const threat = threatsData[threatId];
-              if (threat) {
-                const normalizedCompId = compId.replace(/\./g, "-");
-                const mainCompId = compId.includes(".") ? compId.split(".")[0] : compId;
-                const threatAffectsComponent = threat.componentIds?.some(
-                  (tCompId) =>
-                    tCompId === compId ||
-                    tCompId === normalizedCompId ||
-                    tCompId === mainCompId ||
-                    tCompId.replace(/-/g, ".") === compId,
-                );
+            addNode(threatId, threat.name, "threat", threat.description, 20, {
+              riskScore: threat.riskScore,
+              tags: threat.tags,
+              parentCompId: compId,
+              parentArchId: archId,
+            });
+            linkArray.push({ source: compId, target: threatId, type: "comp-threat" });
 
-                if (threatAffectsComponent) {
-                  addNode(
-                    threatId,
-                    threat.name,
-                    "threat",
-                    threat.description,
-                    NODE_COLORS.threat,
-                    30,
-                    threat.riskScore,
-                    threat.tags,
-                  );
-                  addLink(
-                    compId,
-                    threatId,
-                    "comp-threat",
-                    threat.riskScore ? threat.riskScore / 10 : 1,
-                  );
-
-                  (arch.mitigationIds || []).forEach((mitigationId) => {
-                    const mitigation = mitigationsData[mitigationId];
-                    if (mitigation && mitigation.threatIds?.includes(threatId)) {
-                      addNode(
-                        mitigationId,
-                        mitigation.name,
-                        "mitigation",
-                        mitigation.description,
-                        NODE_COLORS.mitigation,
-                        25,
-                        undefined,
-                        mitigation.tags,
-                      );
-                      addLink(threatId, mitigationId, "threat-mitigation", 1.5);
-                    }
-                  });
-                }
+            (arch.mitigationIds || []).forEach((mitId) => {
+              const mit = mitigationsData[mitId];
+              if (mit && mit.threatIds?.includes(threatId)) {
+                addNode(mitId, mit.name, "mitigation", mit.description, 16, {
+                  tags: mit.tags,
+                  parentCompId: compId,
+                  parentArchId: archId,
+                });
+                linkArray.push({ source: threatId, target: mitId, type: "threat-mitigation" });
               }
             });
-          }
-        });
+          });
+        }
       });
-    } catch (error) {
-      console.error("Error building graph data:", error);
-    }
+    });
 
     return { nodes: Array.from(nodeMap.values()), links: linkArray };
-  }, []);
+  }, [allArchitectures, expandedArchitectures, expandedComponents]);
 
-  // Filter nodes and links
+  // ── Filter by search & type toggles ──────────────────────────────────
   const filteredData = useMemo(() => {
     const filteredNodes = nodes.filter((node) => {
       if (!filters[node.type]) return false;
@@ -477,7 +431,7 @@ const ArchitectureNavigator: React.FC = () => {
     return { nodes: filteredNodes, links: filteredLinks };
   }, [nodes, links, filters, debouncedSearch]);
 
-  // Connected nodes count for the selected node
+  // ── Connected count for selected node ────────────────────────────────
   const connectedCount = useMemo(() => {
     if (!selectedNode) return 0;
     const ids = new Set<string>();
@@ -490,7 +444,36 @@ const ArchitectureNavigator: React.FC = () => {
     return ids.size;
   }, [selectedNode, filteredData.links]);
 
-  // Resize
+  // ── Toggle expand/collapse ───────────────────────────────────────────
+  const toggleArchitecture = useCallback((archId: string) => {
+    setExpandedArchitectures((prev) => {
+      const next = new Set(prev);
+      if (next.has(archId)) {
+        next.delete(archId);
+        // Also collapse any expanded components under this architecture
+        setExpandedComponents((prevComps) => {
+          const nextComps = new Set(prevComps);
+          const arch = architecturesData[archId];
+          if (arch) arch.keyComponents.forEach((c) => nextComps.delete(c));
+          return nextComps;
+        });
+      } else {
+        next.add(archId);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleComponent = useCallback((compId: string) => {
+    setExpandedComponents((prev) => {
+      const next = new Set(prev);
+      if (next.has(compId)) next.delete(compId);
+      else next.add(compId);
+      return next;
+    });
+  }, []);
+
+  // ── Resize ───────────────────────────────────────────────────────────
   useEffect(() => {
     const update = () => {
       if (containerRef.current) {
@@ -507,7 +490,7 @@ const ArchitectureNavigator: React.FC = () => {
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  // D3 visualization
+  // ── D3 Visualization ────────────────────────────────────────────────
   useEffect(() => {
     if (!svgRef.current || !dimensions.width || !filteredData.nodes.length) return;
 
@@ -515,182 +498,324 @@ const ArchitectureNavigator: React.FC = () => {
     svg.selectAll("*").remove();
 
     const g = svg.append("g");
+    const isMobile = dimensions.width < 768;
+    const scale = isMobile ? 0.65 : 1;
 
+    // Zoom
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.1, 4])
-      .on("zoom", (event) => {
-        g.attr("transform", event.transform);
-      });
-
+      .scaleExtent([0.15, 4])
+      .on("zoom", (event) => g.attr("transform", event.transform));
     zoomRef.current = zoom;
     svg.call(zoom);
 
+    // Click empty space to deselect
     svg.on("click", () => {
       setSelectedNode(null);
-      node.transition().duration(500).style("opacity", 1);
-      link.transition().duration(500).style("opacity", 0.6);
-      filteredData.nodes.forEach((n) => {
-        n.fx = null;
-        n.fy = null;
-      });
-      if (simulationRef.current) {
-        simulationRef.current.alpha(0.3).restart();
-      }
+      g.selectAll(".node-group").transition().duration(300).style("opacity", 1);
+      g.selectAll(".link-line").transition().duration(300).style("opacity", 0.5);
     });
 
-    const isMobile = dimensions.width < 768;
-    const mobileScale = isMobile ? 0.6 : 1;
+    const cx = dimensions.width / 2;
+    const cy = dimensions.height / 2;
 
-    const simulation = d3
-      .forceSimulation<GraphNode>(filteredData.nodes)
-      .force(
-        "link",
-        d3
-          .forceLink<GraphNode, GraphLink>(filteredData.links)
-          .id((d) => d.id)
-          .distance((d) => {
-            const base: Record<string, number> = {
-              "arch-comp": 120,
-              "comp-threat": 80,
-              "threat-mitigation": 60,
-            };
-            return (base[d.type] || 80) * mobileScale;
-          })
-          .strength((d) => d.strength * 0.8),
-      )
-      .force(
-        "charge",
-        d3.forceManyBody<GraphNode>().strength((d) => {
-          const base: Record<string, number> = {
-            architecture: -1500,
-            component: -800,
-            threat: -600,
-            mitigation: -400,
-          };
-          return (base[d.type] || -600) * mobileScale;
+    // ── Compute positions ────────────────────────────────────────────
+    const archNodes = filteredData.nodes.filter((n) => n.type === "architecture");
+    const archCount = archNodes.length;
+    const archRadius = Math.min(cx, cy) * 0.85;
+
+    // Architecture nodes in a circle
+    const archPositions = new Map<string, { x: number; y: number }>();
+    archNodes.forEach((arch, i) => {
+      const angle = (2 * Math.PI * i) / archCount - Math.PI / 2;
+      const x = cx + archRadius * Math.cos(angle);
+      const y = cy + archRadius * Math.sin(angle);
+      arch.x = x;
+      arch.y = y;
+      arch.fx = x;
+      arch.fy = y;
+      archPositions.set(arch.id, { x, y });
+    });
+
+    // Components fan out around their parent architecture
+    const compNodes = filteredData.nodes.filter((n) => n.type === "component");
+    compNodes.forEach((comp) => {
+      const parentPos = archPositions.get(comp.parentArchId || "");
+      if (!parentPos) return;
+      const siblings = compNodes.filter((c) => c.parentArchId === comp.parentArchId);
+      const idx = siblings.indexOf(comp);
+      const count = siblings.length;
+      // Fan outward from center, relative to parent
+      const baseAngle = Math.atan2(parentPos.y - cy, parentPos.x - cx);
+      const spread = Math.min(Math.PI * 1.2, count * 0.45);
+      const startAngle = baseAngle - spread / 2;
+      const angleStep = count > 1 ? spread / (count - 1) : 0;
+      const dist = 240 * scale;
+      const angle = startAngle + angleStep * idx;
+      comp.x = parentPos.x + dist * Math.cos(angle);
+      comp.y = parentPos.y + dist * Math.sin(angle);
+      comp.fx = comp.x;
+      comp.fy = comp.y;
+    });
+
+    // Threats and mitigations fan out around their parent component
+    const threatNodes = filteredData.nodes.filter((n) => n.type === "threat");
+    const mitNodes = filteredData.nodes.filter((n) => n.type === "mitigation");
+
+    threatNodes.forEach((threat) => {
+      const parentComp = compNodes.find((c) => c.id === threat.parentCompId);
+      if (!parentComp || parentComp.x == null || parentComp.y == null) return;
+      const parentArch = archPositions.get(threat.parentArchId || "");
+      if (!parentArch) return;
+      const siblings = threatNodes.filter((t) => t.parentCompId === threat.parentCompId);
+      const idx = siblings.indexOf(threat);
+      const count = siblings.length;
+      const baseAngle = Math.atan2(parentComp.y - parentArch.y, parentComp.x - parentArch.x);
+      const spread = Math.min(Math.PI * 1.0, count * 0.5);
+      const startAngle = baseAngle - spread / 2;
+      const angleStep = count > 1 ? spread / (count - 1) : 0;
+      const dist = 160 * scale;
+      const angle = startAngle + angleStep * idx;
+      threat.x = parentComp.x + dist * Math.cos(angle);
+      threat.y = parentComp.y + dist * Math.sin(angle);
+      threat.fx = threat.x;
+      threat.fy = threat.y;
+    });
+
+    mitNodes.forEach((mit) => {
+      const parentThreat = threatNodes.find((t) =>
+        filteredData.links.some((l) => {
+          const src = typeof l.source === "string" ? l.source : l.source.id;
+          const tgt = typeof l.target === "string" ? l.target : l.target.id;
+          return src === t.id && tgt === mit.id;
         }),
-      )
-      .force("center", d3.forceCenter(dimensions.width / 2, dimensions.height / 2))
-      .force(
-        "collision",
-        d3
-          .forceCollide<GraphNode>()
-          .radius((d) => (d.size + 15) * mobileScale)
-          .strength(0.8),
-      )
-      .force("x", d3.forceX(dimensions.width / 2).strength(0.05))
-      .force("y", d3.forceY(dimensions.height / 2).strength(0.05));
+      );
+      if (!parentThreat || parentThreat.x == null || parentThreat.y == null) return;
+      const parentComp = compNodes.find((c) => c.id === parentThreat.parentCompId);
+      if (!parentComp || parentComp.x == null) return;
+      const siblingMits = mitNodes.filter((m) =>
+        filteredData.links.some((l) => {
+          const src = typeof l.source === "string" ? l.source : l.source.id;
+          const tgt = typeof l.target === "string" ? l.target : l.target.id;
+          return src === parentThreat.id && tgt === m.id;
+        }),
+      );
+      const idx = siblingMits.indexOf(mit);
+      const count = siblingMits.length;
+      const baseAngle = Math.atan2(parentThreat.y - parentComp.y, parentThreat.x - parentComp.x);
+      const spread = Math.min(Math.PI * 0.8, count * 0.5);
+      const startAngle = baseAngle - spread / 2;
+      const angleStep = count > 1 ? spread / (count - 1) : 0;
+      const dist = 110 * scale;
+      const angle = startAngle + angleStep * idx;
+      mit.x = parentThreat.x + dist * Math.cos(angle);
+      mit.y = parentThreat.y + dist * Math.sin(angle);
+      mit.fx = mit.x;
+      mit.fy = mit.y;
+    });
 
-    simulationRef.current = simulation;
-
+    // ── Arrow markers ────────────────────────────────────────────────
     const defs = svg.append("defs");
     (["arch-comp", "comp-threat", "threat-mitigation"] as const).forEach((type) => {
       defs
         .append("marker")
         .attr("id", `arrow-${type}`)
-        .attr("viewBox", "0 -5 10 10")
-        .attr("refX", 15)
+        .attr("viewBox", "0 -4 8 8")
+        .attr("refX", 8)
         .attr("refY", 0)
-        .attr("markerWidth", 6)
-        .attr("markerHeight", 6)
+        .attr("markerWidth", 5)
+        .attr("markerHeight", 5)
         .attr("orient", "auto")
         .append("path")
-        .attr("d", "M0,-5L10,0L0,5")
+        .attr("d", "M0,-4L8,0L0,4")
         .attr("fill", LINK_COLORS[type]);
     });
 
-    const link = g
-      .append("g")
-      .selectAll(".link")
+    // ── Links ────────────────────────────────────────────────────────
+    g.append("g")
+      .selectAll(".link-line")
       .data(filteredData.links)
       .join("line")
-      .attr("class", "link")
-      .attr("stroke", (d) => LINK_COLORS[d.type] || "#999")
-      .attr("stroke-width", (d) => Math.max(1, d.strength * 2))
-      .attr("stroke-opacity", 0.6)
-      .attr("marker-end", (d) => `url(#arrow-${d.type})`);
-
-    const drag = d3
-      .drag<SVGGElement, GraphNode>()
-      .on("start", (event, d) => {
-        if (!event.active) simulation.alphaTarget(0.3).restart();
-        d.fx = d.x;
-        d.fy = d.y;
+      .attr("class", "link-line")
+      .attr("stroke", (d) => LINK_COLORS[d.type] || "#99999940")
+      .attr("stroke-width", (d) => (d.type === "arch-comp" ? 2 : 1.5))
+      .attr("stroke-opacity", 0.5)
+      .attr("marker-end", (d) => `url(#arrow-${d.type})`)
+      .attr("x1", (d) => {
+        const s =
+          typeof d.source === "string"
+            ? filteredData.nodes.find((n) => n.id === d.source)
+            : d.source;
+        return s?.x ?? 0;
       })
-      .on("drag", (event, d) => {
-        d.fx = event.x;
-        d.fy = event.y;
+      .attr("y1", (d) => {
+        const s =
+          typeof d.source === "string"
+            ? filteredData.nodes.find((n) => n.id === d.source)
+            : d.source;
+        return s?.y ?? 0;
       })
-      .on("end", (event) => {
-        if (!event.active) simulation.alphaTarget(0);
+      .attr("x2", (d) => {
+        const t =
+          typeof d.target === "string"
+            ? filteredData.nodes.find((n) => n.id === d.target)
+            : d.target;
+        return t?.x ?? 0;
+      })
+      .attr("y2", (d) => {
+        const t =
+          typeof d.target === "string"
+            ? filteredData.nodes.find((n) => n.id === d.target)
+            : d.target;
+        return t?.y ?? 0;
       });
 
-    const node = g
+    // ── Nodes ────────────────────────────────────────────────────────
+    const nodeGroups = g
       .append("g")
-      .selectAll(".node")
+      .selectAll(".node-group")
       .data(filteredData.nodes)
       .join("g")
-      .attr("class", "node")
-      .style("cursor", "pointer")
-      .call(drag)
-      .on("click", (event, d) => {
-        setSelectedNode(d);
-        event.stopPropagation();
+      .attr("class", "node-group")
+      .attr("transform", (d) => `translate(${d.x ?? 0},${d.y ?? 0})`)
+      .style("cursor", "pointer");
 
-        const connectedNodeIds = new Set<string>();
-        const connectedNodes: GraphNode[] = [];
+    // Glow ring for architectures
+    nodeGroups
+      .filter((d) => d.type === "architecture")
+      .append("circle")
+      .attr("r", (d) => (d.size + 6) * scale)
+      .attr("fill", "none")
+      .attr("stroke", (d) => d.color)
+      .attr("stroke-width", 2)
+      .attr("stroke-opacity", 0.2);
 
-        filteredData.links.forEach((l) => {
-          const sourceId = typeof l.source === "string" ? l.source : l.source.id;
-          const targetId = typeof l.target === "string" ? l.target : l.target.id;
-          if (sourceId === d.id) {
-            connectedNodeIds.add(targetId);
-            const tn = filteredData.nodes.find((n) => n.id === targetId);
-            if (tn) connectedNodes.push(tn);
-          }
-          if (targetId === d.id) {
-            connectedNodeIds.add(sourceId);
-            const sn = filteredData.nodes.find((n) => n.id === sourceId);
-            if (sn) connectedNodes.push(sn);
-          }
-        });
+    // Expanded indicator ring
+    nodeGroups
+      .filter((d) => d.type === "architecture" && expandedArchitectures.has(d.id))
+      .append("circle")
+      .attr("r", (d) => (d.size + 10) * scale)
+      .attr("fill", "none")
+      .attr("stroke", (d) => d.color)
+      .attr("stroke-width", 1.5)
+      .attr("stroke-dasharray", "4,3")
+      .attr("stroke-opacity", 0.35);
 
-        node
-          .transition()
-          .duration(500)
-          .style("opacity", (n) => (n.id === d.id || connectedNodeIds.has(n.id) ? 1 : 0.1));
+    // Expanded indicator for components
+    nodeGroups
+      .filter((d) => d.type === "component" && expandedComponents.has(d.id))
+      .append("circle")
+      .attr("r", (d) => (d.size + 6) * scale)
+      .attr("fill", "none")
+      .attr("stroke", (d) => d.color)
+      .attr("stroke-width", 1.5)
+      .attr("stroke-dasharray", "3,2")
+      .attr("stroke-opacity", 0.35);
 
-        link
-          .transition()
-          .duration(500)
-          .style("opacity", (l) => {
-            const src = typeof l.source === "string" ? l.source : l.source.id;
-            const tgt = typeof l.target === "string" ? l.target : l.target.id;
-            return src === d.id || tgt === d.id ? 1 : 0.05;
-          });
+    // Main circle
+    nodeGroups
+      .append("circle")
+      .attr("r", (d) => d.size * scale)
+      .attr("fill", (d) => d.color)
+      .attr("stroke", "hsl(var(--background))")
+      .attr("stroke-width", (d) => (d.type === "architecture" ? 3 : 2))
+      .attr("opacity", (d) => (d.type === "architecture" ? 1 : 0.9));
 
-        if (connectedNodes.length > 0) {
-          const cx = d.x || 0;
-          const cy = d.y || 0;
-          const radius = 150;
-          connectedNodes.forEach((cn, i) => {
-            const angle = (2 * Math.PI * i) / connectedNodes.length;
-            cn.fx = cx + radius * Math.cos(angle);
-            cn.fy = cy + radius * Math.sin(angle);
-          });
-          d.fx = cx;
-          d.fy = cy;
-          if (simulationRef.current) simulationRef.current.alpha(0.3).restart();
-        }
+    // Risk ring for threats
+    nodeGroups
+      .filter((d) => d.type === "threat" && d.riskScore != null && d.riskScore > 0)
+      .append("circle")
+      .attr("r", (d) => (d.size + 4) * scale)
+      .attr("fill", "none")
+      .attr("stroke", (d) => {
+        const r = d.riskScore || 0;
+        return r >= 8 ? "#dc2626" : r >= 6 ? "#ea580c" : "#eab308";
       })
+      .attr("stroke-width", 2)
+      .attr("stroke-dasharray", "3,3");
+
+    // Type letter inside node
+    nodeGroups
+      .append("text")
+      .attr("text-anchor", "middle")
+      .attr("dy", (d) => (d.type === "architecture" ? 1 : 1))
+      .attr("font-size", (d) => {
+        const sizes: Record<string, number> = {
+          architecture: 16,
+          component: 11,
+          threat: 9,
+          mitigation: 8,
+        };
+        return `${(sizes[d.type] || 10) * scale}px`;
+      })
+      .attr("font-weight", "700")
+      .attr("fill", "#fff")
+      .attr("pointer-events", "none")
+      .text((d) => {
+        if (d.type === "architecture") return d.name.split(" ")[0].charAt(0).toUpperCase();
+        return d.type.charAt(0).toUpperCase();
+      });
+
+    // Label below node
+    nodeGroups
+      .append("text")
+      .attr("text-anchor", "middle")
+      .attr("dy", (d) => (d.size + 14) * scale)
+      .attr("font-size", (d) => {
+        const sizes: Record<string, number> = {
+          architecture: 12,
+          component: 10,
+          threat: 9,
+          mitigation: 8,
+        };
+        return `${sizes[d.type] * scale}px`;
+      })
+      .attr("font-weight", (d) => (d.type === "architecture" ? "600" : "400"))
+      .attr("fill", "hsl(var(--foreground))")
+      .attr("pointer-events", "none")
+      .text((d) => {
+        const maxLen = d.type === "architecture" ? 22 : d.type === "component" ? 18 : 14;
+        return truncate(d.name, isMobile ? maxLen - 5 : maxLen);
+      });
+
+    // Expand hint for architectures (small + icon)
+    nodeGroups
+      .filter((d) => d.type === "architecture")
+      .append("text")
+      .attr("text-anchor", "middle")
+      .attr("dy", (d) => (d.size + 26) * scale)
+      .attr("font-size", `${9 * scale}px`)
+      .attr("fill", "hsl(var(--muted-foreground))")
+      .attr("pointer-events", "none")
+      .text((d) => (expandedArchitectures.has(d.id) ? "click to collapse" : "click to explore"));
+
+    // Expand hint for components
+    nodeGroups
+      .filter((d) => d.type === "component" && expandedArchitectures.has(d.parentArchId || ""))
+      .append("text")
+      .attr("text-anchor", "middle")
+      .attr("dy", (d) => (d.size + 22) * scale)
+      .attr("font-size", `${8 * scale}px`)
+      .attr("fill", "hsl(var(--muted-foreground))")
+      .attr("pointer-events", "none")
+      .text((d) => (expandedComponents.has(d.id) ? "collapse" : "expand threats"));
+
+    // ── Interactions ─────────────────────────────────────────────────
+
+    nodeGroups.on("click", (event, d) => {
+      event.stopPropagation();
+      setSelectedNode(d);
+
+      if (d.type === "architecture") {
+        toggleArchitecture(d.id);
+      } else if (d.type === "component") {
+        toggleComponent(d.id);
+      }
+    });
+
+    nodeGroups
       .on("mouseover", (event, d) => {
-        setTooltip({
-          x: event.clientX,
-          y: event.clientY,
-          name: d.name,
-          type: d.type,
-        });
+        setTooltip({ x: event.clientX, y: event.clientY, name: d.name, type: d.type });
 
         const connected = new Set<string>();
         filteredData.links.forEach((l) => {
@@ -700,163 +825,100 @@ const ArchitectureNavigator: React.FC = () => {
           if (tgt === d.id) connected.add(src);
         });
 
-        node.style("opacity", (n) => (n.id === d.id || connected.has(n.id) ? 1 : 0.3));
-        link.style("opacity", (l) => {
-          const src = typeof l.source === "string" ? l.source : l.source.id;
-          const tgt = typeof l.target === "string" ? l.target : l.target.id;
-          return src === d.id || tgt === d.id ? 1 : 0.1;
-        });
+        g.selectAll<SVGGElement, GraphNode>(".node-group")
+          .transition()
+          .duration(200)
+          .style("opacity", (n) => (n.id === d.id || connected.has(n.id) ? 1 : 0.25));
+        g.selectAll<SVGLineElement, GraphLink>(".link-line")
+          .transition()
+          .duration(200)
+          .style("opacity", (l) => {
+            const src = typeof l.source === "string" ? l.source : l.source.id;
+            const tgt = typeof l.target === "string" ? l.target : l.target.id;
+            return src === d.id || tgt === d.id ? 0.8 : 0.08;
+          });
       })
       .on("mousemove", (event) => {
         setTooltip((prev) => (prev ? { ...prev, x: event.clientX, y: event.clientY } : null));
       })
       .on("mouseout", () => {
         setTooltip(null);
-        node.style("opacity", 1);
-        link.style("opacity", 0.6);
+        g.selectAll(".node-group").transition().duration(300).style("opacity", 1);
+        g.selectAll(".link-line").transition().duration(300).style("opacity", 0.5);
       });
 
-    // Circles
-    node
-      .append("circle")
-      .attr("r", (d) => d.size * mobileScale)
-      .attr("fill", (d) => d.color)
-      .attr("stroke", "hsl(var(--background))")
-      .attr("stroke-width", 2);
-
-    // Risk indicators
-    node
-      .filter((d) => d.type === "threat" && d.riskScore != null && d.riskScore > 0)
-      .append("circle")
-      .attr("r", (d) => (d.size + 5) * mobileScale)
-      .attr("fill", "none")
-      .attr("stroke", (d) => {
-        const risk = d.riskScore || 0;
-        return risk >= 8 ? "#dc2626" : risk >= 6 ? "#ea580c" : "#eab308";
-      })
-      .attr("stroke-width", 3)
-      .attr("stroke-dasharray", "5,5");
-
-    // Labels
-    node
-      .append("text")
-      .attr("text-anchor", "middle")
-      .attr("dy", (d) => (d.size + 20) * mobileScale)
-      .attr("font-size", (d) => {
-        const sizes: Record<string, number> = {
-          architecture: 14,
-          component: 12,
-          threat: 10,
-          mitigation: 9,
-        };
-        return `${(sizes[d.type] || 10) * mobileScale}px`;
-      })
-      .attr("font-weight", (d) => (d.type === "architecture" ? "bold" : "normal"))
-      .attr("fill", "hsl(var(--foreground))")
-      .text((d) => {
-        const max = isMobile
-          ? d.type === "architecture"
-            ? 15
-            : 10
-          : d.type === "architecture"
-            ? 20
-            : 15;
-        return d.name.length > max ? d.name.substring(0, max) + "..." : d.name;
-      });
-
-    // Type letter
-    node
-      .append("text")
-      .attr("text-anchor", "middle")
-      .attr("dy", 5)
-      .attr("font-size", "10px")
-      .attr("font-weight", "bold")
-      .attr("fill", "#fff")
-      .text((d) => d.type.charAt(0).toUpperCase());
-
-    // Tick
-    simulation.on("tick", () => {
-      link
-        .attr("x1", (d) => (d.source as GraphNode).x || 0)
-        .attr("y1", (d) => (d.source as GraphNode).y || 0)
-        .attr("x2", (d) => (d.target as GraphNode).x || 0)
-        .attr("y2", (d) => (d.target as GraphNode).y || 0);
-      node.attr("transform", (d) => `translate(${d.x || 0},${d.y || 0})`);
-    });
-
-    // Fit to view after initial layout
-    setTimeout(() => {
+    // ── Fit to view ──────────────────────────────────────────────────
+    requestAnimationFrame(() => {
       const bounds = (g.node() as SVGGElement)?.getBBox();
       if (bounds && bounds.width > 0 && bounds.height > 0) {
-        const scale =
-          Math.min(dimensions.width / bounds.width, dimensions.height / bounds.height) * 0.6;
-        const tx = dimensions.width / 2 - scale * (bounds.x + bounds.width / 2);
-        const ty = dimensions.height / 2 - scale * (bounds.y + bounds.height / 2);
+        const fitScale =
+          Math.min(
+            dimensions.width / (bounds.width + 80),
+            dimensions.height / (bounds.height + 80),
+          ) * 0.9;
+        const tx = dimensions.width / 2 - fitScale * (bounds.x + bounds.width / 2);
+        const ty = dimensions.height / 2 - fitScale * (bounds.y + bounds.height / 2);
         svg
           .transition()
-          .duration(1000)
-          .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+          .duration(600)
+          .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(fitScale));
       }
-    }, 1000);
+    });
 
     return () => {
-      simulation.stop();
+      svg.on(".zoom", null);
     };
-  }, [filteredData, dimensions]);
+  }, [
+    filteredData,
+    dimensions,
+    expandedArchitectures,
+    expandedComponents,
+    toggleArchitecture,
+    toggleComponent,
+  ]);
 
-  // Zoom controls using stored ref
+  // ── Zoom controls ────────────────────────────────────────────────────
   const zoomIn = useCallback(() => {
-    if (svgRef.current && zoomRef.current) {
+    if (svgRef.current && zoomRef.current)
       d3.select(svgRef.current).transition().duration(300).call(zoomRef.current.scaleBy, 1.5);
-    }
   }, []);
 
   const zoomOut = useCallback(() => {
-    if (svgRef.current && zoomRef.current) {
+    if (svgRef.current && zoomRef.current)
       d3.select(svgRef.current)
         .transition()
         .duration(300)
         .call(zoomRef.current.scaleBy, 1 / 1.5);
-    }
   }, []);
 
   const resetZoom = useCallback(() => {
-    if (svgRef.current && zoomRef.current) {
+    if (svgRef.current && zoomRef.current)
       d3.select(svgRef.current)
         .transition()
         .duration(300)
         .call(zoomRef.current.transform, d3.zoomIdentity);
-    }
   }, []);
 
   const centerView = useCallback(() => {
     if (svgRef.current && zoomRef.current) {
       const svg = d3.select(svgRef.current);
-      const g = svg.select("g");
-      const bounds = (g.node() as SVGGElement)?.getBBox();
+      const gNode = svg.select("g");
+      const bounds = (gNode.node() as SVGGElement)?.getBBox();
       if (bounds && bounds.width > 0 && bounds.height > 0) {
-        const scale =
-          Math.min(dimensions.width / bounds.width, dimensions.height / bounds.height) * 0.6;
-        const tx = dimensions.width / 2 - scale * (bounds.x + bounds.width / 2);
-        const ty = dimensions.height / 2 - scale * (bounds.y + bounds.height / 2);
+        const fitScale =
+          Math.min(
+            dimensions.width / (bounds.width + 80),
+            dimensions.height / (bounds.height + 80),
+          ) * 0.9;
+        const tx = dimensions.width / 2 - fitScale * (bounds.x + bounds.width / 2);
+        const ty = dimensions.height / 2 - fitScale * (bounds.y + bounds.height / 2);
         svg
           .transition()
           .duration(750)
-          .call(zoomRef.current.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+          .call(zoomRef.current.transform, d3.zoomIdentity.translate(tx, ty).scale(fitScale));
       }
     }
   }, [dimensions]);
-
-  const toggleSimulation = useCallback(() => {
-    if (simulationRef.current) {
-      if (isSimulationRunning) {
-        simulationRef.current.stop();
-      } else {
-        simulationRef.current.restart();
-      }
-      setIsSimulationRunning(!isSimulationRunning);
-    }
-  }, [isSimulationRunning]);
 
   const toggleFullscreen = useCallback(async () => {
     try {
@@ -878,7 +940,14 @@ const ArchitectureNavigator: React.FC = () => {
     return () => document.removeEventListener("fullscreenchange", handler);
   }, []);
 
-  if (nodes.length === 0) {
+  const collapseAll = useCallback(() => {
+    setExpandedArchitectures(new Set());
+    setExpandedComponents(new Set());
+    setSelectedNode(null);
+  }, []);
+
+  // ── No data guard ────────────────────────────────────────────────────
+  if (allArchitectures.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -890,6 +959,7 @@ const ArchitectureNavigator: React.FC = () => {
   }
 
   const detailPath = selectedNode ? getDetailPath(selectedNode) : null;
+  const hasExpanded = expandedArchitectures.size > 0;
 
   return (
     <div
@@ -911,9 +981,7 @@ const ArchitectureNavigator: React.FC = () => {
           {sidebarOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
           Controls
         </Button>
-        <span className="text-xs text-muted-foreground">
-          {filteredData.nodes.length} nodes, {filteredData.links.length} links
-        </span>
+        <span className="text-xs text-muted-foreground">{filteredData.nodes.length} nodes</span>
       </div>
 
       {/* Controls Panel */}
@@ -950,7 +1018,7 @@ const ArchitectureNavigator: React.FC = () => {
               <p className="text-xs text-muted-foreground">No matching nodes found.</p>
             )}
 
-            {/* View controls */}
+            {/* Navigation controls */}
             <div>
               <div className="text-xs font-medium text-muted-foreground mb-1.5">Navigation</div>
               <div className="grid grid-cols-4 gap-1.5">
@@ -993,18 +1061,8 @@ const ArchitectureNavigator: React.FC = () => {
               </div>
             </div>
 
-            {/* Simulation + Fullscreen */}
+            {/* Fullscreen + Collapse All */}
             <div className="flex gap-1.5">
-              <Button
-                onClick={toggleSimulation}
-                variant="outline"
-                size="sm"
-                aria-label={isSimulationRunning ? "Pause simulation" : "Resume simulation"}
-                className="flex-1 h-7 text-xs gap-1"
-              >
-                {isSimulationRunning ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-                {isSimulationRunning ? "Pause" : "Play"}
-              </Button>
               <Button
                 onClick={toggleFullscreen}
                 variant="outline"
@@ -1015,9 +1073,20 @@ const ArchitectureNavigator: React.FC = () => {
                 {isFullscreen ? <Minimize className="h-3 w-3" /> : <Maximize className="h-3 w-3" />}
                 {isFullscreen ? "Exit" : "Fullscreen"}
               </Button>
+              {hasExpanded && (
+                <Button
+                  onClick={collapseAll}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 h-7 text-xs gap-1"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  Collapse All
+                </Button>
+              )}
             </div>
 
-            {/* Filters */}
+            {/* Type filters */}
             <div>
               <div className="text-xs font-medium text-muted-foreground mb-1.5">Show / Hide</div>
               <div className="grid grid-cols-2 gap-y-1.5 gap-x-3">
@@ -1044,18 +1113,15 @@ const ArchitectureNavigator: React.FC = () => {
             </div>
 
             {/* Help */}
-            <details
-              open={helpOpen}
-              onToggle={(e) => setHelpOpen((e.target as HTMLDetailsElement).open)}
-            >
+            <details>
               <summary className="text-xs font-medium text-muted-foreground cursor-pointer select-none">
                 Help
               </summary>
               <div className="text-xs text-muted-foreground space-y-0.5 mt-1.5">
-                <p>Click a node to select it and highlight connections.</p>
-                <p>Drag nodes to reposition. They stay where you drop them.</p>
-                <p>Scroll to zoom. Click empty space to deselect all.</p>
-                <p>On touch devices, pinch to zoom and drag to pan.</p>
+                <p>Click an architecture node to expand its components.</p>
+                <p>Click a component to reveal its threats and mitigations.</p>
+                <p>Scroll to zoom. Drag the background to pan.</p>
+                <p>Click empty space to deselect.</p>
               </div>
             </details>
           </CardContent>
@@ -1077,9 +1143,11 @@ const ArchitectureNavigator: React.FC = () => {
                 <Badge variant="outline" className="capitalize text-xs">
                   {selectedNode.type}
                 </Badge>
-                <span className="text-xs text-muted-foreground">
-                  {connectedCount} connection{connectedCount !== 1 ? "s" : ""}
-                </span>
+                {connectedCount > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    {connectedCount} connection{connectedCount !== 1 ? "s" : ""}
+                  </span>
+                )}
               </div>
 
               <p className="text-xs text-muted-foreground leading-relaxed">
@@ -1149,7 +1217,7 @@ const ArchitectureNavigator: React.FC = () => {
               height={dimensions.height}
               className="w-full h-full block"
               role="img"
-              aria-label="Interactive architecture explorer graph showing architectures, components, threats, and mitigations"
+              aria-label="Interactive architecture explorer graph"
             />
           </CardContent>
         </Card>

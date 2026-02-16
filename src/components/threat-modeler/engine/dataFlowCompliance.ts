@@ -1,4 +1,5 @@
 import type { CanvasNode, CanvasEdge } from "../types";
+import type { NodeRiskProfile } from "./nodeProfile";
 
 export interface ComplianceViolation {
   id: string;
@@ -13,6 +14,7 @@ export interface ComplianceViolation {
 export function runDataFlowComplianceCheck(
   nodes: CanvasNode[],
   edges: CanvasEdge[],
+  profiles?: Map<string, NodeRiskProfile>,
 ): ComplianceViolation[] {
   const violations: ComplianceViolation[] = [];
   const nodeMap = new Map(nodes.map((n) => [n.id, n]));
@@ -21,6 +23,8 @@ export function runDataFlowComplianceCheck(
     const source = nodeMap.get(edge.source);
     const target = nodeMap.get(edge.target);
     if (!source?.data || !target?.data || !edge.data) continue;
+    const srcProfile = profiles?.get(edge.source);
+    const tgtProfile = profiles?.get(edge.target);
 
     if (edge.data.containsPII && !edge.data.encrypted) {
       violations.push({
@@ -105,6 +109,46 @@ export function runDataFlowComplianceCheck(
         affectedEdgeIds: [edge.id!],
         affectedNodeIds: [edge.source, edge.target],
         rule: "External connections must use HTTPS or equivalent encrypted protocol",
+      });
+    }
+
+    // Sensitivity-aware: credentials/regulated data requires BOTH encryption AND auth
+    const srcSensitive = srcProfile?.handlesCredentials || srcProfile?.handlesRegulatedData;
+    const tgtSensitive = tgtProfile?.handlesCredentials || tgtProfile?.handlesRegulatedData;
+    if (srcSensitive || tgtSensitive) {
+      const sensitiveNode = srcSensitive ? source : target;
+      const sensitivityType = (srcProfile ?? tgtProfile)?.handlesCredentials
+        ? "credentials"
+        : "regulated data";
+      if (!edge.data.encrypted || edge.data.authentication === "None") {
+        const missing = [];
+        if (!edge.data.encrypted) missing.push("encryption");
+        if (edge.data.authentication === "None") missing.push("authentication");
+        violations.push({
+          id: `dfc-sensitive-flow-${edge.id}`,
+          name: `Sensitive Data Flow Missing ${missing.join(" & ")}`,
+          description: `"${sensitiveNode.data.label}" handles ${sensitivityType}. The data flow between "${source.data.label}" and "${target.data.label}" is missing ${missing.join(" and ")}.`,
+          severity: "critical",
+          affectedEdgeIds: [edge.id!],
+          affectedNodeIds: [edge.source, edge.target],
+          rule: `Data flows involving ${sensitivityType} must have both encryption and authentication`,
+        });
+      }
+    }
+
+    // PII flowing to dangerous-access nodes
+    const srcPII = srcProfile?.handlesPII;
+    const tgtDangerous =
+      tgtProfile?.accessDanger === "dangerous" || tgtProfile?.accessDanger === "critical";
+    if (srcPII && tgtDangerous) {
+      violations.push({
+        id: `dfc-pii-to-dangerous-${edge.id}`,
+        name: "PII Flowing to High-Risk Component",
+        description: `PII from "${source.data.label}" flows to "${target.data.label}" which has ${tgtProfile?.accessDanger} access level. This combination poses elevated data breach risk.`,
+        severity: "critical",
+        affectedEdgeIds: [edge.id!],
+        affectedNodeIds: [edge.source, edge.target],
+        rule: "PII must not flow to components with dangerous or critical access without strict controls",
       });
     }
   }

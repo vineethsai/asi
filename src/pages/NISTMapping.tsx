@@ -27,7 +27,6 @@ import { Helmet } from "react-helmet";
 import {
   Search,
   Shield,
-  Target,
   ExternalLink,
   GitBranch,
   ArrowRight,
@@ -75,12 +74,6 @@ interface GraphNode {
   description?: string;
   color: string;
   parentId?: string;
-  x?: number;
-  y?: number;
-  fx?: number | null;
-  fy?: number | null;
-  expanded?: boolean;
-  visible?: boolean;
   data?: GraphNodeData;
 }
 
@@ -884,7 +877,6 @@ export const NISTMapping = () => {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [selectedNodeData, setSelectedNodeData] = useState<GraphNode | null>(null);
-  const [focusMode, setFocusMode] = useState<boolean>(false);
 
   // Convert AISVS data for easier access
   const aisvsCategories = Object.values(aisvsData);
@@ -894,7 +886,6 @@ export const NISTMapping = () => {
     setExpandedNodes(new Set(["govern"]));
     setSelectedNode(null);
     setSelectedNodeData(null);
-    setFocusMode(false);
   }, []);
 
   // Handle URL hash-based navigation
@@ -1380,7 +1371,6 @@ export const NISTMapping = () => {
           parentId: n.parentId,
           data: n.data as GraphNodeData,
         });
-        setFocusMode(false);
       });
 
       // Hover tooltip
@@ -1445,7 +1435,6 @@ export const NISTMapping = () => {
             data: aisvsCategory as GraphNodeData,
           });
         }
-        setFocusMode(false);
       });
 
       ag.on("mouseenter", function () {
@@ -1587,11 +1576,15 @@ export const NISTMapping = () => {
                   placeholder="Search NIST functions, categories, or subcategories..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  aria-label="Search NIST functions, categories, or subcategories"
                   className="pl-10 border-border/50 focus:border-primary/50 bg-background/50 focus:bg-background transition-all duration-200"
                 />
               </div>
               <Select value={selectedFunction} onValueChange={setSelectedFunction}>
-                <SelectTrigger className="border-border/50 focus:border-primary/50 bg-background/50 focus:bg-background transition-all duration-200">
+                <SelectTrigger
+                  aria-label="Filter by NIST function"
+                  className="border-border/50 focus:border-primary/50 bg-background/50 focus:bg-background transition-all duration-200"
+                >
                   <div className="flex items-center gap-2">
                     <Shield className="h-4 w-4 text-muted-foreground" />
                     <SelectValue placeholder="All NIST Functions" />
@@ -1613,7 +1606,10 @@ export const NISTMapping = () => {
                 </SelectContent>
               </Select>
               <Select value={selectedAISVS} onValueChange={setSelectedAISVS}>
-                <SelectTrigger className="border-border/50 focus:border-primary/50 bg-background/50 focus:bg-background transition-all duration-200">
+                <SelectTrigger
+                  aria-label="Filter by AISVS category"
+                  className="border-border/50 focus:border-primary/50 bg-background/50 focus:bg-background transition-all duration-200"
+                >
                   <div className="flex items-center gap-2">
                     <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
                     <SelectValue placeholder="All AISVS Categories" />
@@ -1980,1127 +1976,130 @@ export const NISTMapping = () => {
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="relative w-full h-[650px] border-b border-border/50 bg-muted/30 overflow-hidden">
-                    <svg ref={svgRef} width="100%" height="100%" />
-
-                    {/* Modern Interactive Controls */}
-                    <div className="absolute top-4 right-4 flex flex-col gap-3 z-50">
-                      {/* Control Panel */}
-                      <div className="bg-background/95 dark:bg-background/95 backdrop-blur-sm border border-border/50 rounded-xl p-4 shadow-lg z-50">
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-                          <span className="text-xs font-semibold text-foreground">
-                            Graph Controls
-                          </span>
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setExpandedNodes(new Set());
-                              setSelectedNode(null);
-                              setSelectedNodeData(null);
-                              setFocusMode(false);
-                            }}
-                            className="text-xs h-8 bg-background hover:bg-accent border text-foreground hover:text-accent-foreground transition-all duration-200 cursor-pointer select-none"
-                            style={{ pointerEvents: "auto" }}
-                          >
-                            <RotateCcw className="h-3 w-3 mr-1" />
-                            Reset Graph
-                          </Button>
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              const newExpanded = new Set<string>();
-                              nistAIRMF.forEach((func) => {
-                                newExpanded.add(func.id);
-                                func.categories.forEach((cat) => {
-                                  newExpanded.add(`${func.id}-${cat.id}`);
-                                });
-                              });
-                              setExpandedNodes(newExpanded);
-                            }}
-                            className="text-xs h-8 bg-background hover:bg-accent border text-foreground hover:text-accent-foreground transition-all duration-200 cursor-pointer select-none"
-                            style={{ pointerEvents: "auto" }}
-                          >
-                            <Maximize className="h-3 w-3 mr-1" />
-                            Expand All
-                          </Button>
-
-                          <Button
-                            variant={focusMode ? "default" : "outline"}
-                            size="sm"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setFocusMode(!focusMode);
-                              if (!focusMode && !selectedNode) {
-                                return;
-                              }
-                            }}
-                            disabled={!selectedNode}
-                            className={`text-xs h-8 transition-all duration-200 cursor-pointer select-none ${
-                              focusMode
-                                ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
-                                : "bg-background hover:bg-accent border text-foreground hover:text-accent-foreground"
-                            } ${!selectedNode ? "opacity-50 cursor-not-allowed" : ""}`}
-                            style={{ pointerEvents: "auto" }}
-                          >
-                            <Target className="h-3 w-3 mr-1" />
-                            {focusMode ? "Exit Focus" : "Focus Mode"}
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Status Panel */}
-                      <div className="bg-background/95 dark:bg-background/95 backdrop-blur-sm border border-border/50 rounded-xl p-4 shadow-lg z-50">
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                          <span className="text-xs font-semibold text-foreground">
-                            Graph Status
-                          </span>
-                        </div>
-
-                        {focusMode && (
-                          <div className="flex items-center gap-2 mb-3">
-                            <Target className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-xs font-medium text-foreground">
-                              Focus Mode Active
-                            </span>
-                          </div>
-                        )}
-
-                        <div className="space-y-2 text-xs">
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Expanded:</span>
-                            <span className="font-medium text-foreground">
-                              {expandedNodes.size}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Focus Mode:</span>
-                            <span className="font-medium text-foreground">
-                              {focusMode ? "On" : "Off"}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Quick Tips */}
-                        <div className="mt-4 pt-3 border-t border-border/30">
-                          <div className="text-xs text-muted-foreground space-y-1">
-                            <div className="flex items-center gap-2">
-                              <div className="w-1 h-1 rounded-full bg-blue-500"></div>
-                              <span>Click nodes to expand/collapse</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="w-1 h-1 rounded-full bg-green-500"></div>
-                              <span>Drag nodes to reposition</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="w-1 h-1 rounded-full bg-purple-500"></div>
-                              <span>Select node for focus mode</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <svg
+                      ref={svgRef}
+                      width="100%"
+                      height="100%"
+                      role="img"
+                      aria-label="Interactive tree visualization of NIST AI RMF functions mapped to AISVS security categories"
+                    />
                   </div>
 
-                  {/* Selected Node Information Panel */}
+                  {/* Selected Node Detail */}
                   {selectedNodeData && (
-                    <div className="mt-4">
-                      {focusMode && (
-                        <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                          <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
-                            <Target className="h-4 w-4" />
-                            <span className="font-medium text-sm">Focus Mode Active</span>
+                    <div className="p-4 border-t border-border/50">
+                      <div className="flex items-start gap-3">
+                        <div
+                          className="w-3 h-3 rounded-full mt-1 shrink-0"
+                          style={{ backgroundColor: selectedNodeData.color }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-semibold text-sm">{selectedNodeData.label}</h4>
+                            <Badge variant="outline" className="text-xs">
+                              {selectedNodeData.type === "nist-function" && "NIST Function"}
+                              {selectedNodeData.type === "nist-category" && "NIST Category"}
+                              {selectedNodeData.type === "nist-subcategory" && "NIST Subcategory"}
+                              {selectedNodeData.type === "aisvs-category" && "AISVS Category"}
+                            </Badge>
                           </div>
-                          <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                            Showing only "{selectedNodeData.label}" and its direct connections.
-                            Click the same node again or use "Exit Focus" to return to full view.
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {selectedNodeData.description}
                           </p>
-                        </div>
-                      )}
-                      <Card className="border-2" style={{ borderColor: selectedNodeData.color }}>
-                        <CardHeader className="pb-3 bg-card">
-                          <CardTitle className="flex items-center gap-3">
-                            {selectedNodeData.type === "nist-function" && (
-                              <Shield className="h-5 w-5 text-muted-foreground" />
-                            )}
-                            {selectedNodeData.type === "nist-category" && (
-                              <Target className="h-4 w-4 text-muted-foreground" />
-                            )}
-                            {selectedNodeData.type === "nist-subcategory" && (
-                              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-                            )}
-                            {selectedNodeData.type === "aisvs-category" && (
-                              <Network className="h-4 w-4 text-muted-foreground" />
-                            )}
-                            <div>
-                              <h3
-                                className="text-lg font-bold"
-                                style={{ color: selectedNodeData.color }}
-                              >
-                                {selectedNodeData.label}: {selectedNodeData.description}
-                              </h3>
-                              <Badge variant="outline" className="mt-1">
-                                {selectedNodeData.type === "nist-function" &&
-                                  "NIST AI RMF Function"}
-                                {selectedNodeData.type === "nist-category" &&
-                                  "NIST AI RMF Category"}
-                                {selectedNodeData.type === "nist-subcategory" &&
-                                  "NIST AI RMF Subcategory"}
-                                {selectedNodeData.type === "aisvs-category" &&
-                                  "OWASP AISVS Category"}
-                              </Badge>
+
+                          {selectedNodeData.type === "nist-function" && (
+                            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                              <span className="text-muted-foreground">
+                                {(selectedNodeData.data as NISTFunction).categories.length}{" "}
+                                categories,{" "}
+                                {(selectedNodeData.data as NISTFunction).categories.reduce(
+                                  (t: number, c: NISTCategory) => t + c.subcategories.length,
+                                  0,
+                                )}{" "}
+                                subcategories
+                              </span>
+                              <span className="text-muted-foreground">
+                                {expandedNodes.has(selectedNodeData.id)
+                                  ? "Click to collapse"
+                                  : "Click to expand"}
+                              </span>
                             </div>
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="pt-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Left Column - Description and Details */}
-                            <div>
-                              <h4 className="font-semibold mb-3 flex items-center gap-2">
-                                <BookOpen className="h-4 w-4" />
-                                Description & Purpose
-                              </h4>
+                          )}
 
-                              {selectedNodeData.type === "nist-function" && (
-                                <div className="space-y-4">
-                                  <p className="text-sm text-muted-foreground leading-relaxed">
-                                    {selectedNodeData.data.description}
-                                  </p>
+                          {selectedNodeData.type === "nist-category" && (
+                            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                              <span className="text-muted-foreground">
+                                {(selectedNodeData.data as NISTCategory).subcategories.length}{" "}
+                                subcategories
+                              </span>
+                              <span className="text-muted-foreground">
+                                Part of {selectedNodeData.parentId?.toUpperCase()}
+                              </span>
+                            </div>
+                          )}
 
-                                  <div className="p-4 bg-muted/50 rounded-lg">
-                                    <h5 className="font-medium text-sm mb-3">
-                                      Key Responsibilities & Activities:
-                                    </h5>
-                                    <ul className="text-xs text-muted-foreground space-y-2">
-                                      {selectedNodeData.id === "govern" && (
-                                        <>
-                                          <li className="flex items-start gap-2">
-                                            <span className="text-blue-600 dark:text-blue-400 font-bold">
-                                              •
-                                            </span>
-                                            <span>
-                                              <strong>Governance Structure:</strong> Establish AI
-                                              governance boards, define roles and responsibilities,
-                                              and create accountability frameworks
-                                            </span>
-                                          </li>
-                                          <li className="flex items-start gap-2">
-                                            <span className="text-blue-600 dark:text-blue-400 font-bold">
-                                              •
-                                            </span>
-                                            <span>
-                                              <strong>Policy Development:</strong> Create
-                                              comprehensive AI policies covering ethics, risk
-                                              management, and compliance requirements
-                                            </span>
-                                          </li>
-                                          <li className="flex items-start gap-2">
-                                            <span className="text-blue-600 dark:text-blue-400 font-bold">
-                                              •
-                                            </span>
-                                            <span>
-                                              <strong>Human-AI Alignment:</strong> Design meaningful
-                                              human oversight mechanisms and decision-making
-                                              processes
-                                            </span>
-                                          </li>
-                                          <li className="flex items-start gap-2">
-                                            <span className="text-blue-600 dark:text-blue-400 font-bold">
-                                              •
-                                            </span>
-                                            <span>
-                                              <strong>Risk Appetite:</strong> Define organizational
-                                              tolerance for AI risks and establish clear boundaries
-                                            </span>
-                                          </li>
-                                        </>
-                                      )}
-                                      {selectedNodeData.id === "map" && (
-                                        <>
-                                          <li className="flex items-start gap-2">
-                                            <span className="text-green-600 dark:text-green-400 font-bold">
-                                              •
-                                            </span>
-                                            <span>
-                                              <strong>Context Analysis:</strong> Document AI system
-                                              purpose, use cases, and operational environment
-                                              thoroughly
-                                            </span>
-                                          </li>
-                                          <li className="flex items-start gap-2">
-                                            <span className="text-green-600 dark:text-green-400 font-bold">
-                                              •
-                                            </span>
-                                            <span>
-                                              <strong>Risk Categorization:</strong> Classify AI
-                                              systems by impact level (high, moderate, low) and risk
-                                              profile
-                                            </span>
-                                          </li>
-                                          <li className="flex items-start gap-2">
-                                            <span className="text-green-600 dark:text-green-400 font-bold">
-                                              •
-                                            </span>
-                                            <span>
-                                              <strong>Stakeholder Mapping:</strong> Identify all
-                                              affected parties and document their concerns and
-                                              requirements
-                                            </span>
-                                          </li>
-                                          <li className="flex items-start gap-2">
-                                            <span className="text-green-600 dark:text-green-400 font-bold">
-                                              •
-                                            </span>
-                                            <span>
-                                              <strong>Threat Modeling:</strong> Systematically
-                                              identify AI-specific threats, attack vectors, and
-                                              vulnerability sources
-                                            </span>
-                                          </li>
-                                        </>
-                                      )}
-                                      {selectedNodeData.id === "measure" && (
-                                        <>
-                                          <li className="flex items-start gap-2">
-                                            <span className="text-orange-500 font-bold">•</span>
-                                            <span>
-                                              <strong>Performance Metrics:</strong> Define and
-                                              implement comprehensive KPIs for AI system performance
-                                              and reliability
-                                            </span>
-                                          </li>
-                                          <li className="flex items-start gap-2">
-                                            <span className="text-orange-500 font-bold">•</span>
-                                            <span>
-                                              <strong>Bias Testing:</strong> Conduct systematic
-                                              fairness assessments across different demographic
-                                              groups and use cases
-                                            </span>
-                                          </li>
-                                          <li className="flex items-start gap-2">
-                                            <span className="text-orange-500 font-bold">•</span>
-                                            <span>
-                                              <strong>Security Assessment:</strong> Perform
-                                              penetration testing, vulnerability scans, and
-                                              adversarial attack simulations
-                                            </span>
-                                          </li>
-                                          <li className="flex items-start gap-2">
-                                            <span className="text-orange-500 font-bold">•</span>
-                                            <span>
-                                              <strong>Risk Quantification:</strong> Use statistical
-                                              methods to measure and prioritize identified AI risks
-                                            </span>
-                                          </li>
-                                        </>
-                                      )}
-                                      {selectedNodeData.id === "manage" && (
-                                        <>
-                                          <li className="flex items-start gap-2">
-                                            <span className="text-red-600 dark:text-red-400 font-bold">
-                                              •
-                                            </span>
-                                            <span>
-                                              <strong>Risk Treatment:</strong> Implement mitigation
-                                              strategies including avoidance, reduction, transfer,
-                                              and acceptance
-                                            </span>
-                                          </li>
-                                          <li className="flex items-start gap-2">
-                                            <span className="text-red-600 dark:text-red-400 font-bold">
-                                              •
-                                            </span>
-                                            <span>
-                                              <strong>Control Implementation:</strong> Deploy
-                                              technical, administrative, and physical safeguards for
-                                              AI systems
-                                            </span>
-                                          </li>
-                                          <li className="flex items-start gap-2">
-                                            <span className="text-red-600 dark:text-red-400 font-bold">
-                                              •
-                                            </span>
-                                            <span>
-                                              <strong>Incident Response:</strong> Establish 24/7
-                                              monitoring, detection, and response capabilities for
-                                              AI incidents
-                                            </span>
-                                          </li>
-                                          <li className="flex items-start gap-2">
-                                            <span className="text-red-600 dark:text-red-400 font-bold">
-                                              •
-                                            </span>
-                                            <span>
-                                              <strong>Third-Party Management:</strong> Assess and
-                                              monitor AI vendors, suppliers, and service providers
-                                            </span>
-                                          </li>
-                                        </>
-                                      )}
-                                    </ul>
-                                  </div>
-
-                                  <div className="grid grid-cols-2 gap-3">
-                                    <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                                      <h6 className="font-medium text-xs mb-2 text-blue-800 dark:text-blue-200">
-                                        Implementation Timeline
-                                      </h6>
-                                      <p className="text-xs text-blue-700 dark:text-blue-300">
-                                        {selectedNodeData.id === "govern" &&
-                                          "Foundational phase (0-6 months)"}
-                                        {selectedNodeData.id === "map" &&
-                                          "Discovery phase (1-3 months)"}
-                                        {selectedNodeData.id === "measure" &&
-                                          "Assessment phase (2-6 months)"}
-                                        {selectedNodeData.id === "manage" &&
-                                          "Ongoing operations (continuous)"}
-                                      </p>
-                                    </div>
-                                    <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                                      <h6 className="font-medium text-xs mb-2 text-green-800 dark:text-green-200">
-                                        Key Stakeholders
-                                      </h6>
-                                      <p className="text-xs text-green-700 dark:text-green-300">
-                                        {selectedNodeData.id === "govern" &&
-                                          "C-Suite, Legal, Compliance"}
-                                        {selectedNodeData.id === "map" &&
-                                          "Risk, Security, Product Teams"}
-                                        {selectedNodeData.id === "measure" &&
-                                          "QA, Security, Data Science"}
-                                        {selectedNodeData.id === "manage" &&
-                                          "Operations, Security, IT"}
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex items-center gap-2 text-sm">
-                                    <span className="font-medium">Contains:</span>
-                                    <Badge variant="secondary">
-                                      {(selectedNodeData.data as NISTFunction).categories.length}{" "}
-                                      categories
-                                    </Badge>
-                                    <Badge variant="secondary">
-                                      {(selectedNodeData.data as NISTFunction).categories.reduce(
-                                        (total: number, cat: NISTCategory) =>
-                                          total + cat.subcategories.length,
-                                        0,
-                                      )}{" "}
-                                      subcategories
-                                    </Badge>
-                                  </div>
-                                </div>
-                              )}
-
-                              {selectedNodeData.type === "nist-category" && (
-                                <div className="space-y-4">
-                                  <p className="text-sm text-muted-foreground leading-relaxed">
-                                    {selectedNodeData.data.description}
-                                  </p>
-
-                                  <div className="p-4 bg-muted/50 rounded-lg">
-                                    <h5 className="font-medium text-sm mb-3">
-                                      Implementation Guidance:
-                                    </h5>
-                                    <div className="text-xs text-muted-foreground space-y-2">
-                                      <div className="flex items-start gap-2">
-                                        <span className="text-indigo-500 font-bold">•</span>
-                                        <span>
-                                          <strong>Strategic Importance:</strong> This category is
-                                          fundamental to the{" "}
-                                          {selectedNodeData.parentId?.toUpperCase()} function and
-                                          establishes critical foundations for AI governance
-                                        </span>
-                                      </div>
-                                      <div className="flex items-start gap-2">
-                                        <span className="text-indigo-500 font-bold">•</span>
-                                        <span>
-                                          <strong>Implementation Priority:</strong> Should be
-                                          addressed in coordination with other{" "}
-                                          {selectedNodeData.parentId?.toUpperCase()} categories for
-                                          maximum effectiveness
-                                        </span>
-                                      </div>
-                                      <div className="flex items-start gap-2">
-                                        <span className="text-indigo-500 font-bold">•</span>
-                                        <span>
-                                          <strong>Cross-Function Impact:</strong> Influences and is
-                                          influenced by activities in other NIST AI RMF functions
-                                          (GOVERN, MAP, MEASURE, MANAGE)
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div className="grid grid-cols-2 gap-3">
-                                    <div className="p-3 bg-indigo-50 dark:bg-indigo-950/20 rounded-lg">
-                                      <h6 className="font-medium text-xs mb-2 text-indigo-800 dark:text-indigo-200">
-                                        Function Context
-                                      </h6>
-                                      <p className="text-xs text-indigo-700 dark:text-indigo-300">
-                                        Part of {selectedNodeData.parentId?.toUpperCase()} function
-                                      </p>
-                                    </div>
-                                    <div className="p-3 bg-teal-50 dark:bg-teal-950/20 rounded-lg">
-                                      <h6 className="font-medium text-xs mb-2 text-teal-800 dark:text-teal-200">
-                                        Maturity Level
-                                      </h6>
-                                      <p className="text-xs text-teal-700 dark:text-teal-300">
-                                        {(selectedNodeData.data as NISTCategory).subcategories
-                                          .length > 6
-                                          ? "Advanced"
-                                          : (selectedNodeData.data as NISTCategory).subcategories
-                                                .length > 3
-                                            ? "Intermediate"
-                                            : "Foundational"}
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex items-center gap-2 text-sm">
-                                    <span className="font-medium">Contains:</span>
-                                    <Badge variant="secondary">
-                                      {(selectedNodeData.data as NISTCategory).subcategories.length}{" "}
-                                      subcategories
-                                    </Badge>
-                                    <Badge variant="outline">Click to expand</Badge>
-                                  </div>
-                                </div>
-                              )}
-
-                              {selectedNodeData.type === "nist-subcategory" && (
-                                <div className="space-y-4">
-                                  <p className="text-sm text-muted-foreground leading-relaxed">
-                                    {selectedNodeData.data.description}
-                                  </p>
-
-                                  <div className="p-4 bg-muted/50 rounded-lg">
-                                    <h5 className="font-medium text-sm mb-3">
-                                      Implementation Details:
-                                    </h5>
-                                    <div className="text-xs text-muted-foreground space-y-2">
-                                      <div className="flex items-start gap-2">
-                                        <span className="text-cyan-500 font-bold">•</span>
-                                        <span>
-                                          <strong>Operational Focus:</strong> This subcategory
-                                          defines specific, actionable requirements that
-                                          organizations must implement to achieve AI risk management
-                                          objectives
-                                        </span>
-                                      </div>
-                                      <div className="flex items-start gap-2">
-                                        <span className="text-cyan-500 font-bold">•</span>
-                                        <span>
-                                          <strong>Implementation Approach:</strong> Should be
-                                          addressed through documented policies, technical controls,
-                                          training programs, and regular assessments
-                                        </span>
-                                      </div>
-                                      <div className="flex items-start gap-2">
-                                        <span className="text-cyan-500 font-bold">•</span>
-                                        <span>
-                                          <strong>Success Metrics:</strong> Progress can be measured
-                                          through compliance audits, risk assessments, and security
-                                          testing aligned with mapped AISVS controls
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                                    <h5 className="font-medium text-sm mb-3 text-blue-800 dark:text-blue-200">
-                                      🔗 AISVS Security Mappings
-                                    </h5>
-                                    {(selectedNodeData.data as NISTSubcategory).aisvsMapping
-                                      .length > 0 ? (
-                                      <div className="space-y-2">
-                                        <p className="text-xs text-blue-700 dark:text-blue-300 mb-3">
-                                          This NIST subcategory directly supports the following
-                                          AISVS security controls:
-                                        </p>
-                                        <div className="flex flex-wrap gap-2">
-                                          {(
-                                            selectedNodeData.data as NISTSubcategory
-                                          ).aisvsMapping.map((aisvsCode: string) => {
-                                            const aisvsCategory = getAISVSCategory(aisvsCode);
-                                            return aisvsCategory ? (
-                                              <Link
-                                                key={aisvsCode}
-                                                to="/aisvs"
-                                                className="no-underline"
-                                              >
-                                                <Badge
-                                                  variant="default"
-                                                  className="text-xs hover:opacity-80 transition-all duration-200 cursor-pointer transform hover:scale-105"
-                                                  style={{ backgroundColor: aisvsCategory.color }}
-                                                >
-                                                  {aisvsCode}: {aisvsCategory.name.split(" &")[0]}
-                                                </Badge>
-                                              </Link>
-                                            ) : (
-                                              <Badge
-                                                key={aisvsCode}
-                                                variant="outline"
-                                                className="text-xs"
-                                              >
-                                                {aisvsCode}
-                                              </Badge>
-                                            );
-                                          })}
-                                        </div>
-                                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 italic">
-                                          💡 Click on any AISVS badge above to explore detailed
-                                          security requirements and testing procedures.
-                                        </p>
-                                      </div>
-                                    ) : (
-                                      <div className="text-center py-4">
-                                        <Badge variant="secondary" className="text-xs mb-2">
-                                          No direct AISVS mapping identified
+                          {selectedNodeData.type === "nist-subcategory" && (
+                            <div className="mt-3">
+                              {(selectedNodeData.data as NISTSubcategory).aisvsMapping.length >
+                              0 ? (
+                                <div className="flex flex-wrap gap-1.5">
+                                  <span className="text-xs text-muted-foreground mr-1">
+                                    Maps to:
+                                  </span>
+                                  {(selectedNodeData.data as NISTSubcategory).aisvsMapping.map(
+                                    (code: string) => {
+                                      const cat = getAISVSCategory(code);
+                                      return cat ? (
+                                        <Link key={code} to="/aisvs">
+                                          <Badge
+                                            variant="default"
+                                            className="text-xs cursor-pointer hover:opacity-80"
+                                            style={{ backgroundColor: cat.color }}
+                                          >
+                                            {code}: {cat.name.split(" &")[0]}
+                                          </Badge>
+                                        </Link>
+                                      ) : (
+                                        <Badge key={code} variant="outline" className="text-xs">
+                                          {code}
                                         </Badge>
-                                        <p className="text-xs text-muted-foreground">
-                                          This subcategory may require custom security controls or
-                                          alignment with general security practices.
-                                        </p>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  <div className="grid grid-cols-2 gap-3">
-                                    <div className="p-3 bg-slate-50 dark:bg-slate-950/20 rounded-lg">
-                                      <h6 className="font-medium text-xs mb-2 text-slate-800 dark:text-slate-200">
-                                        Implementation Complexity
-                                      </h6>
-                                      <p className="text-xs text-slate-700 dark:text-slate-300">
-                                        {(selectedNodeData.data as NISTSubcategory).aisvsMapping
-                                          .length > 3
-                                          ? "High - Multi-domain"
-                                          : (selectedNodeData.data as NISTSubcategory).aisvsMapping
-                                                .length > 1
-                                            ? "Medium - Cross-functional"
-                                            : (selectedNodeData.data as NISTSubcategory)
-                                                  .aisvsMapping.length === 1
-                                              ? "Medium - Focused"
-                                              : "Low - Policy-based"}
-                                      </p>
-                                    </div>
-                                    <div className="p-3 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg">
-                                      <h6 className="font-medium text-xs mb-2 text-emerald-800 dark:text-emerald-200">
-                                        Security Impact
-                                      </h6>
-                                      <p className="text-xs text-emerald-700 dark:text-emerald-300">
-                                        {(selectedNodeData.data as NISTSubcategory).aisvsMapping
-                                          .length > 0
-                                          ? "Direct security control alignment"
-                                          : "Governance and process focused"}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-
-                              {selectedNodeData.type === "aisvs-category" && (
-                                <div className="space-y-4">
-                                  <p className="text-sm text-muted-foreground leading-relaxed">
-                                    {selectedNodeData.data.description}
-                                  </p>
-
-                                  <div className="p-4 bg-muted/50 rounded-lg">
-                                    <h5 className="font-medium text-sm mb-3">
-                                      Security Domain & Requirements:
-                                    </h5>
-                                    <div className="text-xs text-muted-foreground space-y-2">
-                                      {selectedNodeData.label === "C1" && (
-                                        <>
-                                          <div className="flex items-start gap-2">
-                                            <span className="text-purple-500 font-bold">•</span>
-                                            <span>
-                                              <strong>Memory Safety:</strong> Protect against buffer
-                                              overflows, memory corruption, and unsafe memory
-                                              operations in AI systems
-                                            </span>
-                                          </div>
-                                          <div className="flex items-start gap-2">
-                                            <span className="text-purple-500 font-bold">•</span>
-                                            <span>
-                                              <strong>Input Validation:</strong> Ensure robust
-                                              validation of all inputs to prevent injection attacks
-                                              and malformed data processing
-                                            </span>
-                                          </div>
-                                          <div className="flex items-start gap-2">
-                                            <span className="text-purple-500 font-bold">•</span>
-                                            <span>
-                                              <strong>Architecture Security:</strong> Implement
-                                              secure coding practices and architectural patterns for
-                                              AI applications
-                                            </span>
-                                          </div>
-                                        </>
-                                      )}
-                                      {selectedNodeData.label === "C2" && (
-                                        <>
-                                          <div className="flex items-start gap-2">
-                                            <span className="text-blue-600 dark:text-blue-400 font-bold">
-                                              •
-                                            </span>
-                                            <span>
-                                              <strong>Authentication Controls:</strong> Implement
-                                              strong user authentication and identity verification
-                                              mechanisms
-                                            </span>
-                                          </div>
-                                          <div className="flex items-start gap-2">
-                                            <span className="text-blue-600 dark:text-blue-400 font-bold">
-                                              •
-                                            </span>
-                                            <span>
-                                              <strong>Session Management:</strong> Secure session
-                                              handling, timeout controls, and session invalidation
-                                            </span>
-                                          </div>
-                                          <div className="flex items-start gap-2">
-                                            <span className="text-blue-600 dark:text-blue-400 font-bold">
-                                              •
-                                            </span>
-                                            <span>
-                                              <strong>Multi-Factor Authentication:</strong> Deploy
-                                              MFA for privileged access to AI systems and data
-                                            </span>
-                                          </div>
-                                        </>
-                                      )}
-                                      {selectedNodeData.label === "C3" && (
-                                        <>
-                                          <div className="flex items-start gap-2">
-                                            <span className="text-green-600 dark:text-green-400 font-bold">
-                                              •
-                                            </span>
-                                            <span>
-                                              <strong>Access Control Policies:</strong> Define and
-                                              enforce granular access controls for AI resources and
-                                              capabilities
-                                            </span>
-                                          </div>
-                                          <div className="flex items-start gap-2">
-                                            <span className="text-green-600 dark:text-green-400 font-bold">
-                                              •
-                                            </span>
-                                            <span>
-                                              <strong>Role-Based Access:</strong> Implement
-                                              RBAC/ABAC models appropriate for AI system operations
-                                            </span>
-                                          </div>
-                                          <div className="flex items-start gap-2">
-                                            <span className="text-green-600 dark:text-green-400 font-bold">
-                                              •
-                                            </span>
-                                            <span>
-                                              <strong>Privilege Management:</strong> Apply least
-                                              privilege principles and regular access reviews
-                                            </span>
-                                          </div>
-                                        </>
-                                      )}
-                                      {[
-                                        "C4",
-                                        "C5",
-                                        "C6",
-                                        "C7",
-                                        "C8",
-                                        "C9",
-                                        "C10",
-                                        "C11",
-                                        "C12",
-                                        "C13",
-                                      ].includes(selectedNodeData.label) && (
-                                        <>
-                                          <div className="flex items-start gap-2">
-                                            <span className="text-orange-500 font-bold">•</span>
-                                            <span>
-                                              <strong>Core Security Requirements:</strong> Essential
-                                              security controls and verification procedures for AI
-                                              systems
-                                            </span>
-                                          </div>
-                                          <div className="flex items-start gap-2">
-                                            <span className="text-orange-500 font-bold">•</span>
-                                            <span>
-                                              <strong>Implementation Guidelines:</strong> Specific
-                                              technical requirements and testing methodologies
-                                            </span>
-                                          </div>
-                                          <div className="flex items-start gap-2">
-                                            <span className="text-orange-500 font-bold">•</span>
-                                            <span>
-                                              <strong>Verification Criteria:</strong> Measurable
-                                              security objectives and compliance checkpoints
-                                            </span>
-                                          </div>
-                                        </>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  <div className="grid grid-cols-2 gap-3">
-                                    <div className="p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
-                                      <h6 className="font-medium text-xs mb-2 text-purple-800 dark:text-purple-200">
-                                        Security Level
-                                      </h6>
-                                      <p className="text-xs text-purple-700 dark:text-purple-300">
-                                        {["C1", "C2", "C3"].includes(selectedNodeData.label) &&
-                                          "Foundational (Level 1)"}
-                                        {["C4", "C5", "C6", "C7"].includes(
-                                          selectedNodeData.label,
-                                        ) && "Standard (Level 2)"}
-                                        {["C8", "C9", "C10"].includes(selectedNodeData.label) &&
-                                          "Advanced (Level 3)"}
-                                        {["C11", "C12", "C13"].includes(selectedNodeData.label) &&
-                                          "Expert (Level 4)"}
-                                      </p>
-                                    </div>
-                                    <div className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
-                                      <h6 className="font-medium text-xs mb-2 text-red-800 dark:text-red-200">
-                                        Testing Focus
-                                      </h6>
-                                      <p className="text-xs text-red-700 dark:text-red-300">
-                                        {["C1", "C4", "C8"].includes(selectedNodeData.label) &&
-                                          "Penetration Testing"}
-                                        {["C2", "C5", "C9"].includes(selectedNodeData.label) &&
-                                          "Authentication Testing"}
-                                        {["C3", "C6", "C10"].includes(selectedNodeData.label) &&
-                                          "Access Control Testing"}
-                                        {["C7", "C11", "C12", "C13"].includes(
-                                          selectedNodeData.label,
-                                        ) && "Specialized Testing"}
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  <div className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                                    <h6 className="font-medium text-xs mb-2 text-amber-800 dark:text-amber-200">
-                                      💡 Reverse Mapping Tip
-                                    </h6>
-                                    <p className="text-xs text-amber-700 dark:text-amber-300">
-                                      Click this AISVS category to automatically expand all related
-                                      NIST AI RMF subcategories in the graph above. This shows you
-                                      which governance, mapping, measurement, and management
-                                      activities support this security control.
-                                    </p>
-                                  </div>
-
-                                  {(selectedNodeData.data as AISVSCategory).subCategories && (
-                                    <div className="flex items-center gap-2 text-sm">
-                                      <span className="font-medium">Contains:</span>
-                                      <Badge variant="secondary">
-                                        {
-                                          (selectedNodeData.data as AISVSCategory).subCategories
-                                            .length
-                                        }{" "}
-                                        subcategories
-                                      </Badge>
-                                      <Badge variant="outline">
-                                        {(selectedNodeData.data as AISVSCategory).subCategories
-                                          .length > 5
-                                          ? "Comprehensive"
-                                          : (selectedNodeData.data as AISVSCategory).subCategories
-                                                .length > 3
-                                            ? "Moderate"
-                                            : "Focused"}{" "}
-                                        scope
-                                      </Badge>
-                                    </div>
+                                      );
+                                    },
                                   )}
                                 </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">
+                                  No direct AISVS mapping
+                                </span>
                               )}
                             </div>
+                          )}
 
-                            {/* Right Column - Relationships and Mappings */}
-                            <div>
-                              <h4 className="font-semibold mb-3 flex items-center gap-2">
-                                <ArrowRight className="h-4 w-4" />
-                                Relationships & Mappings
-                              </h4>
-
-                              {selectedNodeData.type === "nist-subcategory" &&
-                                (selectedNodeData.data as NISTSubcategory).aisvsMapping.length >
-                                  0 && (
-                                  <div className="space-y-3">
-                                    <div>
-                                      <h5 className="font-medium text-sm mb-2">
-                                        Maps to AISVS Categories:
-                                      </h5>
-                                      <div className="space-y-2">
-                                        {(
-                                          selectedNodeData.data as NISTSubcategory
-                                        ).aisvsMapping.map((aisvsCode: string) => {
-                                          const aisvsCategory = getAISVSCategory(aisvsCode);
-                                          return aisvsCategory ? (
-                                            <div
-                                              key={aisvsCode}
-                                              className="flex items-center gap-2 p-2 border rounded"
-                                            >
-                                              <div
-                                                className="w-3 h-3 rounded-full"
-                                                style={{ backgroundColor: aisvsCategory.color }}
-                                              ></div>
-                                              <div className="flex-1">
-                                                <div className="font-medium text-sm">
-                                                  {aisvsCategory.code}
-                                                </div>
-                                                <div className="text-xs text-muted-foreground">
-                                                  {aisvsCategory.name.split(" &")[0]}
-                                                </div>
-                                              </div>
-                                              <Link to="/aisvs">
-                                                <Badge
-                                                  variant="outline"
-                                                  className="text-xs cursor-pointer hover:bg-accent"
-                                                >
-                                                  View Details
-                                                </Badge>
-                                              </Link>
-                                            </div>
-                                          ) : null;
-                                        })}
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-
-                              {selectedNodeData.type === "aisvs-category" && (
-                                <div className="space-y-4">
-                                  <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-                                    <h5 className="font-medium text-sm mb-3 text-green-800 dark:text-green-200">
-                                      🎯 NIST AI RMF Governance Support
-                                    </h5>
-                                    <p className="text-xs text-green-700 dark:text-green-300 mb-3">
-                                      This AISVS security control is supported by the following NIST
-                                      AI RMF subcategories. Understanding these connections helps
-                                      you implement comprehensive AI governance.
-                                    </p>
-
-                                    <div className="space-y-3">
-                                      {["govern", "map", "measure", "manage"].map((funcId) => {
-                                        const func = nistAIRMF.find((f) => f.id === funcId);
-                                        const mappedSubcategories = func
-                                          ? func.categories.flatMap((cat) =>
-                                              cat.subcategories.filter((sub) =>
-                                                sub.aisvsMapping.includes(selectedNodeData.label),
-                                              ),
-                                            )
-                                          : [];
-
-                                        if (mappedSubcategories.length === 0) return null;
-
-                                        return (
-                                          <div key={funcId} className="space-y-2">
-                                            <div className="flex items-center gap-2 mb-2">
-                                              <div
-                                                className="w-3 h-3 rounded-full"
-                                                style={{ backgroundColor: func?.color }}
-                                              ></div>
-                                              <span
-                                                className="font-medium text-xs"
-                                                style={{ color: func?.color }}
-                                              >
-                                                {func?.code} - {func?.name} (
-                                                {mappedSubcategories.length})
-                                              </span>
-                                            </div>
-                                            <div className="ml-5 space-y-1">
-                                              {mappedSubcategories.map((sub) => (
-                                                <div
-                                                  key={sub.id}
-                                                  className="flex items-start gap-2 p-2 bg-card border rounded text-xs"
-                                                >
-                                                  <div className="flex-1">
-                                                    <div className="font-medium">{sub.code}</div>
-                                                    <div className="text-muted-foreground">
-                                                      {sub.name}
-                                                    </div>
-                                                    <div className="text-muted-foreground mt-1 text-xs italic">
-                                                      "{sub.description.substring(0, 80)}..."
-                                                    </div>
-                                                  </div>
-                                                </div>
-                                              ))}
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-
-                                  <div className="p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                                    <h5 className="font-medium text-sm mb-2 text-purple-800 dark:text-purple-200">
-                                      📊 Implementation Statistics
-                                    </h5>
-                                    <div className="grid grid-cols-2 gap-3 text-xs">
-                                      {["govern", "map", "measure", "manage"].map((funcId) => {
-                                        const func = nistAIRMF.find((f) => f.id === funcId);
-                                        const mappedCount = func
-                                          ? func.categories.flatMap((cat) =>
-                                              cat.subcategories.filter((sub) =>
-                                                sub.aisvsMapping.includes(selectedNodeData.label),
-                                              ),
-                                            ).length
-                                          : 0;
-
-                                        return (
-                                          <div key={funcId} className="flex items-center gap-2">
-                                            <div
-                                              className="w-2 h-2 rounded-full"
-                                              style={{ backgroundColor: func?.color }}
-                                            ></div>
-                                            <span className="text-purple-700 dark:text-purple-300">
-                                              {func?.code}: {mappedCount} controls
-                                            </span>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-
-                                  <div className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                                    <h5 className="font-medium text-sm mb-2 text-amber-800 dark:text-amber-200">
-                                      🚀 Quick Action
-                                    </h5>
-                                    <p className="text-xs text-amber-700 dark:text-amber-300 mb-2">
-                                      Want to see all these NIST subcategories in the graph above?
-                                    </p>
-                                    <p className="text-xs text-amber-600 dark:text-amber-400 italic">
-                                      💡 Click this AISVS node again to auto-expand all related NIST
-                                      elements and visualize the complete governance framework
-                                      supporting this security control.
-                                    </p>
-                                  </div>
-                                </div>
-                              )}
-
-                              {(selectedNodeData.type === "nist-function" ||
-                                selectedNodeData.type === "nist-category") && (
-                                <div className="space-y-3">
-                                  <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                                    <h5 className="font-medium text-sm mb-2 text-blue-800 dark:text-blue-200">
-                                      💡 Interaction Tip
-                                    </h5>
-                                    <p className="text-xs text-blue-700 dark:text-blue-300">
-                                      Click this node to{" "}
-                                      {expandedNodes.has(selectedNodeData.id)
-                                        ? "collapse"
-                                        : "expand"}{" "}
-                                      and
-                                      {selectedNodeData.type === "nist-function"
-                                        ? " view its categories and subcategories"
-                                        : " view its subcategories"}
-                                      .
-                                    </p>
-                                  </div>
-
-                                  {expandedNodes.has(selectedNodeData.id) && (
-                                    <div>
-                                      <h5 className="font-medium text-sm mb-2">
-                                        Currently Expanded:
-                                      </h5>
-                                      <div className="text-xs text-muted-foreground">
-                                        This node is currently expanded, showing its child elements
-                                        in the graph above.
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-
-                              {/* Usage Context */}
-                              <div className="mt-4 p-3 bg-accent/50 rounded-lg">
-                                <h5 className="font-medium text-sm mb-2">Usage Context:</h5>
-                                <div className="text-xs text-muted-foreground space-y-1">
-                                  {selectedNodeData.type === "nist-function" && (
-                                    <>
-                                      <div>• Use for high-level AI governance planning</div>
-                                      <div>• Essential for compliance frameworks</div>
-                                      <div>• Foundation for risk management strategy</div>
-                                    </>
-                                  )}
-                                  {selectedNodeData.type === "nist-category" && (
-                                    <>
-                                      <div>• Implement through specific procedures</div>
-                                      <div>• Map to organizational capabilities</div>
-                                      <div>• Essential for targeted risk mitigation</div>
-                                    </>
-                                  )}
-                                  {selectedNodeData.type === "nist-subcategory" && (
-                                    <>
-                                      <div>• Implement through specific controls</div>
-                                      <div>• Verify through AISVS requirements</div>
-                                      <div>• Essential for detailed compliance</div>
-                                    </>
-                                  )}
-                                  {selectedNodeData.type === "aisvs-category" && (
-                                    <>
-                                      <div>• Use for security verification</div>
-                                      <div>• Essential for penetration testing</div>
-                                      <div>• Validate AI system security</div>
-                                    </>
-                                  )}
-                                </div>
+                          {selectedNodeData.type === "aisvs-category" && (
+                            <div className="mt-3 space-y-2">
+                              <div className="text-xs text-muted-foreground">
+                                Supported by NIST subcategories across{" "}
+                                {
+                                  ["govern", "map", "measure", "manage"].filter((fid) => {
+                                    const func = nistAIRMF.find((f) => f.id === fid);
+                                    return func?.categories.some((c) =>
+                                      c.subcategories.some((s) =>
+                                        s.aisvsMapping.includes(selectedNodeData.label),
+                                      ),
+                                    );
+                                  }).length
+                                }{" "}
+                                functions
                               </div>
+                              <Link to="/aisvs" className="text-xs text-primary hover:underline">
+                                View full AISVS details &rarr;
+                              </Link>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
-
-                  {/* Graph Controls and Info */}
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card>
-                      <CardContent className="p-4">
-                        <h4 className="font-semibold mb-2 text-sm">Graph Features</h4>
-                        <ul className="text-xs text-muted-foreground space-y-1">
-                          <li>• Click nodes to expand/select</li>
-                          <li>• Drag nodes to rearrange layout</li>
-                          <li>• Zoom and pan for detailed view</li>
-                          <li>• Hover for quick information</li>
-                        </ul>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardContent className="p-4">
-                        <h4 className="font-semibold mb-2 text-sm">Mapping Insights</h4>
-                        <ul className="text-xs text-muted-foreground space-y-1">
-                          <li>• GOVERN maps to foundational controls</li>
-                          <li>• MAP focuses on risk identification</li>
-                          <li>• MEASURE emphasizes testing & metrics</li>
-                          <li>• MANAGE covers incident response</li>
-                        </ul>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardContent className="p-4">
-                        <h4 className="font-semibold mb-2 text-sm">Usage Guide</h4>
-                        <ul className="text-xs text-muted-foreground space-y-1">
-                          <li>• Click nodes for detailed information</li>
-                          <li>• Use for compliance planning</li>
-                          <li>• Identify coverage gaps</li>
-                          <li>• Plan implementation priorities</li>
-                        </ul>
-                      </CardContent>
-                    </Card>
-                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -3127,6 +2126,7 @@ export const NISTMapping = () => {
                     >
                       <ExternalLink className="h-4 w-4" />
                       <span>NIST AI RMF Official Documentation</span>
+                      <span className="sr-only">(opens in new tab)</span>
                     </a>
                     <a
                       href="https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.100-1.pdf"
@@ -3136,6 +2136,7 @@ export const NISTMapping = () => {
                     >
                       <ExternalLink className="h-4 w-4" />
                       <span>NIST AI RMF 1.0 (PDF)</span>
+                      <span className="sr-only">(opens in new tab)</span>
                     </a>
                   </div>
                 </div>
@@ -3157,6 +2158,7 @@ export const NISTMapping = () => {
                     >
                       <ExternalLink className="h-4 w-4" />
                       <span>OWASP AISVS GitHub Repository</span>
+                      <span className="sr-only">(opens in new tab)</span>
                     </a>
                   </div>
                 </div>

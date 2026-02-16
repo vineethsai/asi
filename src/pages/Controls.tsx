@@ -338,13 +338,20 @@ export const Controls = () => {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Search</label>
+                    <label htmlFor="controls-search" className="text-sm font-medium">
+                      Search
+                    </label>
                     <div className="relative">
-                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Search
+                        className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
+                        aria-hidden="true"
+                      />
                       <Input
+                        id="controls-search"
                         placeholder="Search controls, requirements..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
+                        aria-label="Search controls and requirements"
                         className="pl-10"
                       />
                     </div>
@@ -353,7 +360,7 @@ export const Controls = () => {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">AISVS Category</label>
                     <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                      <SelectTrigger>
+                      <SelectTrigger aria-label="Filter by AISVS category">
                         <SelectValue placeholder="All Categories" />
                       </SelectTrigger>
                       <SelectContent className="z-[9999] bg-popover border shadow-lg">
@@ -370,7 +377,7 @@ export const Controls = () => {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Threat Focus</label>
                     <Select value={selectedThreat} onValueChange={setSelectedThreat}>
-                      <SelectTrigger>
+                      <SelectTrigger aria-label="Filter by threat focus">
                         <SelectValue placeholder="All Threats" />
                       </SelectTrigger>
                       <SelectContent className="z-[9999] bg-popover border shadow-lg">
@@ -387,7 +394,7 @@ export const Controls = () => {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">AISVS Level</label>
                     <Select value={selectedLevel} onValueChange={setSelectedLevel}>
-                      <SelectTrigger>
+                      <SelectTrigger aria-label="Filter by AISVS level">
                         <SelectValue placeholder="All Levels" />
                       </SelectTrigger>
                       <SelectContent className="z-[9999] bg-popover border shadow-lg">
@@ -459,6 +466,14 @@ export const Controls = () => {
                     <div
                       key={control.id}
                       onClick={() => navigate(`/controls/${control.id}`)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          navigate(`/controls/${control.id}`);
+                        }
+                      }}
+                      role="link"
+                      tabIndex={0}
                       className="cursor-pointer"
                     >
                       <Card className="h-full border border-control/20 hover:bg-muted/50 transition-colors">
@@ -558,9 +573,9 @@ export const Controls = () => {
                                 References:
                               </p>
                               <div className="flex flex-wrap gap-2">
-                                {control.references.slice(0, 2).map((ref) => (
+                                {control.references.slice(0, 2).map((ref, refIdx) => (
                                   <a
-                                    key={ref.url}
+                                    key={`${control.id}-ref-${refIdx}`}
                                     href={ref.url}
                                     target="_blank"
                                     rel="noopener noreferrer"
@@ -570,7 +585,8 @@ export const Controls = () => {
                                     {ref.title.length > 20
                                       ? `${ref.title.substring(0, 20)}...`
                                       : ref.title}
-                                    <ExternalLink className="h-3 w-3" />
+                                    <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                                    <span className="sr-only">(opens in new tab)</span>
                                   </a>
                                 ))}
                                 {control.references.length > 2 && (
@@ -666,16 +682,17 @@ export const Controls = () => {
                                         References:
                                       </p>
                                       <div className="space-y-1">
-                                        {requirement.references.map((ref) => (
+                                        {requirement.references.map((ref, refIdx) => (
                                           <a
-                                            key={ref.url}
+                                            key={`${requirement.id}-ref-${refIdx}`}
                                             href={ref.url}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="text-xs text-primary hover:text-primary/80 underline flex items-center gap-1"
                                           >
                                             {ref.title}
-                                            <ExternalLink className="h-3 w-3" />
+                                            <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                                            <span className="sr-only">(opens in new tab)</span>
                                           </a>
                                         ))}
                                       </div>
@@ -691,16 +708,17 @@ export const Controls = () => {
                             <div className="mt-6 p-4 bg-muted/50 rounded-lg">
                               <h4 className="font-semibold mb-2">Category References:</h4>
                               <div className="space-y-1">
-                                {category.references.map((ref) => (
+                                {category.references.map((ref, refIdx) => (
                                   <a
-                                    key={ref.url}
+                                    key={`${category.id}-ref-${refIdx}`}
                                     href={ref.url}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-sm text-primary hover:text-primary/80 underline flex items-center gap-1"
                                   >
                                     {ref.title}
-                                    <ExternalLink className="h-4 w-4" />
+                                    <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                                    <span className="sr-only">(opens in new tab)</span>
                                   </a>
                                 ))}
                               </div>
@@ -999,13 +1017,13 @@ export const Controls = () => {
                           <div
                             key={category.id}
                             className="border-2 rounded-xl p-6 hover:bg-muted/50 transition-colors"
-                            style={{ borderColor: `${category.color}20` }}
+                            style={{ borderColor: `${category.color}35` }}
                           >
                             {/* Category Header */}
                             <div className="flex items-start gap-4 mb-6">
                               <div
                                 className="p-3 rounded-lg"
-                                style={{ backgroundColor: `${category.color}15` }}
+                                style={{ backgroundColor: `${category.color}20` }}
                               >
                                 <IconComponent
                                   className="h-8 w-8"

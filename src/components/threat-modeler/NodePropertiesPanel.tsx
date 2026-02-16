@@ -38,6 +38,7 @@ interface NodePropertiesPanelProps {
   selectedEdge?: CanvasEdge | null;
   onClose: () => void;
   onEditEdge?: (edgeId: string) => void;
+  onEditNode?: (nodeId: string) => void;
   allThreats?: GeneratedThreat[];
   onToggleMitigation?: (nodeId: string, mitigationId: string, applied: boolean) => void;
   onMitigationStatusChange?: (
@@ -89,6 +90,7 @@ export default function NodePropertiesPanel({
   selectedEdge,
   onClose,
   onEditEdge,
+  onEditNode,
   allThreats,
   onToggleMitigation: _onToggleMitigation,
   onMitigationStatusChange,
@@ -231,9 +233,22 @@ export default function NodePropertiesPanel({
       <div className="w-72 border-l bg-background/95 flex flex-col h-full">
         <div className="p-2 border-b flex items-center justify-between">
           <h3 className="text-xs font-bold truncate">{data?.label ?? "Node"}</h3>
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={onClose}>
-            <X className="h-3 w-3" />
-          </Button>
+          <div className="flex gap-1">
+            {onEditNode && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0"
+                onClick={() => onEditNode(selectedNode.id)}
+                aria-label="Edit node"
+              >
+                <Edit2 className="h-3 w-3" />
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={onClose}>
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
         </div>
         <ScrollArea className="flex-1">
           <div className="p-2 space-y-2 text-xs">
@@ -246,6 +261,38 @@ export default function NodePropertiesPanel({
             {data?.description && (
               <div>
                 <span className="font-semibold">Description:</span> {data.description}
+              </div>
+            )}
+            {data?.toolAccessMode && (
+              <div>
+                <span className="font-semibold">Access Mode:</span>{" "}
+                <span className="px-1 py-0.5 rounded text-[10px] bg-accent">
+                  {data.toolAccessMode}
+                </span>
+              </div>
+            )}
+            {data?.toolRiskTier && (
+              <div>
+                <span className="font-semibold">Risk Tier:</span>{" "}
+                <span
+                  className={`px-1 py-0.5 rounded text-[10px] ${data.toolRiskTier === "critical" || data.toolRiskTier === "destructive" ? "bg-red-500/20 text-red-700 dark:text-red-400" : data.toolRiskTier === "sensitive" ? "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400" : "bg-green-500/20 text-green-700 dark:text-green-400"}`}
+                >
+                  {data.toolRiskTier}
+                </span>
+              </div>
+            )}
+            {data?.promptType && (
+              <div>
+                <span className="font-semibold">Prompt Type:</span>{" "}
+                <span className="px-1 py-0.5 rounded text-[10px] bg-accent">{data.promptType}</span>
+              </div>
+            )}
+            {data?.dataSensitivity && data.dataSensitivity !== "none" && (
+              <div>
+                <span className="font-semibold">Data Sensitivity:</span>{" "}
+                <span className="px-1 py-0.5 rounded text-[10px] bg-accent">
+                  {data.dataSensitivity}
+                </span>
               </div>
             )}
             {data?.maestroLayers && data.maestroLayers.length > 0 && (

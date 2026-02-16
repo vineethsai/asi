@@ -1,6 +1,5 @@
 import { useState } from "react";
 import HeroSection from "@/components/home/HeroSection";
-import ComponentsSection from "@/components/home/ComponentsSection";
 import ArchitectureGraphSection from "@/components/home/ArchitectureGraphSection";
 import ArchitectureShowcase from "@/components/home/ArchitectureShowcase";
 import Header from "@/components/layout/Header";
@@ -129,7 +128,6 @@ const Index = () => {
         <HeroSection />
         <ArchitectureShowcase />
         <ArchitectureGraphSection />
-        <ComponentsSection />
       </main>
       <Footer />
     </>

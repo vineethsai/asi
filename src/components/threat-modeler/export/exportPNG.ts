@@ -1,9 +1,14 @@
 import { toPng } from "html-to-image";
 
+function detectBackground(): string {
+  const isDark = document.documentElement.classList.contains("dark");
+  return isDark ? "#1e1e2e" : "#ffffff";
+}
+
 export async function exportCanvasPNG(element: HTMLElement, filename?: string): Promise<void> {
   try {
     const dataUrl = await toPng(element, {
-      backgroundColor: "#ffffff",
+      backgroundColor: detectBackground(),
       pixelRatio: 2,
       filter: (node) => {
         const exclude = ["react-flow__minimap", "react-flow__controls", "react-flow__panel"];

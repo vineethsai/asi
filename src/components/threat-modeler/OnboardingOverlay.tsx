@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { X, MousePointer, Zap, Shield, Download, Keyboard } from "lucide-react";
+import { X, MousePointer, Zap, Shield, Download, Keyboard, BookOpen } from "lucide-react";
 
 interface OnboardingOverlayProps {
   onDismiss: () => void;
@@ -11,29 +12,31 @@ const steps = [
     icon: MousePointer,
     title: "Drag & Drop",
     description:
-      "Drag components from the left palette onto the canvas to build your architecture.",
+      "Drag components from the left palette onto the canvas to build your architecture. Components include LLMs, agents, data stores, tools, and more.",
   },
   {
     icon: Zap,
     title: "Connect Components",
     description:
-      "Click and drag from one handle to another to create data flows between components.",
+      "Click and drag from one handle to another to create data flows. Configure protocol, encryption, and authentication for each connection.",
   },
   {
     icon: Shield,
     title: "Run Analysis",
     description:
-      'Click "Analyze" or enable Live mode to automatically detect threats using MAESTRO 7-layer analysis.',
+      'Click "Analyze" or enable Live mode to automatically detect threats using MAESTRO 7-layer analysis, attack path discovery, and compliance checks.',
   },
   {
     icon: Download,
     title: "Export Results",
-    description: "Export your threat model as JSON, PNG, CSV, Markdown, or SARIF format.",
+    description:
+      "Export your threat model as JSON, PNG, CSV, Markdown, or SARIF format for documentation, tracking, or CI/CD integration.",
   },
   {
     icon: Keyboard,
     title: "Keyboard Shortcuts",
-    description: "Press ? for shortcuts. Del to delete, Ctrl+Z to undo, Ctrl+E to analyze.",
+    description:
+      "Press ? for shortcuts. Del to delete, Ctrl+Z to undo, Ctrl+E to analyze, Space to fit view.",
   },
 ];
 
@@ -62,13 +65,26 @@ export default function OnboardingOverlay({ onDismiss }: OnboardingOverlayProps)
           <p className="text-sm text-muted-foreground mt-2">{steps[step].description}</p>
         </div>
         <div className="flex items-center justify-between p-4 border-t bg-accent/20">
-          <div className="flex gap-1">
-            {steps.map((_, i) => (
-              <div
-                key={i}
-                className={`w-2 h-2 rounded-full ${i === step ? "bg-primary" : "bg-muted-foreground/30"}`}
-              />
-            ))}
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1">
+              {steps.map((_, i) => (
+                <div
+                  key={i}
+                  className={`w-2 h-2 rounded-full ${i === step ? "bg-primary" : "bg-muted-foreground/30"}`}
+                />
+              ))}
+            </div>
+            {step === steps.length - 1 && (
+              <Link
+                to="/threat-modeler-guide"
+                target="_blank"
+                className="flex items-center gap-1 text-[10px] text-primary hover:underline"
+                onClick={onDismiss}
+              >
+                <BookOpen className="h-3 w-3" />
+                Full Guide
+              </Link>
+            )}
           </div>
           <div className="flex gap-2">
             {step > 0 && (

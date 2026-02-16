@@ -6,10 +6,13 @@ import type {
   MethodologyMode,
   MaestroLayer,
 } from "../types";
+import { buildNodeProfiles, type NodeRiskProfile } from "./nodeProfile";
 import { runMaestroAnalysis } from "./maestroRules";
 import { runConnectionAnalysis } from "./connectionRules";
 import { runTopologyAnalysis } from "./topologyRules";
 import { runInheritedThreatPropagation } from "./inheritedThreats";
+
+export { buildNodeProfiles, type NodeRiskProfile };
 
 export function runThreatAnalysis(
   nodes: CanvasNode[],
@@ -17,12 +20,13 @@ export function runThreatAnalysis(
   _methodology: MethodologyMode,
   customComponentThreats?: GeneratedThreat[],
 ): ThreatAnalysisResult {
+  const profiles = buildNodeProfiles(nodes);
   const allThreats: GeneratedThreat[] = [];
 
-  allThreats.push(...runMaestroAnalysis(nodes, edges));
+  allThreats.push(...runMaestroAnalysis(nodes, edges, profiles));
 
-  allThreats.push(...runConnectionAnalysis(nodes, edges));
-  allThreats.push(...runTopologyAnalysis(nodes, edges));
+  allThreats.push(...runConnectionAnalysis(nodes, edges, profiles));
+  allThreats.push(...runTopologyAnalysis(nodes, edges, profiles));
 
   if (customComponentThreats) {
     allThreats.push(...customComponentThreats);

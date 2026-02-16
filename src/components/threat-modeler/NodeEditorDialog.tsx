@@ -24,6 +24,10 @@ import {
   type CanvasNodeData,
   type TrustLevel,
   type MaestroLayer,
+  type ToolAccessMode,
+  type ToolRiskTier,
+  type PromptType,
+  type DataSensitivity,
   MAESTRO_LAYER_LABELS,
   MAESTRO_LAYER_COLORS,
 } from "./types";
@@ -37,6 +41,34 @@ interface NodeEditorDialogProps {
 
 const ALL_LAYERS: MaestroLayer[] = [1, 2, 3, 4, 5, 6, 7];
 const TRUST_LEVELS: TrustLevel[] = ["trusted", "semi-trusted", "untrusted"];
+const TOOL_ACCESS_MODES: { value: ToolAccessMode; label: string }[] = [
+  { value: "read-only", label: "Read-Only" },
+  { value: "read-write", label: "Read-Write" },
+  { value: "write-only", label: "Write-Only" },
+  { value: "execute", label: "Execute" },
+  { value: "admin", label: "Admin" },
+];
+const TOOL_RISK_TIERS: { value: ToolRiskTier; label: string }[] = [
+  { value: "benign", label: "Benign" },
+  { value: "sensitive", label: "Sensitive" },
+  { value: "destructive", label: "Destructive" },
+  { value: "critical", label: "Critical" },
+];
+const PROMPT_TYPES: { value: PromptType; label: string }[] = [
+  { value: "system", label: "System" },
+  { value: "user", label: "User" },
+  { value: "few-shot", label: "Few-Shot" },
+  { value: "chain-of-thought", label: "Chain-of-Thought" },
+  { value: "function-call", label: "Function Call" },
+  { value: "multi-turn", label: "Multi-Turn" },
+];
+const DATA_SENSITIVITY_LEVELS: { value: DataSensitivity; label: string }[] = [
+  { value: "none", label: "None" },
+  { value: "internal", label: "Internal" },
+  { value: "pii", label: "PII" },
+  { value: "credentials", label: "Credentials" },
+  { value: "regulated", label: "Regulated" },
+];
 
 export default function NodeEditorDialog({
   open,
@@ -51,6 +83,16 @@ export default function NodeEditorDialog({
   const [metadata, setMetadata] = useState<Record<string, string>>({});
   const [newMetaKey, setNewMetaKey] = useState("");
   const [newMetaValue, setNewMetaValue] = useState("");
+  const [toolAccessMode, setToolAccessMode] = useState<ToolAccessMode | "">("");
+  const [toolRiskTier, setToolRiskTier] = useState<ToolRiskTier | "">("");
+  const [promptType, setPromptType] = useState<PromptType | "">("");
+  const [dataSensitivity, setDataSensitivity] = useState<DataSensitivity | "">("");
+
+  const nodeCategory = node?.data?.category;
+  const showToolFields = nodeCategory === "kc5";
+  const showPromptFields = nodeCategory === "kc3";
+  const showSensitivityField =
+    nodeCategory === "kc4" || nodeCategory === "kc5" || nodeCategory === "datastore";
 
   useEffect(() => {
     if (node?.data) {
@@ -59,6 +101,10 @@ export default function NodeEditorDialog({
       setTrustLevel(node.data.trustLevel ?? "semi-trusted");
       setSelectedLayers(new Set(node.data.maestroLayers ?? []));
       setMetadata({ ...(node.data.customMetadata ?? {}) });
+      setToolAccessMode(node.data.toolAccessMode ?? "");
+      setToolRiskTier(node.data.toolRiskTier ?? "");
+      setPromptType(node.data.promptType ?? "");
+      setDataSensitivity(node.data.dataSensitivity ?? "");
     }
   }, [node]);
 
@@ -95,6 +141,10 @@ export default function NodeEditorDialog({
       trustLevel,
       maestroLayers: Array.from(selectedLayers).sort(),
       customMetadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+      toolAccessMode: toolAccessMode || undefined,
+      toolRiskTier: toolRiskTier || undefined,
+      promptType: promptType || undefined,
+      dataSensitivity: dataSensitivity || undefined,
     });
     onOpenChange(false);
   };
@@ -181,6 +231,89 @@ export default function NodeEditorDialog({
               })}
             </div>
           </div>
+
+          {/* Tool Classification (KC5) */}
+          {showToolFields && (
+            <>
+              <div className="space-y-1">
+                <Label className="text-xs">Tool Access Mode</Label>
+                <Select
+                  value={toolAccessMode}
+                  onValueChange={(v) => setToolAccessMode(v as ToolAccessMode)}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="Select access mode..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TOOL_ACCESS_MODES.map((m) => (
+                      <SelectItem key={m.value} value={m.value} className="text-sm">
+                        {m.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Tool Risk Tier</Label>
+                <Select
+                  value={toolRiskTier}
+                  onValueChange={(v) => setToolRiskTier(v as ToolRiskTier)}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="Select risk tier..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TOOL_RISK_TIERS.map((t) => (
+                      <SelectItem key={t.value} value={t.value} className="text-sm">
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
+
+          {/* Prompt Classification (KC3) */}
+          {showPromptFields && (
+            <div className="space-y-1">
+              <Label className="text-xs">Prompt Type</Label>
+              <Select value={promptType} onValueChange={(v) => setPromptType(v as PromptType)}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="Select prompt type..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROMPT_TYPES.map((p) => (
+                    <SelectItem key={p.value} value={p.value} className="text-sm">
+                      {p.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Data Sensitivity */}
+          {showSensitivityField && (
+            <div className="space-y-1">
+              <Label className="text-xs">Data Sensitivity</Label>
+              <Select
+                value={dataSensitivity}
+                onValueChange={(v) => setDataSensitivity(v as DataSensitivity)}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="Select sensitivity..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {DATA_SENSITIVITY_LEVELS.map((d) => (
+                    <SelectItem key={d.value} value={d.value} className="text-sm">
+                      {d.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Custom Metadata */}
           <div className="space-y-1">
