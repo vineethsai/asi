@@ -1,4 +1,5 @@
 import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -292,7 +293,7 @@ export const Controls = () => {
       {/* Mobile Navigation Sidebar */}
       <SidebarNav type="controls" isOpen={isMobileMenuOpen} onClose={handleMobileMenuClose} />
 
-      <section className="py-16 bg-secondary/50">
+      <section className="py-16">
         <div className="container px-4 md:px-6">
           <div className="max-w-7xl mx-auto">
             {/* Header */}
@@ -309,56 +310,24 @@ export const Controls = () => {
             </div>
 
             {/* Analytics Dashboard */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <Shield className="h-5 w-5 text-blue-500" />
-                    <div>
-                      <p className="text-sm font-medium">Total Controls</p>
-                      <p className="text-2xl font-bold">{analytics.totalControls}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <div>
-                      <p className="text-sm font-medium">AISVS Requirements</p>
-                      <p className="text-2xl font-bold">{analytics.totalAISVSRequirements}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <BookOpen className="h-5 w-5 text-purple-500" />
-                    <div>
-                      <p className="text-sm font-medium">Categories</p>
-                      <p className="text-2xl font-bold">{aisvsCategories.length}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <AlertTriangle className="h-5 w-5 text-red-500" />
-                    <div>
-                      <p className="text-sm font-medium">Active Controls</p>
-                      <p className="text-2xl font-bold">
-                        {analytics.statusDistribution.active || 0}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="flex flex-wrap gap-6 text-sm text-muted-foreground mb-6">
+              <span>
+                <strong className="text-foreground">{analytics.totalControls}</strong> Total
+                Controls
+              </span>
+              <span>
+                <strong className="text-foreground">{analytics.totalAISVSRequirements}</strong>{" "}
+                AISVS Requirements
+              </span>
+              <span>
+                <strong className="text-foreground">{aisvsCategories.length}</strong> Categories
+              </span>
+              <span>
+                <strong className="text-foreground">
+                  {analytics.statusDistribution.active || 0}
+                </strong>{" "}
+                Active Controls
+              </span>
             </div>
 
             {/* Filters */}
@@ -491,7 +460,7 @@ export const Controls = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                   {filteredControls.map((control) => (
                     <Link to={`/controls/${control.id}`} key={control.id}>
-                      <Card className="h-full border border-control/20 hover:shadow-lg transition-all duration-200 hover:-translate-y-1">
+                      <Card className="h-full border border-control/20 hover:bg-muted/50 transition-colors">
                         <CardContent className="p-6">
                           <div className="flex items-center mb-3 gap-2">
                             {control.icon && (
@@ -1228,6 +1197,7 @@ export const Controls = () => {
           </div>
         </div>
       </section>
+      <Footer />
     </>
   );
 };

@@ -1047,23 +1047,16 @@ export default function Taxonomy() {
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Network className="h-8 w-8 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">AI Security Taxonomy</h1>
-              <p className="text-muted-foreground">
-                Unified view of AI security frameworks, standards, and their interconnections
-              </p>
-            </div>
-          </div>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold tracking-tight">Threat Taxonomy</h1>
+          <p className="mt-1 text-muted-foreground">
+            Unified view of AI security frameworks, standards, and their interconnections
+          </p>
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <div className="overflow-x-auto -mx-4 px-4 mb-6">
-            <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 bg-muted/50 p-1 rounded-xl">
+            <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 p-1 rounded-xl">
               <TabsTrigger value="overview" className="gap-1.5">
                 <Network className="h-4 w-4" />
                 <span className="hidden sm:inline">Overview & Mapping</span>
@@ -1093,43 +1086,11 @@ export default function Taxonomy() {
           </div>
 
           <TabsContent value="overview" className="mt-0 space-y-6">
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="flex flex-wrap gap-6 text-sm text-muted-foreground mb-6">
               {nodes.map((fw) => (
-                <Card
-                  key={fw.id}
-                  className="cursor-pointer hover:shadow-md transition-all group"
-                  onClick={() =>
-                    handleTabChange(
-                      fw.id === "threats"
-                        ? "overview"
-                        : fw.id === "atlas"
-                          ? "mitre-atlas"
-                          : fw.id === "agentic"
-                            ? "owasp-agentic"
-                            : fw.id,
-                    )
-                  }
-                >
-                  <CardContent className="p-4 text-center">
-                    <div
-                      className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center text-white group-hover:scale-110 transition-transform"
-                      style={{ backgroundColor: fw.color }}
-                    >
-                      {fw.id === "atlas" && <Shield className="h-5 w-5" />}
-                      {fw.id === "cisco" && <Layers className="h-5 w-5" />}
-                      {fw.id === "agentic" && <Target className="h-5 w-5" />}
-                      {fw.id === "aivss" && <Calculator className="h-5 w-5" />}
-                      {fw.id === "threats" && <Zap className="h-5 w-5" />}
-                    </div>
-                    <div className="text-2xl font-bold" style={{ color: fw.color }}>
-                      {fw.count}
-                    </div>
-                    <div className="text-xs font-medium mt-1">{fw.shortName}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5 leading-tight">
-                      {fw.description}
-                    </div>
-                  </CardContent>
-                </Card>
+                <span key={fw.id}>
+                  <strong className="text-foreground">{fw.count}</strong> {fw.shortName}
+                </span>
               ))}
             </div>
 

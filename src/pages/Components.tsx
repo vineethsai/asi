@@ -22,16 +22,6 @@ const getAllTags = (data) => {
   return Array.from(tags);
 };
 
-// Add color map for icon backgrounds and borders
-const colorMap = {
-  kc1: { border: "#2563eb", bg: "#eff6ff", icon: "#2563eb" },
-  kc2: { border: "#22c55e", bg: "#f0fdf4", icon: "#22c55e" },
-  kc3: { border: "#818cf8", bg: "#f5f3ff", icon: "#818cf8" },
-  kc4: { border: "#a855f7", bg: "#faf5ff", icon: "#a855f7" },
-  kc5: { border: "#f87171", bg: "#fef2f2", icon: "#f87171" },
-  kc6: { border: "#38bdf8", bg: "#f0f9ff", icon: "#38bdf8" },
-};
-
 const Components = () => {
   const [tagFilter, _setTagFilter] = useState("");
   const [sortBy, _setSortBy] = useState("name");
@@ -133,32 +123,24 @@ const Components = () => {
       {/* Mobile Navigation Sidebar */}
       <SidebarNav type="components" isOpen={isMobileMenuOpen} onClose={handleMobileMenuClose} />
 
-      <main className="py-16 bg-secondary/50">
+      <main className="py-16 bg-background">
         <div className="container px-4 md:px-6">
           <div className="max-w-7xl mx-auto">
+            <div className="mb-8">
+              <h1 className="text-2xl font-bold tracking-tight">Agent Components</h1>
+              <p className="mt-1 text-muted-foreground">
+                Explore the 6 key components of agentic AI systems and learn security best practices
+                for each component.
+              </p>
+            </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-0">
               {filtered.map((component) => (
                 <Link to={`/components/${component.id}`} key={component.id}>
-                  <Card
-                    className="h-full border hover:shadow-lg transition-shadow"
-                    style={{ borderColor: colorMap[component.id]?.border || "#e5e7eb" }}
-                  >
+                  <Card className="h-full border hover:bg-muted/50 transition-colors">
                     <CardContent className="p-6">
                       <div className="flex items-center gap-3 mb-2">
                         {component.icon && (
-                          <span
-                            className="rounded-md border p-2 flex items-center justify-center"
-                            style={{
-                              background: colorMap[component.id]?.bg || "#f1f5f9",
-                              borderColor: colorMap[component.id]?.border || "#e5e7eb",
-                            }}
-                          >
-                            <Icon
-                              name={component.icon}
-                              color={colorMap[component.id]?.icon || "#2563eb"}
-                              size={32}
-                            />
-                          </span>
+                          <Icon name={component.icon} className="text-muted-foreground" size={32} />
                         )}
                         <h3 className="text-xl font-bold text-foreground">{component.title}</h3>
                       </div>

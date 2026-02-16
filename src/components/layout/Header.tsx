@@ -182,16 +182,14 @@ export const Header = ({ onMobileMenuToggle, isMobileMenuOpen = false }: HeaderP
 
   return (
     <header className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between px-4">
+      <div className="container flex h-14 items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <div className="rounded-md bg-primary p-1">
-              <div className="h-6 w-6 text-primary-foreground font-bold flex items-center justify-center">
-                AI
-              </div>
-            </div>
-            <span className="font-bold text-lg hidden sm:inline-block">Agentic Security Hub</span>
-            <span className="font-bold text-lg sm:hidden">ASH</span>
+            <span className="font-mono text-base font-bold text-foreground">&gt;_</span>
+            <span className="font-semibold text-sm hidden sm:inline-block tracking-tight">
+              Agentic Security Hub
+            </span>
+            <span className="font-semibold text-sm sm:hidden tracking-tight">ASH</span>
           </Link>
         </div>
 
@@ -206,18 +204,15 @@ export const Header = ({ onMobileMenuToggle, isMobileMenuOpen = false }: HeaderP
               key={item.path}
               to={item.path}
               className={cn(
-                "px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 relative",
-                "hover:bg-accent hover:text-accent-foreground",
+                "px-2.5 py-1.5 text-sm transition-colors duration-150",
+                "hover:text-foreground",
                 isActiveNavItem(item.path)
-                  ? "bg-primary/10 text-primary font-semibold shadow-sm"
+                  ? "text-foreground font-semibold"
                   : "text-muted-foreground",
               )}
               aria-current={isActiveNavItem(item.path) ? "page" : undefined}
             >
               {item.name}
-              {isActiveNavItem(item.path) && (
-                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />
-              )}
             </Link>
           ))}
         </nav>

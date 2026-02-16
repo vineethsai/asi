@@ -1,69 +1,22 @@
-import React from "react";
-import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-import { ArrowRight, Network, Users, Zap, Brain, Target, type LucideIcon } from "lucide-react";
-import {
-  Text,
-  Heading,
-  Container,
-  Flex,
-  Box,
-  Grid,
-  Section,
-  Tabs,
-  Separator,
-  Card as RadixCard,
-} from "@radix-ui/themes";
+import { ArrowRight, Network } from "lucide-react";
 import ArchitectureDiagram from "@/components/visual/ArchitectureDiagrams";
 import { architecturesData } from "@/components/components/architecturesData";
 
-// UI-specific mapping: display name for tabs, icon, Tailwind color, complexity label, use case
-const archColorMap: Record<string, string> = {
-  blue: "bg-blue-500",
-  green: "bg-green-500",
-  orange: "bg-orange-500",
-  yellow: "bg-yellow-500",
-  purple: "bg-purple-500",
-  gray: "bg-gray-500",
-};
-
-const ARCH_UI_MAP: Record<
-  string,
-  { displayName: string; icon: LucideIcon; color: string; complexity: string; useCase: string }
-> = {
-  sequential: {
-    displayName: "Sequential Agent",
-    icon: ArrowRight,
-    color: "blue",
-    complexity: "Simple",
-    useCase: "Basic automation",
-  },
-  hierarchical: {
-    displayName: "Hierarchical",
-    icon: Network,
-    color: "green",
-    complexity: "Complex",
-    useCase: "Enterprise systems",
-  },
+const ARCH_UI: Record<string, { name: string; complexity: string; useCase: string }> = {
+  sequential: { name: "Sequential Agent", complexity: "Simple", useCase: "Basic automation" },
+  hierarchical: { name: "Hierarchical", complexity: "Complex", useCase: "Enterprise systems" },
   collaborative: {
-    displayName: "Collaborative Swarm",
-    icon: Users,
-    color: "orange",
+    name: "Collaborative Swarm",
     complexity: "Advanced",
     useCase: "Distributed problem-solving",
   },
-  reactive: {
-    displayName: "Reactive",
-    icon: Zap,
-    color: "yellow",
-    complexity: "Moderate",
-    useCase: "Real-time systems",
-  },
+  reactive: { name: "Reactive", complexity: "Moderate", useCase: "Real-time systems" },
   knowledge_intensive: {
-    displayName: "Knowledge-Intensive",
-    icon: Brain,
-    color: "purple",
+    name: "Knowledge-Intensive",
     complexity: "Advanced",
     useCase: "Research & analysis",
   },
@@ -78,241 +31,112 @@ const architectureOrder = [
 ];
 
 export const ArchitectureShowcase = () => {
+  const [activeTab, setActiveTab] = useState("sequential");
+
   const architectures = architectureOrder
     .filter((id) => architecturesData[id])
     .map((id) => {
       const arch = architecturesData[id];
-      const ui = ARCH_UI_MAP[id] ?? {
-        displayName: arch.name,
-        icon: Network,
-        color: "gray",
-        complexity: "Standard",
-        useCase: "General",
-      };
+      const ui = ARCH_UI[id] ?? { name: arch.name, complexity: "Standard", useCase: "General" };
       return {
         id: arch.id,
-        name: ui.displayName,
+        name: ui.name,
         description: arch.description,
-        icon: ui.icon,
-        color: ui.color,
         complexity: ui.complexity,
         useCase: ui.useCase,
       };
     });
 
+  const active = architectures.find((a) => a.id === activeTab) ?? architectures[0];
+
   return (
-    <Section className="py-16 lg:py-24">
-      <Container size="4">
-        <Box className="text-center mb-12">
-          <Badge variant="secondary" className="mb-4">
-            <Target className="h-4 w-4 mr-2" />
-            Architecture Patterns
-          </Badge>
-          <Heading size="8" className="mb-4">
-            AI Agent Architecture Diagrams
-          </Heading>
-          <Text size="5" className="text-muted-foreground max-w-3xl mx-auto">
-            Interactive SVG diagrams showcasing different AI agent architecture patterns with
-            detailed component relationships and data flows.
-          </Text>
-        </Box>
+    <section className="py-12 lg:py-16">
+      <div className="container px-4 md:px-6">
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold tracking-tight">Architecture Patterns</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Interactive diagrams of AI agent architecture patterns with component relationships and
+            data flows.
+          </p>
+        </div>
 
-        <Tabs.Root defaultValue="sequential" className="w-full">
-          <Tabs.List className="grid w-full grid-cols-5 mb-8 bg-gray-50 dark:bg-gray-900 p-2 rounded-lg">
-            {architectures.map((arch) => (
-              <Tabs.Trigger
-                key={arch.id}
-                value={arch.id}
-                className="flex flex-col items-center gap-2 p-4 rounded-md transition-all duration-200 hover:bg-white dark:hover:bg-gray-800 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm"
-              >
-                <arch.icon className="h-5 w-5" />
-                <Text size="2" weight="medium">
-                  {arch.name}
-                </Text>
-              </Tabs.Trigger>
-            ))}
-          </Tabs.List>
-
+        {/* Tab triggers */}
+        <div className="flex gap-1 mb-6 overflow-x-auto border-b">
           {architectures.map((arch) => (
-            <Tabs.Content key={arch.id} value={arch.id} className="space-y-6">
-              <RadixCard className="overflow-hidden shadow-lg border border-gray-200 dark:border-gray-800">
-                <Grid columns="2" gap="0" className="min-h-[400px]">
-                  {/* Diagram Side */}
-                  <Box className="p-8 bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 flex items-center justify-center border-r border-gray-200 dark:border-gray-700">
-                    <ArchitectureDiagram
-                      architectureId={arch.id}
-                      className="w-full h-80 drop-shadow-lg"
-                    />
-                  </Box>
-
-                  {/* Info Side */}
-                  <Box className="p-8 space-y-6">
-                    <Box>
-                      <Flex align="center" gap="3" className="mb-4">
-                        <Box
-                          className={`p-3 rounded-lg ${archColorMap[arch.color] ?? "bg-gray-500"} text-white`}
-                        >
-                          <arch.icon className="h-6 w-6" />
-                        </Box>
-                        <Box>
-                          <Heading size="6">{arch.name}</Heading>
-                          <Text size="3" className="text-muted-foreground">
-                            {arch.complexity} Architecture
-                          </Text>
-                        </Box>
-                      </Flex>
-
-                      <Text size="4" className="leading-relaxed mb-4">
-                        {arch.description}
-                      </Text>
-                    </Box>
-
-                    <Separator />
-
-                    <Box className="space-y-4">
-                      <Box>
-                        <Text size="3" weight="bold" className="mb-2">
-                          Complexity Level
-                        </Text>
-                        <Badge
-                          variant={
-                            arch.complexity === "Simple"
-                              ? "secondary"
-                              : arch.complexity === "Moderate"
-                                ? "default"
-                                : "destructive"
-                          }
-                        >
-                          {arch.complexity}
-                        </Badge>
-                      </Box>
-
-                      <Box>
-                        <Text size="3" weight="bold" className="mb-2">
-                          Primary Use Case
-                        </Text>
-                        <Text size="3" className="text-muted-foreground">
-                          {arch.useCase}
-                        </Text>
-                      </Box>
-                    </Box>
-
-                    <Separator />
-
-                    <Box className="space-y-3">
-                      <Text size="3" weight="bold">
-                        Key Features
-                      </Text>
-                      <Box className="space-y-2">
-                        {arch.id === "sequential" && (
-                          <>
-                            <Flex align="center" gap="2">
-                              <Box className="w-2 h-2 bg-blue-500 rounded-full" />
-                              <Text size="2">Linear task processing</Text>
-                            </Flex>
-                            <Flex align="center" gap="2">
-                              <Box className="w-2 h-2 bg-blue-500 rounded-full" />
-                              <Text size="2">Single LLM core</Text>
-                            </Flex>
-                            <Flex align="center" gap="2">
-                              <Box className="w-2 h-2 bg-blue-500 rounded-full" />
-                              <Text size="2">Session-specific memory</Text>
-                            </Flex>
-                          </>
-                        )}
-                        {arch.id === "hierarchical" && (
-                          <>
-                            <Flex align="center" gap="2">
-                              <Box className="w-2 h-2 bg-green-500 rounded-full" />
-                              <Text size="2">Task orchestration</Text>
-                            </Flex>
-                            <Flex align="center" gap="2">
-                              <Box className="w-2 h-2 bg-green-500 rounded-full" />
-                              <Text size="2">Specialized sub-agents</Text>
-                            </Flex>
-                            <Flex align="center" gap="2">
-                              <Box className="w-2 h-2 bg-green-500 rounded-full" />
-                              <Text size="2">Shared memory system</Text>
-                            </Flex>
-                          </>
-                        )}
-                        {arch.id === "collaborative" && (
-                          <>
-                            <Flex align="center" gap="2">
-                              <Box className="w-2 h-2 bg-orange-500 rounded-full" />
-                              <Text size="2">Peer-to-peer communication</Text>
-                            </Flex>
-                            <Flex align="center" gap="2">
-                              <Box className="w-2 h-2 bg-orange-500 rounded-full" />
-                              <Text size="2">Distributed decision making</Text>
-                            </Flex>
-                            <Flex align="center" gap="2">
-                              <Box className="w-2 h-2 bg-orange-500 rounded-full" />
-                              <Text size="2">Collective knowledge sharing</Text>
-                            </Flex>
-                          </>
-                        )}
-                        {arch.id === "reactive" && (
-                          <>
-                            <Flex align="center" gap="2">
-                              <Box className="w-2 h-2 bg-yellow-500 rounded-full" />
-                              <Text size="2">Event-driven responses</Text>
-                            </Flex>
-                            <Flex align="center" gap="2">
-                              <Box className="w-2 h-2 bg-yellow-500 rounded-full" />
-                              <Text size="2">ReAct paradigm</Text>
-                            </Flex>
-                            <Flex align="center" gap="2">
-                              <Box className="w-2 h-2 bg-yellow-500 rounded-full" />
-                              <Text size="2">Real-time adaptation</Text>
-                            </Flex>
-                          </>
-                        )}
-                        {arch.id === "knowledge_intensive" && (
-                          <>
-                            <Flex align="center" gap="2">
-                              <Box className="w-2 h-2 bg-purple-500 rounded-full" />
-                              <Text size="2">RAG integration</Text>
-                            </Flex>
-                            <Flex align="center" gap="2">
-                              <Box className="w-2 h-2 bg-purple-500 rounded-full" />
-                              <Text size="2">External knowledge sources</Text>
-                            </Flex>
-                            <Flex align="center" gap="2">
-                              <Box className="w-2 h-2 bg-purple-500 rounded-full" />
-                              <Text size="2">Persistent knowledge cache</Text>
-                            </Flex>
-                          </>
-                        )}
-                      </Box>
-                    </Box>
-
-                    <Box className="pt-4">
-                      <Link to={`/architectures/${arch.id}`}>
-                        <Button className="w-full gap-2">
-                          Learn More
-                          <ArrowRight className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                    </Box>
-                  </Box>
-                </Grid>
-              </RadixCard>
-            </Tabs.Content>
+            <button
+              key={arch.id}
+              onClick={() => setActiveTab(arch.id)}
+              className={`px-4 py-2 text-sm whitespace-nowrap border-b-2 transition-colors -mb-px ${
+                activeTab === arch.id
+                  ? "border-foreground text-foreground font-medium"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {arch.name}
+            </button>
           ))}
-        </Tabs.Root>
+        </div>
 
-        <Box className="text-center mt-12">
+        {/* Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 border rounded-lg overflow-hidden">
+          {/* Diagram */}
+          <div className="p-6 bg-muted/30 border-b lg:border-b-0 lg:border-r flex items-center justify-center min-h-[350px]">
+            <ArchitectureDiagram architectureId={active.id} className="w-full h-80" />
+          </div>
+
+          {/* Info */}
+          <div className="p-6 space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold">{active.name}</h3>
+              <p className="text-sm text-muted-foreground mt-1">{active.complexity} architecture</p>
+            </div>
+
+            <p className="text-sm leading-relaxed text-muted-foreground">{active.description}</p>
+
+            <div className="flex gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground">Complexity</span>
+                <div className="font-medium mt-0.5">
+                  <Badge
+                    variant={
+                      active.complexity === "Simple"
+                        ? "secondary"
+                        : active.complexity === "Moderate"
+                          ? "default"
+                          : "destructive"
+                    }
+                  >
+                    {active.complexity}
+                  </Badge>
+                </div>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Use case</span>
+                <div className="font-medium mt-0.5">{active.useCase}</div>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <Link to={`/architectures/${active.id}`}>
+                <Button variant="outline" size="sm" className="gap-2">
+                  View details <ArrowRight className="h-3 w-3" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8">
           <Link to="/architectures">
-            <Button variant="outline" size="lg" className="gap-2">
-              <Network className="h-5 w-5" />
-              View All Architectures
-              <ArrowRight className="h-4 w-4" />
+            <Button variant="outline" size="sm" className="gap-2">
+              <Network className="h-4 w-4" />
+              All architectures
+              <ArrowRight className="h-3 w-3" />
             </Button>
           </Link>
-        </Box>
-      </Container>
-    </Section>
+        </div>
+      </div>
+    </section>
   );
 };
 

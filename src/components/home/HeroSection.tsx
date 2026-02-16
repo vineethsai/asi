@@ -1,30 +1,44 @@
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Crosshair } from "lucide-react";
+import { ArrowRight, ShieldCheck, Target, Shield, Network, Brain, Crosshair } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const terminalStats = [
-  { label: "AISVS Categories", value: 13, maxBar: 16 },
-  { label: "Threat Vectors", value: 15, maxBar: 16 },
-  { label: "Agent Components", value: 6, maxBar: 16 },
-  { label: "Security Controls", value: 16, maxBar: 16 },
+const sectionLinks = [
+  {
+    icon: ShieldCheck,
+    title: "AISVS Standards",
+    description: "13 verification categories for AI agent security",
+    path: "/aisvs",
+  },
+  {
+    icon: Target,
+    title: "Threat Catalog",
+    description: "Known threats to agentic AI systems",
+    path: "/threats",
+  },
+  {
+    icon: Shield,
+    title: "Security Controls",
+    description: "Defensive mitigations and controls",
+    path: "/controls",
+  },
+  {
+    icon: Network,
+    title: "NIST AI RMF",
+    description: "Interactive NIST Risk Management mapping",
+    path: "/nist-mapping",
+  },
+  {
+    icon: Brain,
+    title: "Architecture Patterns",
+    description: "5 agentic architectures with security analysis",
+    path: "/architectures",
+  },
+  {
+    icon: Crosshair,
+    title: "Threat Modeler",
+    description: "Drag-and-drop MAESTRO threat modeling",
+    path: "/threat-modeler",
+  },
 ];
-
-const statusLines = [
-  "NIST AI RMF mapping loaded",
-  "MAESTRO threat modeling ready",
-  "5 architecture patterns analyzed",
-];
-
-function TerminalBar({ ratio }: { ratio: number }) {
-  const widthPercent = Math.round(ratio * 100);
-  return (
-    <span
-      className="term-bar"
-      style={{ width: `${widthPercent}%`, maxWidth: 120, minWidth: 16 }}
-      aria-hidden="true"
-    />
-  );
-}
 
 export const HeroSection = () => {
   return (
@@ -32,10 +46,10 @@ export const HeroSection = () => {
       {/* Dot-grid background */}
       <div className="hero-grid-bg absolute inset-0 text-foreground opacity-[0.03] dark:opacity-[0.05] pointer-events-none" />
 
-      <div className="container relative px-4 md:px-6 max-w-4xl mx-auto">
+      <div className="container relative px-4 md:px-6 max-w-3xl mx-auto">
         <div className="flex flex-col items-center text-center space-y-8">
           {/* Status badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border bg-muted/50 dark:bg-muted/30 backdrop-blur-sm">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border bg-muted/50 dark:bg-muted/30">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
@@ -55,81 +69,28 @@ export const HeroSection = () => {
           </h1>
 
           {/* Subtitle */}
-          <p className="max-w-2xl text-lg text-muted-foreground leading-relaxed md:text-xl">
+          <p className="max-w-2xl text-base text-muted-foreground leading-relaxed md:text-lg">
             Threat models, verification standards, and security controls for AI agent architectures.
             Built on OWASP AISVS and NIST AI RMF.
           </p>
+        </div>
 
-          {/* Terminal widget */}
-          <div className="w-full max-w-2xl terminal-window">
-            {/* Title bar */}
-            <div className="terminal-titlebar">
-              <div className="flex items-center gap-1.5">
-                <span className="terminal-dot bg-red-400 dark:bg-red-500" />
-                <span className="terminal-dot bg-amber-400 dark:bg-amber-500" />
-                <span className="terminal-dot bg-emerald-400 dark:bg-emerald-500" />
+        {/* Navigation grid */}
+        <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-px bg-border rounded-lg border overflow-hidden">
+          {sectionLinks.map((link) => (
+            <Link
+              key={link.path}
+              to={link.path}
+              className="group flex items-center gap-4 px-5 py-4 bg-background hover:bg-muted/50 transition-colors"
+            >
+              <link.icon className="h-5 w-5 text-muted-foreground group-hover:text-foreground shrink-0 transition-colors" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-foreground">{link.title}</div>
+                <div className="text-xs text-muted-foreground">{link.description}</div>
               </div>
-              <span className="ml-3 text-xs text-muted-foreground font-mono">
-                ~/agentic-security
-              </span>
-            </div>
-
-            {/* Terminal body */}
-            <div className="terminal-body text-foreground dark:text-slate-200">
-              {/* Command */}
-              <div className="mb-4">
-                <span className="term-prompt">$</span>{" "}
-                <span className="term-command">asi status</span>
-              </div>
-
-              {/* Stats with bars */}
-              <div className="space-y-2 mb-4">
-                {terminalStats.map((stat) => (
-                  <div key={stat.label} className="flex items-center gap-3">
-                    <span className="term-label w-40 text-right text-xs shrink-0">
-                      {stat.label}
-                    </span>
-                    <span className="term-value w-6 text-right text-xs">{stat.value}</span>
-                    <div className="flex-1 flex items-center">
-                      <TerminalBar ratio={stat.value / stat.maxBar} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Status lines */}
-              <div className="space-y-1 mb-4 border-t border-border/50 dark:border-slate-700/50 pt-3">
-                {statusLines.map((line) => (
-                  <div key={line} className="text-xs">
-                    <span className="term-success">[ok]</span>{" "}
-                    <span className="term-muted">{line}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Prompt with blinking cursor */}
-              <div>
-                <span className="term-prompt">$</span>{" "}
-                <span className="animate-blink term-prompt">_</span>
-              </div>
-            </div>
-          </div>
-
-          {/* CTA buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 pt-2">
-            <Link to="/aisvs">
-              <Button size="lg" className="gap-2 font-semibold">
-                Explore Framework
-                <ArrowRight className="h-4 w-4" />
-              </Button>
+              <ArrowRight className="h-4 w-4 text-muted-foreground/0 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all shrink-0" />
             </Link>
-            <Link to="/threat-modeler">
-              <Button variant="outline" size="lg" className="gap-2 border-2">
-                <Crosshair className="h-4 w-4" />
-                Threat Modeler
-              </Button>
-            </Link>
-          </div>
+          ))}
         </div>
       </div>
     </section>

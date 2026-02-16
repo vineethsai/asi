@@ -147,13 +147,13 @@ const References = () => {
   const getSourceIcon = (sourceType: string) => {
     switch (sourceType) {
       case "threat":
-        return <Target className="h-4 w-4 text-red-500" />;
+        return <Target className="h-4 w-4 text-muted-foreground" />;
       case "mitigation":
-        return <Shield className="h-4 w-4 text-blue-500" />;
+        return <Shield className="h-4 w-4 text-muted-foreground" />;
       case "aisvs":
-        return <Database className="h-4 w-4 text-purple-500" />;
+        return <Database className="h-4 w-4 text-muted-foreground" />;
       default:
-        return <BookOpen className="h-4 w-4" />;
+        return <BookOpen className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
@@ -213,111 +213,71 @@ const References = () => {
       <main className="container mx-auto px-4 py-8">
         {/* Header Section */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <BookOpen className="h-8 w-8 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">References & Resources</h1>
-              <p className="text-xl text-muted-foreground">
-                Comprehensive AI Security Resource Library
-              </p>
-            </div>
-          </div>
-
-          <p className="text-lg text-muted-foreground mb-6 max-w-4xl">
+          <h1 className="text-2xl font-bold tracking-tight">References</h1>
+          <p className="mt-1 text-muted-foreground">
             This page aggregates all external references from our AI security framework, including
             research papers, standards documents, tools, and resources related to threats,
             mitigations, and AISVS requirements.
           </p>
 
-          {/* Statistics Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-primary mb-1">{stats.total}</div>
-                <div className="text-sm text-muted-foreground">Total References</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-red-500 mb-1">{stats.threatRefs}</div>
-                <div className="text-sm text-muted-foreground">Threat References</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-blue-500 mb-1">{stats.mitigationRefs}</div>
-                <div className="text-sm text-muted-foreground">Control References</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-purple-500 mb-1">{stats.aisvsRefs}</div>
-                <div className="text-sm text-muted-foreground">AISVS References</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-green-500 mb-1">{stats.uniqueDomains}</div>
-                <div className="text-sm text-muted-foreground">Unique Sources</div>
-              </CardContent>
-            </Card>
+          <div className="flex flex-wrap gap-6 text-sm text-muted-foreground mb-6">
+            <span>
+              <strong className="text-foreground">{stats.total}</strong> Total References
+            </span>
+            <span>
+              <strong className="text-foreground">{stats.threatRefs}</strong> Threat References
+            </span>
+            <span>
+              <strong className="text-foreground">{stats.mitigationRefs}</strong> Control References
+            </span>
+            <span>
+              <strong className="text-foreground">{stats.aisvsRefs}</strong> AISVS References
+            </span>
+            <span>
+              <strong className="text-foreground">{stats.uniqueDomains}</strong> Unique Sources
+            </span>
           </div>
         </div>
 
-        {/* Search and Filter Controls */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5" />
-              Search & Filter References
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Search references by title or source..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant={selectedType === "all" ? "default" : "outline"}
-                  onClick={() => setSelectedType("all")}
-                  className="whitespace-nowrap"
-                >
-                  All ({allReferences.length})
-                </Button>
-                <Button
-                  variant={selectedType === "threat" ? "default" : "outline"}
-                  onClick={() => setSelectedType("threat")}
-                  className="whitespace-nowrap"
-                >
-                  Threats ({stats.threatRefs})
-                </Button>
-                <Button
-                  variant={selectedType === "mitigation" ? "default" : "outline"}
-                  onClick={() => setSelectedType("mitigation")}
-                  className="whitespace-nowrap"
-                >
-                  Controls ({stats.mitigationRefs})
-                </Button>
-                <Button
-                  variant={selectedType === "aisvs" ? "default" : "outline"}
-                  onClick={() => setSelectedType("aisvs")}
-                  className="whitespace-nowrap"
-                >
-                  AISVS ({stats.aisvsRefs})
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex flex-wrap gap-3 mb-6">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search references by title or source..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Button
+            variant={selectedType === "all" ? "default" : "outline"}
+            onClick={() => setSelectedType("all")}
+            className="whitespace-nowrap"
+          >
+            All ({allReferences.length})
+          </Button>
+          <Button
+            variant={selectedType === "threat" ? "default" : "outline"}
+            onClick={() => setSelectedType("threat")}
+            className="whitespace-nowrap"
+          >
+            Threats ({stats.threatRefs})
+          </Button>
+          <Button
+            variant={selectedType === "mitigation" ? "default" : "outline"}
+            onClick={() => setSelectedType("mitigation")}
+            className="whitespace-nowrap"
+          >
+            Controls ({stats.mitigationRefs})
+          </Button>
+          <Button
+            variant={selectedType === "aisvs" ? "default" : "outline"}
+            onClick={() => setSelectedType("aisvs")}
+            className="whitespace-nowrap"
+          >
+            AISVS ({stats.aisvsRefs})
+          </Button>
+        </div>
 
         {/* References Display */}
         <Tabs defaultValue="list" className="w-full">
@@ -338,7 +298,7 @@ const References = () => {
             ) : (
               <div className="grid gap-4">
                 {filteredReferences.map((ref, index) => (
-                  <Card key={index} className="hover:shadow-md transition-shadow">
+                  <Card key={index} className="hover:bg-muted/50 transition-colors">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">

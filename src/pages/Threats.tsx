@@ -1,6 +1,6 @@
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
 import { threatsData, Threat, mitigationsData } from "../components/components/securityData";
@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Helmet } from "react-helmet";
 
-import { Search, Filter, AlertTriangle, ArrowRight } from "lucide-react";
+import { Search, AlertTriangle, ArrowRight } from "lucide-react";
 
 function getFrameworkBadges(threat: Threat) {
   const badges: { label: string; color: string }[] = [];
@@ -106,7 +106,7 @@ export const Threats = () => {
 
       <SidebarNav type="threats" isOpen={isMobileMenuOpen} onClose={handleMobileMenuClose} />
 
-      <section className="py-16 bg-secondary/50 min-h-screen">
+      <section className="py-16 bg-background min-h-screen">
         <div className="container px-4 md:px-6">
           <div className="max-w-7xl mx-auto">
             {/* Header */}
@@ -123,64 +123,54 @@ export const Threats = () => {
             </div>
 
             {/* Filters */}
-            <Card className="mb-8">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Filter className="h-5 w-5" />
-                  Filters & Search
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Search</label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search threats..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Tag</label>
-                    <Select
-                      value={tagFilter || "all"}
-                      onValueChange={(val) => setTagFilter(val === "all" ? null : val)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="All Tags" />
-                      </SelectTrigger>
-                      <SelectContent className="z-[9999] bg-popover border shadow-lg">
-                        <SelectItem value="all">All Tags</SelectItem>
-                        {allTags.map((tag) => (
-                          <SelectItem key={tag} value={tag}>
-                            {tag}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Sort By</label>
-                    <Select value={sortBy} onValueChange={setSortBy}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sort By" />
-                      </SelectTrigger>
-                      <SelectContent className="z-[9999] bg-popover border shadow-lg">
-                        <SelectItem value="displayOrder">Default Order</SelectItem>
-                        <SelectItem value="risk">Risk Score (High to Low)</SelectItem>
-                        <SelectItem value="name">Name (A-Z)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+            <div className="flex flex-wrap gap-3 mb-6">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Search</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search threats..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Tag</label>
+                <Select
+                  value={tagFilter || "all"}
+                  onValueChange={(val) => setTagFilter(val === "all" ? null : val)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Tags" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999] bg-popover border shadow-lg">
+                    <SelectItem value="all">All Tags</SelectItem>
+                    {allTags.map((tag) => (
+                      <SelectItem key={tag} value={tag}>
+                        {tag}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Sort By</label>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sort By" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999] bg-popover border shadow-lg">
+                    <SelectItem value="displayOrder">Default Order</SelectItem>
+                    <SelectItem value="risk">Risk Score (High to Low)</SelectItem>
+                    <SelectItem value="name">Name (A-Z)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
             {/* Results count */}
             <div className="flex items-center justify-between mb-6">
@@ -195,7 +185,7 @@ export const Threats = () => {
                 const mitCount = getMitigationCount(threat);
                 return (
                   <Link to={`/threats/${threat.id}`} key={threat.id}>
-                    <Card className="h-full border border-threat/20 hover:shadow-lg transition-all duration-200 hover:-translate-y-1">
+                    <Card className="h-full border hover:bg-muted/50 transition-colors">
                       <CardContent className="p-6">
                         {/* Header row */}
                         <div className="flex items-start justify-between mb-3">

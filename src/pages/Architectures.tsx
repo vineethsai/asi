@@ -1,4 +1,5 @@
 import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
 import SidebarNav from "@/components/layout/SidebarNav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "react-router-dom";
@@ -91,20 +92,29 @@ const Architectures = () => {
       {/* Mobile Navigation Sidebar */}
       <SidebarNav type="architectures" isOpen={isMobileMenuOpen} onClose={handleMobileMenuClose} />
 
-      <section className="py-16 bg-secondary/50">
+      <section className="py-16">
         <div className="container px-4 md:px-6">
           <div className="max-w-7xl mx-auto">
+            <div className="mb-8">
+              <h1 className="text-2xl font-bold tracking-tight">AI Agent Architectures</h1>
+              <p className="mt-1 text-muted-foreground">
+                Comprehensive guide to agent architectures and AI security patterns for agentic
+                systems. Explore secure design patterns, architectural best practices, and security
+                implications for AI agents.
+              </p>
+            </div>
             {/* Architectures Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-0">
               {sorted.map((arch) => (
                 <Link to={`/architectures/${arch.id}`} key={arch.id}>
-                  <Card
-                    className="h-full border border-architecture/20 hover:shadow-lg transition-shadow"
-                    style={{ borderColor: arch.color || undefined }}
-                  >
+                  <Card className="h-full bg-card hover:bg-muted/50 transition-colors">
                     <CardContent className="p-6">
                       <div className="flex items-center gap-2 mb-2">
-                        {arch.icon && <Icon name={arch.icon} color={arch.color} size={24} />}
+                        {arch.icon && (
+                          <span className="text-muted-foreground">
+                            <Icon name={arch.icon} color="currentColor" size={24} />
+                          </span>
+                        )}
                         <h3 className="text-xl font-bold text-foreground">{arch.name}</h3>
                         {arch.status && (
                           <Badge variant="outline" className="capitalize ml-2">
@@ -153,6 +163,7 @@ const Architectures = () => {
           </div>
         </div>
       </section>
+      <Footer />
     </>
   );
 };

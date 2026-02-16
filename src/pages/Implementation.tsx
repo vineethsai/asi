@@ -9,16 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { mitigationsData, Mitigation, threatsData } from "@/components/components/securityData";
-import {
-  Search,
-  Layers,
-  Hammer,
-  Settings,
-  ArrowRight,
-  Shield,
-  BookOpen,
-  CheckCircle2,
-} from "lucide-react";
+import { Search, Layers, Hammer, Settings, ArrowRight, Shield, CheckCircle2 } from "lucide-react";
 
 const phases = [
   {
@@ -105,36 +96,24 @@ export default function Implementation() {
       </Helmet>
       <Header />
       <main id="main-content" className="container mx-auto px-4 py-8 space-y-8">
-        {/* Hero */}
-        <div className="text-center space-y-4">
-          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium">
-            <BookOpen className="h-4 w-4" />
-            Lifecycle-Based Security Guidance
-          </div>
-          <h1 className="text-4xl lg:text-5xl font-bold tracking-tight">Implementation Guide</h1>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold tracking-tight">Implementation Guide</h1>
+          <p className="mt-1 text-muted-foreground">
             Practical security controls organized by development lifecycle phase. Each control
             includes implementation details, tooling recommendations, and threat mappings.
           </p>
         </div>
 
-        {/* Phase Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="flex flex-wrap gap-6 text-sm text-muted-foreground mb-6">
           {phases.map((phase) => (
-            <Card
-              key={phase.id}
-              className={`cursor-pointer transition-all hover:shadow-md ${activePhase === phase.id ? "ring-2 ring-primary" : ""}`}
-              onClick={() => setActivePhase(phase.id)}
-            >
-              <CardContent className="p-6 flex items-center gap-4">
-                <div className="p-3 bg-primary/10 rounded-lg">{phase.icon}</div>
-                <div>
-                  <div className="text-2xl font-bold">{stats[phase.id as keyof typeof stats]}</div>
-                  <div className="text-sm text-muted-foreground">{phase.label} Controls</div>
-                </div>
-              </CardContent>
-            </Card>
+            <span key={phase.id}>
+              <strong className="text-foreground">{stats[phase.id as keyof typeof stats]}</strong>{" "}
+              {phase.label} Controls
+            </span>
           ))}
+          <span>
+            <strong className="text-foreground">{stats.total}</strong> Total
+          </span>
         </div>
 
         {/* Search */}
@@ -170,11 +149,11 @@ export default function Implementation() {
 
               <div className="grid gap-4">
                 {filteredMitigations.map((m) => (
-                  <Card key={m.id} className="hover:shadow-md transition-shadow">
+                  <Card key={m.id} className="hover:bg-muted/50 transition-colors">
                     <CardHeader className="pb-2">
                       <div className="flex items-start justify-between">
                         <CardTitle className="text-lg flex items-center gap-2">
-                          <Shield className="h-5 w-5 text-primary" aria-hidden="true" />
+                          <Shield className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
                           {m.name}
                         </CardTitle>
                         {m.status && (
@@ -188,9 +167,12 @@ export default function Implementation() {
                       <p className="text-sm text-muted-foreground">{m.description}</p>
 
                       {m.implementationDetail[phase.id as keyof typeof m.implementationDetail] && (
-                        <div className="bg-muted/50 rounded-lg p-4">
+                        <div className="rounded-lg p-4">
                           <h4 className="text-sm font-semibold mb-1 flex items-center gap-2">
-                            <CheckCircle2 className="h-4 w-4 text-green-600" aria-hidden="true" />
+                            <CheckCircle2
+                              className="h-4 w-4 text-muted-foreground"
+                              aria-hidden="true"
+                            />
                             {phase.label} Guidance
                           </h4>
                           <p className="text-sm text-muted-foreground">

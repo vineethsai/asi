@@ -4,7 +4,6 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Shield,
   BookOpen,
@@ -76,15 +75,9 @@ export default function About() {
       </Helmet>
       <Header />
       <main id="main-content" className="container mx-auto px-4 py-8 space-y-10">
-        {/* Hero */}
-        <div className="text-center space-y-4 max-w-3xl mx-auto">
-          <Badge variant="outline" className="text-sm">
-            OWASP Project
-          </Badge>
-          <h1 className="text-4xl lg:text-5xl font-bold tracking-tight">
-            About the Agentic Security Hub
-          </h1>
-          <p className="text-xl text-muted-foreground leading-relaxed">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold tracking-tight">About</h1>
+          <p className="mt-1 text-muted-foreground">
             An interactive companion to the OWASP Securing Agentic Applications guide, providing
             security practitioners with actionable tools, frameworks, and verification standards for
             building secure AI agent systems.
@@ -93,10 +86,10 @@ export default function About() {
 
         {/* Project Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
+          <Card className="bg-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-primary" aria-hidden="true" />
+                <Shield className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
                 Mission
               </CardTitle>
             </CardHeader>
@@ -108,10 +101,10 @@ export default function About() {
               </p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="bg-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-primary" aria-hidden="true" />
+                <Target className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
                 Scope
               </CardTitle>
             </CardHeader>
@@ -123,10 +116,10 @@ export default function About() {
               </p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="bg-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Layers className="h-5 w-5 text-primary" aria-hidden="true" />
+                <Layers className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
                 Framework
               </CardTitle>
             </CardHeader>
@@ -148,11 +141,11 @@ export default function About() {
           </p>
           <div className="grid gap-4">
             {methodology.map((step) => (
-              <Card key={step.step} className="hover:shadow-md transition-shadow">
+              <Card key={step.step} className="hover:bg-muted/50 transition-colors">
                 <CardContent className="p-6 flex items-center gap-6">
-                  <div className="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                    <span className="text-primary font-bold text-lg">{step.step}</span>
-                  </div>
+                  <span className="flex-shrink-0 text-muted-foreground font-medium">
+                    {step.step}
+                  </span>
                   <div className="flex-1">
                     <h3 className="font-semibold text-lg">{step.title}</h3>
                     <p className="text-sm text-muted-foreground">{step.description}</p>
@@ -172,10 +165,10 @@ export default function About() {
         <section className="space-y-6">
           <h2 className="text-3xl font-bold tracking-tight text-center">Contributing</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
+            <Card className="bg-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <GitBranch className="h-5 w-5 text-primary" aria-hidden="true" />
+                  <GitBranch className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
                   Open Source
                 </CardTitle>
               </CardHeader>
@@ -198,10 +191,10 @@ export default function About() {
                 </a>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="bg-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-primary" aria-hidden="true" />
+                  <Users className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
                   OWASP Community
                 </CardTitle>
               </CardHeader>
@@ -228,7 +221,7 @@ export default function About() {
         </section>
 
         {/* How to Contribute */}
-        <Card className="bg-muted/30">
+        <Card className="bg-card">
           <CardContent className="p-8 space-y-4">
             <h3 className="text-xl font-semibold">How to Contribute</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -242,7 +235,7 @@ export default function About() {
               ].map((item) => (
                 <div key={item} className="flex items-start gap-2">
                   <CheckCircle2
-                    className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5"
+                    className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5"
                     aria-hidden="true"
                   />
                   <span className="text-sm text-muted-foreground">{item}</span>

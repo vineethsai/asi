@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Icon } from "@/components/ui/icon";
+
 import { Helmet } from "react-helmet";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -642,44 +642,17 @@ export const ControlDetail = () => {
 
           {/* Header Section */}
           <div className="mb-8">
-            <div className="flex items-start gap-4 mb-4">
-              {mitigation.icon && (
-                <div className="p-3 rounded-lg bg-primary/10">
-                  <Icon name={mitigation.icon} color={mitigation.color} size={32} />
-                </div>
-              )}
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-3xl font-bold text-foreground">{mitigation.name}</h1>
-                  {mitigation.status && (
-                    <Badge variant="outline" className="capitalize">
-                      {mitigation.status}
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-muted-foreground text-lg leading-relaxed mb-4">
-                  {enhanceTextWithInteractivity(mitigation.description)}
-                </p>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {(mitigation.tags || []).map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  Version {mitigation.version || "-"} • Updated {mitigation.lastUpdated || "-"} • By{" "}
-                  {mitigation.updatedBy || "-"}
-                </div>
-              </div>
-            </div>
+            <h1 className="text-2xl font-bold tracking-tight">{mitigation.name}</h1>
+            <p className="mt-1 text-muted-foreground">
+              {enhanceTextWithInteractivity(mitigation.description)}
+            </p>
 
             {/* Quick Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 mb-1">
-                    <AlertTriangle className="h-4 w-4 text-red-500" />
+                    <AlertTriangle className="h-4 w-4 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">Mitigates</span>
                   </div>
                   <div className="text-2xl font-bold">{threats.length}</div>
@@ -716,7 +689,7 @@ export const ControlDetail = () => {
                 <Card>
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2 mb-1">
-                      <ExternalLink className="h-4 w-4 text-purple-500" />
+                      <ExternalLink className="h-4 w-4 text-muted-foreground" />
                       <span className="text-xs text-muted-foreground">References</span>
                     </div>
                     <div className="text-2xl font-bold">{mitigation.references.length}</div>
@@ -767,7 +740,7 @@ export const ControlDetail = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <AlertTriangle className="h-5 w-5 text-red-500" />
+                      <AlertTriangle className="h-5 w-5 text-muted-foreground" />
                       Mitigates Threats
                     </CardTitle>
                   </CardHeader>
@@ -815,7 +788,7 @@ export const ControlDetail = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <ExternalLink className="h-5 w-5 text-purple-500" />
+                      <ExternalLink className="h-5 w-5 text-muted-foreground" />
                       References & Resources
                     </CardTitle>
                   </CardHeader>
@@ -869,12 +842,10 @@ export const ControlDetail = () => {
                       </div>
                     )}
                     {hasBuild && (
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-yellow-50/50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800">
-                        <Hammer className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-card border">
+                        <Hammer className="h-5 w-5 text-muted-foreground" />
                         <div className="flex-1">
-                          <div className="font-medium text-yellow-900 dark:text-yellow-100">
-                            Build Phase
-                          </div>
+                          <div className="font-medium">Build Phase</div>
                           <div className="text-sm text-muted-foreground">
                             {
                               mitigation.implementationDetail.build
@@ -890,12 +861,10 @@ export const ControlDetail = () => {
                       </div>
                     )}
                     {hasOperations && (
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50/50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
-                        <Settings className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-card border">
+                        <Settings className="h-5 w-5 text-muted-foreground" />
                         <div className="flex-1">
-                          <div className="font-medium text-green-900 dark:text-green-100">
-                            Operations Phase
-                          </div>
+                          <div className="font-medium">Operations Phase</div>
                           <div className="text-sm text-muted-foreground">
                             {
                               mitigation.implementationDetail.operations
@@ -915,12 +884,10 @@ export const ControlDetail = () => {
                       </div>
                     )}
                     {hasTools && (
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
-                        <Wrench className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-card border">
+                        <Wrench className="h-5 w-5 text-muted-foreground" />
                         <div className="flex-1">
-                          <div className="font-medium text-purple-900 dark:text-purple-100">
-                            Tools & Frameworks
-                          </div>
+                          <div className="font-medium">Tools & Frameworks</div>
                           <div className="text-sm text-muted-foreground">
                             {
                               mitigation.implementationDetail.toolsAndFrameworks
@@ -946,7 +913,7 @@ export const ControlDetail = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Shield className="h-5 w-5 text-blue-500" />
+                      <Shield className="h-5 w-5 text-muted-foreground" />
                       Design Phase
                     </CardTitle>
                   </CardHeader>
@@ -963,7 +930,7 @@ export const ControlDetail = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Hammer className="h-5 w-5 text-yellow-500" />
+                      <Hammer className="h-5 w-5 text-muted-foreground" />
                       Build Phase
                     </CardTitle>
                   </CardHeader>
@@ -980,7 +947,7 @@ export const ControlDetail = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Settings className="h-5 w-5 text-green-500" />
+                      <Settings className="h-5 w-5 text-muted-foreground" />
                       Operations Phase
                     </CardTitle>
                   </CardHeader>
@@ -1000,7 +967,7 @@ export const ControlDetail = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Wrench className="h-5 w-5 text-purple-500" />
+                      <Wrench className="h-5 w-5 text-muted-foreground" />
                       Tools & Frameworks
                     </CardTitle>
                   </CardHeader>

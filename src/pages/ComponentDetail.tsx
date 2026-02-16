@@ -245,15 +245,15 @@ const ComponentDetail = () => {
             )}
           </div>
 
-          <div className={cn("p-6 rounded-lg mb-8", component.color)}>
-            <h1 className="text-3xl font-bold mb-2 text-foreground">
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold tracking-tight">
               {isSubComponent ? subComponent!.title : component.title}
             </h1>
-            <p className="text-lg text-muted-foreground">
+            <p className="mt-1 text-muted-foreground">
               {isSubComponent ? subComponent!.description : component.description}
             </p>
             {isSubComponent && (
-              <p className="text-sm text-muted-foreground mt-2">Part of: {component.title}</p>
+              <p className="mt-1 text-sm text-muted-foreground">Part of: {component.title}</p>
             )}
           </div>
 
@@ -326,7 +326,7 @@ const ComponentDetail = () => {
                     <div className="grid grid-cols-1 gap-4">
                       {component.subComponents.map((subComp) => (
                         <Link to={`/components/${subComp.id}`} key={subComp.id}>
-                          <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                          <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
                             <CardContent className="pt-6">
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center">
@@ -579,14 +579,7 @@ const ComponentDetail = () => {
                 <h2 className="text-xl font-semibold mb-4">Relevant Architectures</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {component.relatedArchitectures.map((arch) => (
-                    <Card
-                      key={arch.id}
-                      className={cn(
-                        arch.relevance === "primary"
-                          ? "border-architecture/30 bg-architecture/5"
-                          : "border-muted",
-                      )}
-                    >
+                    <Card key={arch.id} className="bg-card">
                       <CardContent className="pt-6">
                         <h3 className="text-lg font-medium mb-2">{arch.name}</h3>
                         <p className="text-sm text-muted-foreground mb-4">

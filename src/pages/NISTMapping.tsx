@@ -1807,69 +1807,34 @@ export const NISTMapping = () => {
         <main className="container mx-auto px-4 py-8">
           {/* Header Section */}
           <div className="mb-8">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <GitBranch className="h-8 w-8 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold">NIST AI RMF to AISVS Mapping</h1>
-                <p className="text-lg text-muted-foreground">
-                  Framework Alignment & Compliance Coverage
-                </p>
-              </div>
-            </div>
-
-            <p className="text-lg text-muted-foreground mb-6 max-w-4xl">
+            <h1 className="text-2xl font-bold tracking-tight">NIST AI RMF Mapping</h1>
+            <p className="mt-1 text-muted-foreground">
               Explore the comprehensive mapping between NIST AI Risk Management Framework (AI RMF)
               and OWASP AI Security Verification Standard (AISVS). This visual guide helps
               organizations understand how these frameworks complement each other for comprehensive
               AI governance and security.
             </p>
 
-            {/* Statistics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <Shield className="h-5 w-5 text-blue-500" />
-                    <div>
-                      <p className="text-sm font-medium">NIST Functions</p>
-                      <p className="text-xl font-bold">{nistAIRMF.length}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <Target className="h-5 w-5 text-green-500" />
-                    <div>
-                      <p className="text-sm font-medium">NIST Subcategories</p>
-                      <p className="text-xl font-bold">{mappingStats.totalNISTSubcategories}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-5 w-5 text-purple-500" />
-                    <div>
-                      <p className="text-sm font-medium">AISVS Categories</p>
-                      <p className="text-xl font-bold">{aisvsCategories.length}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            {/* Inline Stats */}
+            <div className="flex flex-wrap gap-6 text-sm text-muted-foreground mb-6">
+              <span>
+                <strong className="text-foreground">{nistAIRMF.length}</strong> NIST Functions
+              </span>
+              <span>
+                <strong className="text-foreground">{mappingStats.totalNISTSubcategories}</strong>{" "}
+                NIST Subcategories
+              </span>
+              <span>
+                <strong className="text-foreground">{aisvsCategories.length}</strong> AISVS
+                Categories
+              </span>
             </div>
 
             {/* Quick Navigation */}
             <Card className="mb-8">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5" />
+                  <BookOpen className="h-5 w-5 text-muted-foreground" />
                   Quick Navigation
                 </CardTitle>
               </CardHeader>
@@ -1880,7 +1845,7 @@ export const NISTMapping = () => {
                     className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
                     onClick={() => handleTabChange("overview")}
                   >
-                    <Shield className="h-4 w-4 text-blue-500" />
+                    <Shield className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">Framework Overview</span>
                   </Link>
                   <Link
@@ -1888,7 +1853,7 @@ export const NISTMapping = () => {
                     className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
                     onClick={() => handleTabChange("mapping")}
                   >
-                    <GitBranch className="h-4 w-4 text-green-500" />
+                    <GitBranch className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">Detailed Mapping</span>
                   </Link>
                   <Link
@@ -1896,7 +1861,7 @@ export const NISTMapping = () => {
                     className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
                     onClick={() => handleTabChange("matrix")}
                   >
-                    <Network className="h-4 w-4 text-purple-500" />
+                    <Network className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">Integration Matrix</span>
                   </Link>
                   <Link
@@ -1904,7 +1869,7 @@ export const NISTMapping = () => {
                     className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
                     onClick={() => handleTabChange("graph")}
                   >
-                    <Layers className="h-4 w-4 text-orange-500" />
+                    <Layers className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">Interactive Graph</span>
                   </Link>
                 </div>
@@ -1913,80 +1878,63 @@ export const NISTMapping = () => {
           </div>
 
           {/* Modern Filters */}
-          <Card className="mb-8 border-border/50 shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-secondary/5 via-secondary/10 to-primary/5 border-b border-border/50">
-              <CardTitle className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-secondary/10 border border-secondary/20">
-                  <Search className="h-5 w-5 text-secondary" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent">
-                    Search & Filter Mappings
-                  </h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Find specific NIST functions and their AISVS mappings
-                  </p>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="relative group">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 group-focus-within:text-primary transition-colors" />
-                  <Input
-                    placeholder="Search NIST functions, categories, or subcategories..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 border-border/50 focus:border-primary/50 bg-background/50 focus:bg-background transition-all duration-200"
-                  />
-                </div>
-                <Select value={selectedFunction} onValueChange={setSelectedFunction}>
-                  <SelectTrigger className="border-border/50 focus:border-primary/50 bg-background/50 focus:bg-background transition-all duration-200">
-                    <div className="flex items-center gap-2">
-                      <Shield className="h-4 w-4 text-blue-500" />
-                      <SelectValue placeholder="All NIST Functions" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent className="z-[9999] bg-background border border-border shadow-lg">
-                    <SelectItem value="all">All NIST Functions</SelectItem>
-                    {nistAIRMF.map((func) => (
-                      <SelectItem key={func.id} value={func.id}>
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-2 h-2 rounded-full"
-                            style={{ backgroundColor: func.color }}
-                          ></div>
-                          {func.code} - {func.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={selectedAISVS} onValueChange={setSelectedAISVS}>
-                  <SelectTrigger className="border-border/50 focus:border-primary/50 bg-background/50 focus:bg-background transition-all duration-200">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      <SelectValue placeholder="All AISVS Categories" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent className="z-[9999] bg-background border border-border shadow-lg">
-                    <SelectItem value="all">All AISVS Categories</SelectItem>
-                    {aisvsCategories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.code}>
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-2 h-2 rounded-full"
-                            style={{ backgroundColor: cat.color }}
-                          ></div>
-                          {cat.code} - {cat.name.split(" &")[0]}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          <div className="flex flex-wrap gap-3 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 min-w-0">
+              <div className="relative group">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 group-focus-within:text-primary transition-colors" />
+                <Input
+                  placeholder="Search NIST functions, categories, or subcategories..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 border-border/50 focus:border-primary/50 bg-background/50 focus:bg-background transition-all duration-200"
+                />
               </div>
-            </CardContent>
-          </Card>
+              <Select value={selectedFunction} onValueChange={setSelectedFunction}>
+                <SelectTrigger className="border-border/50 focus:border-primary/50 bg-background/50 focus:bg-background transition-all duration-200">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-blue-500" />
+                    <SelectValue placeholder="All NIST Functions" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="z-[9999] bg-background border border-border shadow-lg">
+                  <SelectItem value="all">All NIST Functions</SelectItem>
+                  {nistAIRMF.map((func) => (
+                    <SelectItem key={func.id} value={func.id}>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: func.color }}
+                        ></div>
+                        {func.code} - {func.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={selectedAISVS} onValueChange={setSelectedAISVS}>
+                <SelectTrigger className="border-border/50 focus:border-primary/50 bg-background/50 focus:bg-background transition-all duration-200">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <SelectValue placeholder="All AISVS Categories" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="z-[9999] bg-background border border-border shadow-lg">
+                  <SelectItem value="all">All AISVS Categories</SelectItem>
+                  {aisvsCategories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.code}>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: cat.color }}
+                        ></div>
+                        {cat.code} - {cat.name.split(" &")[0]}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
           {/* Main Content Tabs */}
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
@@ -2040,7 +1988,7 @@ export const NISTMapping = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Shield className="h-5 w-5 text-blue-500" />
+                      <Shield className="h-5 w-5 text-muted-foreground" />
                       NIST AI Risk Management Framework
                     </CardTitle>
                   </CardHeader>
@@ -2076,7 +2024,7 @@ export const NISTMapping = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <CheckCircle className="h-5 w-5 text-green-500" />
+                      <CheckCircle className="h-5 w-5 text-muted-foreground" />
                       OWASP AI Security Verification Standard
                     </CardTitle>
                   </CardHeader>
@@ -2110,14 +2058,9 @@ export const NISTMapping = () => {
               <div className="space-y-6">
                 {filteredNISTFunctions.map((func) => (
                   <Card key={func.id} className="overflow-hidden">
-                    <CardHeader className="pb-4" style={{ backgroundColor: `${func.color}10` }}>
+                    <CardHeader className="pb-4 bg-card">
                       <CardTitle className="flex items-center gap-3">
-                        <div
-                          className="p-2 rounded-lg"
-                          style={{ backgroundColor: `${func.color}20` }}
-                        >
-                          <Shield className="h-6 w-6" style={{ color: func.color }} />
-                        </div>
+                        <Shield className="h-6 w-6 text-muted-foreground" />
                         <div>
                           <h3 className="text-lg font-bold" style={{ color: func.color }}>
                             {func.code}: {func.name}
@@ -2211,7 +2154,7 @@ export const NISTMapping = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Network className="h-5 w-5" />
+                    <Network className="h-5 w-5 text-muted-foreground" />
                     Framework Compliance Matrix
                   </CardTitle>
                 </CardHeader>
@@ -2278,16 +2221,12 @@ export const NISTMapping = () => {
 
             {/* Interactive Graph Tab */}
             <TabsContent value="graph" className="mt-6">
-              <Card className="border-border/50 shadow-lg">
-                <CardHeader className="bg-gradient-to-r from-primary/5 via-primary/10 to-secondary/5 border-b border-border/50">
+              <Card className="border-border/50">
+                <CardHeader className="bg-card border-b border-border/50">
                   <CardTitle className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
-                      <Network className="h-5 w-5 text-primary" />
-                    </div>
+                    <Network className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <h3 className="text-lg font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                        NIST Controls to AISVS Mapping
-                      </h3>
+                      <h3 className="text-lg font-bold">NIST Controls to AISVS Mapping</h3>
                       <p className="text-sm text-muted-foreground mt-1">
                         Advanced visualization with expandable nodes and intelligent focus modes
                       </p>
@@ -2309,7 +2248,7 @@ export const NISTMapping = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="relative w-full h-[800px] border border-border/50 rounded-xl bg-gradient-to-br from-background via-background/95 to-muted/30 overflow-hidden shadow-inner">
+                  <div className="relative w-full h-[800px] border border-border/50 rounded-xl bg-muted/50 overflow-hidden">
                     {/* Background Pattern */}
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent opacity-50"></div>
 
@@ -2407,9 +2346,9 @@ export const NISTMapping = () => {
                         </div>
 
                         {focusMode && (
-                          <div className="flex items-center gap-2 mb-3 p-2 bg-primary/10 rounded-lg border border-primary/20">
-                            <Target className="h-3 w-3 text-primary" />
-                            <span className="text-xs font-medium text-primary">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Target className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-xs font-medium text-foreground">
                               Focus Mode Active
                             </span>
                           </div>
@@ -2473,28 +2412,20 @@ export const NISTMapping = () => {
                         </div>
                       )}
                       <Card className="border-2" style={{ borderColor: selectedNodeData.color }}>
-                        <CardHeader
-                          className="pb-3"
-                          style={{ backgroundColor: `${selectedNodeData.color}15` }}
-                        >
+                        <CardHeader className="pb-3 bg-card">
                           <CardTitle className="flex items-center gap-3">
-                            <div
-                              className="p-2 rounded-lg flex items-center justify-center text-white font-bold"
-                              style={{ backgroundColor: selectedNodeData.color }}
-                            >
-                              {selectedNodeData.type === "nist-function" && (
-                                <Shield className="h-5 w-5" />
-                              )}
-                              {selectedNodeData.type === "nist-category" && (
-                                <Target className="h-4 w-4" />
-                              )}
-                              {selectedNodeData.type === "nist-subcategory" && (
-                                <CheckCircle className="h-4 w-4" />
-                              )}
-                              {selectedNodeData.type === "aisvs-category" && (
-                                <Network className="h-4 w-4" />
-                              )}
-                            </div>
+                            {selectedNodeData.type === "nist-function" && (
+                              <Shield className="h-5 w-5 text-muted-foreground" />
+                            )}
+                            {selectedNodeData.type === "nist-category" && (
+                              <Target className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            {selectedNodeData.type === "nist-subcategory" && (
+                              <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            {selectedNodeData.type === "aisvs-category" && (
+                              <Network className="h-4 w-4 text-muted-foreground" />
+                            )}
                             <div>
                               <h3
                                 className="text-lg font-bold"
@@ -3426,7 +3357,7 @@ export const NISTMapping = () => {
           <Card className="mt-8">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BookOpen className="h-5 w-5" />
+                <BookOpen className="h-5 w-5 text-muted-foreground" />
                 Framework References
               </CardTitle>
             </CardHeader>

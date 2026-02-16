@@ -26,7 +26,7 @@ import SidebarNav from "../components/layout/SidebarNav";
 import { Icon } from "@/components/ui/icon";
 import { Helmet } from "react-helmet";
 import { usePageTracking } from "@/hooks/useAnalytics";
-import { Search, Shield, CheckCircle, ExternalLink, FileText } from "lucide-react";
+import { Search, CheckCircle, ExternalLink, FileText } from "lucide-react";
 
 export const AISVS = () => {
   // Track AISVS page views
@@ -191,21 +191,10 @@ export const AISVS = () => {
         <main className="container mx-auto px-4 py-8">
           {/* Header Section */}
           <div className="mb-8">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <Shield className="h-8 w-8 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold">OWASP AISVS</h1>
-                <p className="text-xl text-muted-foreground">AI Security Verification Standard</p>
-              </div>
-            </div>
-
-            <p className="text-lg text-muted-foreground mb-6 max-w-4xl">
-              The OWASP AI Security Verification Standard (AISVS) provides a comprehensive framework
-              for verifying the security of AI systems. This interactive tool maps AISVS controls to
-              identified security threats and allows you to track your compliance progress across
-              all categories and subcategories.
+            <h1 className="text-2xl font-bold tracking-tight">OWASP AISVS</h1>
+            <p className="mt-1 text-muted-foreground">
+              AI Security Verification Standard — comprehensive framework for verifying the security
+              of AI systems.
             </p>
 
             {/* Progress Card */}
@@ -232,48 +221,40 @@ export const AISVS = () => {
           </div>
 
           {/* Controls and Filters */}
-          <div className="mb-8 space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Search categories, subcategories, requirements, or descriptions..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-full sm:w-[200px]">
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent className="z-[9999] bg-white border shadow-lg">
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.code} - {category.name.split(" &")[0]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={selectedLevel} onValueChange={setSelectedLevel}>
-                <SelectTrigger className="w-full sm:w-[150px]">
-                  <SelectValue placeholder="All Levels" />
-                </SelectTrigger>
-                <SelectContent className="z-[9999] bg-white border shadow-lg">
-                  <SelectItem value="all">All Levels</SelectItem>
-                  <SelectItem value="1">Level 1</SelectItem>
-                  <SelectItem value="2">Level 2</SelectItem>
-                  <SelectItem value="3">Level 3</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="flex flex-wrap gap-3 mb-6">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search categories, subcategories, requirements, or descriptions..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
-
-            <div className="flex items-center gap-4">
-              <div className="text-sm text-muted-foreground">
-                Use the filters above to narrow down requirements by category and level
-              </div>
-            </div>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent className="z-[9999] bg-white border shadow-lg">
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.code} - {category.name.split(" &")[0]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={selectedLevel} onValueChange={setSelectedLevel}>
+              <SelectTrigger className="w-full sm:w-[150px]">
+                <SelectValue placeholder="All Levels" />
+              </SelectTrigger>
+              <SelectContent className="z-[9999] bg-white border shadow-lg">
+                <SelectItem value="all">All Levels</SelectItem>
+                <SelectItem value="1">Level 1</SelectItem>
+                <SelectItem value="2">Level 2</SelectItem>
+                <SelectItem value="3">Level 3</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* AISVS Categories */}
@@ -416,27 +397,24 @@ export const AISVS = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-primary mb-2">{categories.length}</div>
-                  <div className="text-sm text-muted-foreground">Security Categories</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-primary mb-2">
+              <div className="flex flex-wrap gap-6 text-sm text-muted-foreground mb-6">
+                <span>
+                  <strong className="text-foreground">{categories.length}</strong> Security
+                  Categories
+                </span>
+                <span>
+                  <strong className="text-foreground">
                     {categories.reduce((total, cat) => total + cat.subCategories.length, 0)}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Subcategories</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-primary mb-2">{totalRequirements}</div>
-                  <div className="text-sm text-muted-foreground">Total Requirements</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-green-600 mb-2">
-                    {completedRequirements}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Completed</div>
-                </div>
+                  </strong>{" "}
+                  Subcategories
+                </span>
+                <span>
+                  <strong className="text-foreground">{totalRequirements}</strong> Total
+                  Requirements
+                </span>
+                <span>
+                  <strong className="text-foreground">{completedRequirements}</strong> Completed
+                </span>
               </div>
 
               <div className="mt-6 p-4 bg-muted/50 rounded-lg">

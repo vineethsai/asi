@@ -388,15 +388,6 @@ export const ThreatDetail = () => {
     return "text-green-600 dark:text-green-400";
   }
 
-  function getRiskBg(score: number) {
-    if (score >= 8) return "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800";
-    if (score >= 6)
-      return "bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800";
-    if (score >= 4)
-      return "bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-800";
-    return "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800";
-  }
-
   function getSeverityBadge(severity: string) {
     switch (severity) {
       case "high":
@@ -471,52 +462,16 @@ export const ThreatDetail = () => {
             Back to Threats
           </Link>
 
-          {/* Hero Header */}
+          {/* Page Header */}
           <div className="mb-8">
-            <div className="flex items-start gap-4 mb-4">
-              {threat.icon && (
-                <div className="p-3 rounded-lg bg-threat/10 border border-threat/20">
-                  <Icon name={threat.icon} color={threat.color} size={36} />
-                </div>
-              )}
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2 flex-wrap">
-                  <span className="font-mono text-sm bg-threat/10 text-threat px-2.5 py-1 rounded font-semibold">
-                    {threat.code}
-                  </span>
-                  <h1 className="text-3xl font-bold text-foreground">{threat.name}</h1>
-                  {threat.status && (
-                    <Badge variant="outline" className="capitalize">
-                      {threat.status}
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-muted-foreground text-lg leading-relaxed mb-4">
-                  {threat.description}
-                </p>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {(threat.tags || []).map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                  <span>Version {threat.version || "-"}</span>
-                  <span className="hidden sm:inline">|</span>
-                  <span>Updated {threat.lastUpdated || "-"}</span>
-                  <span className="hidden sm:inline">|</span>
-                  <span>By {threat.updatedBy || "-"}</span>
-                </div>
-              </div>
-            </div>
-
+            <h1 className="text-2xl font-bold tracking-tight">{threat.name}</h1>
+            <p className="mt-1 text-muted-foreground">{threat.description}</p>
             {/* Quick Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-              <Card className={`border ${getRiskBg(riskScore)}`}>
+              <Card className="bg-card border">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 mb-1">
-                    <Gauge className="h-4 w-4 text-red-500" />
+                    <Gauge className="h-4 w-4 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">Risk Score</span>
                   </div>
                   <div className={`text-3xl font-bold ${getRiskColor(riskScore)}`}>
@@ -548,7 +503,7 @@ export const ThreatDetail = () => {
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 mb-1">
-                    <Network className="h-4 w-4 text-purple-500" />
+                    <Network className="h-4 w-4 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">Framework Refs</span>
                   </div>
                   <div className="text-2xl font-bold">{frameworkCount}</div>
@@ -600,7 +555,7 @@ export const ThreatDetail = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Activity className="h-5 w-5 text-red-500" />
+                    <Activity className="h-5 w-5 text-muted-foreground" />
                     Impact Analysis
                   </CardTitle>
                 </CardHeader>
@@ -704,7 +659,7 @@ export const ThreatDetail = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Layers className="h-5 w-5 text-purple-500" />
+                    <Layers className="h-5 w-5 text-muted-foreground" />
                     Affected Components
                   </CardTitle>
                 </CardHeader>
@@ -754,7 +709,7 @@ export const ThreatDetail = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-control" />
+                    <Shield className="h-5 w-5 text-muted-foreground" />
                     Mitigation Summary
                   </CardTitle>
                 </CardHeader>
@@ -824,7 +779,7 @@ export const ThreatDetail = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <ExternalLink className="h-5 w-5 text-blue-500" />
+                      <ExternalLink className="h-5 w-5 text-muted-foreground" />
                       References & Resources
                     </CardTitle>
                   </CardHeader>
@@ -855,7 +810,7 @@ export const ThreatDetail = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Crosshair className="h-5 w-5 text-yellow-500" />
+                    <Crosshair className="h-5 w-5 text-muted-foreground" />
                     Attack Vectors
                   </CardTitle>
                 </CardHeader>
@@ -905,7 +860,7 @@ export const ThreatDetail = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-control" />
+                    <Shield className="h-5 w-5 text-muted-foreground" />
                     Available Mitigations
                   </CardTitle>
                 </CardHeader>
@@ -919,9 +874,9 @@ export const ThreatDetail = () => {
                           className="flex items-start gap-4 p-5 rounded-lg border hover:bg-muted/50 hover:border-control/40 transition-all group"
                         >
                           {m.icon && (
-                            <div className="p-2 rounded-lg bg-control/10 flex-shrink-0">
-                              <Icon name={m.icon} color={m.color} size={24} />
-                            </div>
+                            <span className="text-muted-foreground flex-shrink-0">
+                              <Icon name={m.icon} color="currentColor" size={24} />
+                            </span>
                           )}
                           <div className="flex-1 min-w-0">
                             <div className="font-semibold text-foreground group-hover:text-primary transition-colors mb-1 text-lg">
@@ -985,7 +940,7 @@ export const ThreatDetail = () => {
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-base">
-                          <Target className="h-5 w-5 text-rose-500" />
+                          <Target className="h-5 w-5 text-muted-foreground" />
                           OWASP Agentic Top 10
                         </CardTitle>
                       </CardHeader>
@@ -1022,7 +977,7 @@ export const ThreatDetail = () => {
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-base">
-                          <Layers className="h-5 w-5 text-cyan-500" />
+                          <Layers className="h-5 w-5 text-muted-foreground" />
                           Cisco AI Taxonomy
                         </CardTitle>
                       </CardHeader>

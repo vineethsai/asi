@@ -6,7 +6,6 @@ import { architecturesData, Architecture } from "../components/components/archit
 import { threatsData, mitigationsData } from "../components/components/securityData";
 import { frameworkData as allComponentNodes } from "../components/components/frameworkData";
 import { Badge } from "@/components/ui/badge";
-import { Icon } from "@/components/ui/icon";
 import { useState } from "react";
 import { Helmet } from "react-helmet";
 import ArchitectureDiagram from "@/components/visual/ArchitectureDiagrams";
@@ -423,21 +422,12 @@ const ArchitectureDetail = () => {
                 &larr; Back to Architectures
               </Link>
               {/* Overview Card */}
-              <Card className="mb-4 border border-architecture/20">
+              <div className="mb-8">
+                <h1 className="text-2xl font-bold tracking-tight">{architecture.name}</h1>
+                <p className="mt-1 text-muted-foreground">{architecture.description}</p>
+              </div>
+              <Card className="mb-4 border border-architecture/20 bg-card">
                 <CardContent className="p-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    {architecture.icon && (
-                      <Icon name={architecture.icon} color={architecture.color} size={32} />
-                    )}
-                    <h1 className="text-2xl font-bold" style={{ color: architecture.color }}>
-                      {architecture.name}
-                    </h1>
-                    {architecture.status && (
-                      <Badge variant="outline" className="capitalize ml-2">
-                        {architecture.status}
-                      </Badge>
-                    )}
-                  </div>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {(architecture.tags || []).map((tag) => (
                       <Badge key={tag} variant="secondary">
@@ -464,13 +454,12 @@ const ArchitectureDetail = () => {
                       ))}
                     </div>
                   )}
-                  <p className="text-muted-foreground mt-4">{architecture.description}</p>
                 </CardContent>
               </Card>
 
               {/* Detailed Description Card */}
               {architecture.detailedDescription && (
-                <Card className="mb-4 border border-border">
+                <Card className="mb-4 border border-border bg-card">
                   <CardContent className="p-4">
                     <h2 className="text-lg font-semibold mb-3 text-foreground">
                       Architecture Overview
@@ -484,7 +473,7 @@ const ArchitectureDetail = () => {
 
               {/* Relevant Threats Section */}
               {architecture.relevantThreats && architecture.relevantThreats.length > 0 && (
-                <Card className="mb-4 border border-red-200">
+                <Card className="mb-4 border border-red-200 bg-card">
                   <CardContent className="p-4">
                     <h2 className="text-lg font-semibold mb-3 text-red-700">Relevant Threats</h2>
                     <p className="text-sm text-muted-foreground mb-4">
@@ -508,7 +497,7 @@ const ArchitectureDetail = () => {
               {/* Grid for the rest of the cards */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Visual Diagram */}
-                <Card className="border border-border bg-background">
+                <Card className="border border-border bg-card">
                   <CardContent className="p-4">
                     <h2 className="text-base font-semibold mb-2 text-foreground">Visual Diagram</h2>
                     <ArchitectureDiagram architectureId={architecture.id} className="w-full h-64" />
@@ -516,7 +505,7 @@ const ArchitectureDetail = () => {
                 </Card>
                 {/* Real-world Examples */}
                 {realWorldExamples[architecture.id] && (
-                  <Card className="border border-border bg-background">
+                  <Card className="border border-border bg-card">
                     <CardContent className="p-4">
                       <h2 className="text-base font-semibold mb-2 text-foreground">
                         Real-World Examples
@@ -530,7 +519,7 @@ const ArchitectureDetail = () => {
                   </Card>
                 )}
                 {/* Key Components */}
-                <Card className="border border-primary/20 bg-background lg:col-span-2">
+                <Card className="border border-primary/20 bg-card lg:col-span-2">
                   <CardContent className="p-4">
                     <h2 className="text-base font-semibold mb-4 text-primary">
                       Key Components & Sub-Components
@@ -681,7 +670,7 @@ const ArchitectureDetail = () => {
                   </CardContent>
                 </Card>
                 {/* Associated Threats */}
-                <Card className="border border-threat/20 bg-background">
+                <Card className="border border-threat/20 bg-card">
                   <CardContent className="p-4">
                     <h2 className="text-base font-semibold mb-2 text-threat">Associated Threats</h2>
                     <ul className="space-y-4">
@@ -706,7 +695,7 @@ const ArchitectureDetail = () => {
                   </CardContent>
                 </Card>
                 {/* Mitigations */}
-                <Card className="border border-control/20 bg-background">
+                <Card className="border border-control/20 bg-card">
                   <CardContent className="p-4">
                     <h2 className="text-base font-semibold mb-2 text-control">Mitigations</h2>
                     <ul className="space-y-4">
@@ -732,7 +721,7 @@ const ArchitectureDetail = () => {
                 </Card>
                 {/* Threat-Component Matrix */}
                 {threats.length > 0 && components.length > 0 && (
-                  <Card className="border border-yellow-200 bg-background lg:col-span-2">
+                  <Card className="border border-yellow-200 bg-card lg:col-span-2">
                     <CardContent className="p-4">
                       <h2 className="text-base font-semibold mb-2 text-foreground">
                         Threat-Component Relationship Map

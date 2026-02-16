@@ -1,5 +1,19 @@
-/* Import modern fonts */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap");
+/* Geist fonts (variable) */
+@font-face {
+  font-family: "Geist Sans";
+  src: url("/fonts/Geist-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/fonts/GeistMono-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
 
 /* Tailwind CSS directives */
 @tailwind base;
@@ -18,8 +32,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 8%;
 
-    /* Primary: Professional Blue */
-    --primary: 214 84% 56%;
+    /* Primary: Deep Indigo */
+    --primary: 220 70% 50%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary: Soft Gray */
@@ -29,8 +43,8 @@
     --muted: 240 5% 96%;
     --muted-foreground: 240 4% 46%;
 
-    --accent: 214 84% 95%;
-    --accent-foreground: 214 84% 11%;
+    --accent: 220 70% 95%;
+    --accent-foreground: 220 70% 11%;
 
     /* Security-themed colors */
     --success: 142 71% 45%;
@@ -45,21 +59,21 @@
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
 
-    --border: 240 6% 90%;
-    --input: 240 6% 90%;
-    --ring: 214 84% 56%;
+    --border: 240 6% 85%;
+    --input: 240 6% 85%;
+    --ring: 220 70% 50%;
 
-    --radius: 8px;
+    --radius: 6px;
 
     /* Sidebar colors */
     --sidebar-background: 240 5% 98%;
     --sidebar-foreground: 240 10% 15%;
-    --sidebar-primary: 214 84% 56%;
+    --sidebar-primary: 220 70% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 5% 94%;
     --sidebar-accent-foreground: 240 6% 10%;
-    --sidebar-border: 240 6% 88%;
-    --sidebar-ring: 214 84% 56%;
+    --sidebar-border: 240 6% 85%;
+    --sidebar-ring: 220 70% 50%;
 
     /* Security status colors */
     --security-critical: 0 84% 60%;
@@ -69,8 +83,8 @@
     --security-info: 199 89% 48%;
 
     /* Interactive elements */
-    --interactive-hover: 214 84% 50%;
-    --interactive-active: 214 84% 40%;
+    --interactive-hover: 220 70% 45%;
+    --interactive-active: 220 70% 38%;
     --interactive-disabled: 240 4% 46%;
 
     /* Code highlighting */
@@ -93,7 +107,7 @@
     --popover: 240 6% 10%;
     --popover-foreground: 240 5% 90%;
 
-    --primary: 214 84% 56%;
+    --primary: 220 70% 55%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 240 4% 20%;
@@ -119,16 +133,16 @@
 
     --border: 240 4% 20%;
     --input: 240 4% 18%;
-    --ring: 214 84% 56%;
+    --ring: 220 70% 55%;
 
     --sidebar-background: 240 6% 9%;
     --sidebar-foreground: 240 5% 88%;
-    --sidebar-primary: 214 84% 56%;
+    --sidebar-primary: 220 70% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 4% 16%;
     --sidebar-accent-foreground: 240 5% 88%;
     --sidebar-border: 240 4% 18%;
-    --sidebar-ring: 214 84% 56%;
+    --sidebar-ring: 220 70% 55%;
 
     /* Security status colors (dark mode) */
     --security-critical: 0 84% 65%;
@@ -137,8 +151,8 @@
     --security-low: 142 71% 50%;
     --security-info: 199 89% 53%;
 
-    --interactive-hover: 214 84% 60%;
-    --interactive-active: 214 84% 70%;
+    --interactive-hover: 220 70% 60%;
+    --interactive-active: 220 70% 70%;
     --interactive-disabled: 240 5% 45%;
 
     /* Code highlighting (dark mode) */
@@ -159,7 +173,7 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family:
-      "Inter",
+      "Geist Sans",
       system-ui,
       -apple-system,
       sans-serif;
@@ -205,52 +219,50 @@
     @apply font-mono text-sm rounded px-1.5 py-0.5;
     background-color: hsl(var(--code-bg));
     border: 1px solid hsl(var(--code-border));
-    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-family: "Geist Mono", "Fira Code", monospace;
   }
 
   pre {
     @apply font-mono text-sm rounded-lg p-4 overflow-auto border;
     background-color: hsl(var(--code-bg));
     border-color: hsl(var(--code-border));
-    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-family: "Geist Mono", "Fira Code", monospace;
   }
 
   pre code {
     @apply bg-transparent border-0 p-0;
   }
 
-  /* Enhanced component styles */
+  /* Component styles */
   .glass-card {
-    @apply bg-white/80 dark:bg-black/80 backdrop-blur-md border rounded-xl shadow-sm;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    @apply bg-card border rounded-lg shadow-sm;
   }
 
   .security-card {
-    @apply bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-800/50 border rounded-xl shadow-sm hover:shadow-md transition-all duration-300;
+    @apply bg-card border rounded-lg hover:bg-muted/50 transition-colors duration-200;
   }
 
   .interactive-card {
-    @apply bg-white dark:bg-gray-900 border rounded-xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer;
+    @apply bg-card border rounded-lg hover:bg-muted/50 transition-colors duration-200 cursor-pointer;
   }
 
   .threat-card {
-    @apply border-l-4 bg-gradient-to-r from-red-50 to-transparent dark:from-red-950/30 dark:to-transparent;
+    @apply border-l-4 bg-card;
     border-left-color: hsl(var(--security-critical));
   }
 
   .control-card {
-    @apply border-l-4 bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-950/30 dark:to-transparent;
+    @apply border-l-4 bg-card;
     border-left-color: hsl(var(--primary));
   }
 
   .success-card {
-    @apply border-l-4 bg-gradient-to-r from-green-50 to-transparent dark:from-green-950/30 dark:to-transparent;
+    @apply border-l-4 bg-card;
     border-left-color: hsl(var(--success));
   }
 
   .warning-card {
-    @apply border-l-4 bg-gradient-to-r from-yellow-50 to-transparent dark:from-yellow-950/30 dark:to-transparent;
+    @apply border-l-4 bg-card;
     border-left-color: hsl(var(--warning));
   }
 
@@ -382,11 +394,11 @@
 
   /* Diagram and visual aid styles */
   .diagram-container {
-    @apply relative rounded-xl border bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-800/50 p-6;
+    @apply relative rounded-lg border bg-card p-6;
   }
 
   .flowchart-node {
-    @apply rounded-lg border-2 bg-white dark:bg-gray-900 p-4 shadow-sm hover:shadow-md transition-all duration-300;
+    @apply rounded-md border-2 bg-card p-4 hover:bg-muted/50 transition-colors duration-200;
   }
 
   .flowchart-connector {
@@ -474,8 +486,9 @@
 
 /* Radix UI Theme Integration */
 .radix-themes {
-  --default-font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --code-font-family: "JetBrains Mono", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  --default-font-family:
+    "Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --code-font-family: "Geist Mono", Consolas, "Liberation Mono", Menlo, Courier, monospace;
 }
 
 /* Enhanced Radix UI component styling */
@@ -620,51 +633,11 @@
   @apply top-4;
 }
 
-/* ===== Hero Terminal Styles (Warp-inspired) ===== */
+/* ===== Hero Styles ===== */
 
 .hero-grid-bg {
   background-image: radial-gradient(circle, currentColor 1px, transparent 1px);
   background-size: 24px 24px;
-}
-
-.terminal-window {
-  @apply rounded-xl border overflow-hidden;
-  font-family: "JetBrains Mono", "Fira Code", monospace;
-  background: hsl(var(--card));
-  border-color: hsl(var(--border));
-  box-shadow:
-    0 0 0 1px hsl(var(--border)),
-    0 8px 40px -12px rgba(0, 0, 0, 0.15);
-}
-
-.dark .terminal-window {
-  background: hsl(240 6% 9% / 0.95);
-  border-color: hsl(240 4% 18%);
-  box-shadow:
-    0 0 0 1px hsl(240 4% 18%),
-    0 0 60px -15px rgba(139, 92, 246, 0.08),
-    0 8px 40px -12px rgba(0, 0, 0, 0.4);
-}
-
-.terminal-titlebar {
-  @apply flex items-center gap-2 px-4 py-3 border-b;
-  border-color: hsl(var(--border));
-  background: hsl(var(--muted) / 0.5);
-}
-
-.dark .terminal-titlebar {
-  border-color: hsl(240 4% 15%);
-  background: hsl(240 6% 7% / 0.8);
-}
-
-.terminal-dot {
-  @apply w-3 h-3 rounded-full;
-}
-
-.terminal-body {
-  @apply p-5 text-sm leading-relaxed;
-  font-size: 13px;
-  line-height: 1.7;
 }
 
 @keyframes blink-cursor {
@@ -683,35 +656,6 @@
 
 .term-prompt {
   @apply text-violet-600 dark:text-violet-400 font-semibold;
-}
-
-.term-command {
-  @apply text-sky-600 dark:text-sky-400;
-}
-
-.term-label {
-  @apply text-amber-700 dark:text-amber-300;
-}
-
-.term-success {
-  @apply text-emerald-600 dark:text-emerald-400;
-}
-
-.term-value {
-  @apply text-cyan-600 dark:text-cyan-300 font-semibold;
-}
-
-.term-muted {
-  @apply text-slate-500 dark:text-slate-400;
-}
-
-.term-bar {
-  @apply inline-block h-3.5 rounded-sm;
-  background: linear-gradient(90deg, #8b5cf6, #06b6d4);
-}
-
-.dark .term-bar {
-  background: linear-gradient(90deg, #a78bfa, #22d3ee);
 }
 
 /* Respect reduced motion preferences */
