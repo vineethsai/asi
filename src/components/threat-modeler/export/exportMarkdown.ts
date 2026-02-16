@@ -106,6 +106,66 @@ export function generateMarkdownReport(
     }
   }
 
+  // ─── Cisco Taxonomy Mapping ─────────────────────────────
+  const ciscoThreats = result.threats.filter((t) => t.ciscoMapping && t.ciscoMapping.length > 0);
+  if (ciscoThreats.length > 0) {
+    md += `## Cisco AI Security Taxonomy Mapping\n\n`;
+    const ciscoMap = new Map<string, { name: string; count: number; techniques: Set<string> }>();
+    for (const t of ciscoThreats) {
+      for (const m of t.ciscoMapping!) {
+        const existing = ciscoMap.get(m.objectiveId);
+        if (existing) {
+          existing.count++;
+          m.techniques?.forEach((tech) => existing.techniques.add(tech));
+        } else {
+          ciscoMap.set(m.objectiveId, {
+            name: m.objectiveName,
+            count: 1,
+            techniques: new Set(m.techniques ?? []),
+          });
+        }
+      }
+    }
+    md += `| Objective ID | Objective Name | Threats Mapped |\n|---|---|---|\n`;
+    for (const [id, data] of Array.from(ciscoMap.entries()).sort(
+      (a, b) => b[1].count - a[1].count,
+    )) {
+      md += `| ${id} | ${data.name} | ${data.count} |\n`;
+    }
+    md += "\n";
+  }
+
+  // ─── OWASP Agentic Top 10 Mapping ─────────────────────────
+  const owaspThreats = result.threats.filter((t) => t.owaspMapping && t.owaspMapping.length > 0);
+  if (owaspThreats.length > 0) {
+    md += `## OWASP Agentic Top 10 Mapping\n\n`;
+    const owaspMap = new Map<string, { name: string; high: number; med: number; low: number }>();
+    for (const t of owaspThreats) {
+      for (const m of t.owaspMapping!) {
+        const existing = owaspMap.get(m.asiId);
+        if (existing) {
+          if (m.confidence === "high") existing.high++;
+          else if (m.confidence === "medium") existing.med++;
+          else existing.low++;
+        } else {
+          owaspMap.set(m.asiId, {
+            name: m.asiName,
+            high: m.confidence === "high" ? 1 : 0,
+            med: m.confidence === "medium" ? 1 : 0,
+            low: m.confidence === "low" ? 1 : 0,
+          });
+        }
+      }
+    }
+    md += `| ASI ID | Category | High Confidence | Medium | Low |\n|---|---|---|---|---|\n`;
+    for (const [id, data] of Array.from(owaspMap.entries()).sort(
+      (a, b) => b.high + b.med - (a.high + a.med),
+    )) {
+      md += `| ${id} | ${data.name} | ${data.high} | ${data.med} | ${data.low} |\n`;
+    }
+    md += "\n";
+  }
+
   // ─── Component Inventory ─────────────────────────────────
   md += `## Component Inventory\n\n`;
   md += `| Component | Type | Trust Level | Threats |\n|---|---|---|---|\n`;
@@ -154,6 +214,15 @@ export function generateMarkdownReport(
     if (threat.maestroLayer !== undefined)
       md += `- **MAESTRO Layer:** ${MAESTRO_LAYER_LABELS[threat.maestroLayer]}\n`;
     if (threat.inherited) md += `- **Inherited:** Yes\n`;
+    if (threat.ciscoMapping && threat.ciscoMapping.length > 0) {
+      md += `- **Cisco Taxonomy:** ${threat.ciscoMapping.map((m) => `${m.objectiveId} (${m.objectiveName})`).join(", ")}\n`;
+    }
+    if (threat.owaspMapping && threat.owaspMapping.length > 0) {
+      const highMed = threat.owaspMapping.filter((m) => m.confidence !== "low");
+      if (highMed.length > 0) {
+        md += `- **OWASP Agentic:** ${highMed.map((m) => `${m.asiId} (${m.asiName})`).join(", ")}\n`;
+      }
+    }
     if (threat.mitigations.length > 0) {
       md += `- **Mitigations:**\n`;
       threat.mitigations.forEach((m) => {

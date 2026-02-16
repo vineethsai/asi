@@ -39,6 +39,7 @@ interface NodePropertiesPanelProps {
   onClose: () => void;
   onEditEdge?: (edgeId: string) => void;
   onEditNode?: (nodeId: string) => void;
+  onUpdateNodeData?: (nodeId: string, partial: Record<string, unknown>) => void;
   allThreats?: GeneratedThreat[];
   onToggleMitigation?: (nodeId: string, mitigationId: string, applied: boolean) => void;
   onMitigationStatusChange?: (
@@ -91,6 +92,7 @@ export default function NodePropertiesPanel({
   onClose,
   onEditEdge,
   onEditNode,
+  onUpdateNodeData,
   allThreats,
   onToggleMitigation: _onToggleMitigation,
   onMitigationStatusChange,
@@ -100,6 +102,9 @@ export default function NodePropertiesPanel({
   const [threatsExpanded, setThreatsExpanded] = useState(true);
   const [editingJustification, setEditingJustification] = useState<string | null>(null);
   const [justificationText, setJustificationText] = useState("");
+  const [editingLabel, setEditingLabel] = useState(false);
+  const [labelDraft, setLabelDraft] = useState("");
+  const [editingTrust, setEditingTrust] = useState(false);
 
   const catalog = useMemo(() => {
     if (!selectedNode?.data || !allThreats) return null;
@@ -229,18 +234,57 @@ export default function NodePropertiesPanel({
       setEditingJustification(null);
     };
 
+    const startEditLabel = () => {
+      setLabelDraft(data?.label ?? "");
+      setEditingLabel(true);
+    };
+
+    const commitLabel = () => {
+      if (labelDraft.trim() && labelDraft !== data?.label) {
+        onUpdateNodeData?.(selectedNode.id, { label: labelDraft.trim() });
+      }
+      setEditingLabel(false);
+    };
+
+    const TRUST_OPTIONS = ["untrusted", "semi-trusted", "trusted"] as const;
+    const TRUST_COLORS: Record<string, string> = {
+      untrusted: "bg-red-500/20 text-red-700 dark:text-red-400",
+      "semi-trusted": "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400",
+      trusted: "bg-green-500/20 text-green-700 dark:text-green-400",
+    };
+
     return (
       <div className="w-72 border-l bg-background/95 flex flex-col h-full">
         <div className="p-2 border-b flex items-center justify-between">
-          <h3 className="text-xs font-bold truncate">{data?.label ?? "Node"}</h3>
-          <div className="flex gap-1">
+          {editingLabel ? (
+            <Input
+              value={labelDraft}
+              onChange={(e) => setLabelDraft(e.target.value)}
+              onBlur={commitLabel}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitLabel();
+                if (e.key === "Escape") setEditingLabel(false);
+              }}
+              className="h-6 text-xs font-bold flex-1 mr-1"
+              autoFocus
+            />
+          ) : (
+            <h3
+              className="text-xs font-bold truncate cursor-pointer hover:text-primary transition-colors flex-1"
+              onClick={startEditLabel}
+              title="Click to edit label"
+            >
+              {data?.label ?? "Node"}
+            </h3>
+          )}
+          <div className="flex gap-1 shrink-0">
             {onEditNode && (
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-6 w-6 p-0"
                 onClick={() => onEditNode(selectedNode.id)}
-                aria-label="Edit node"
+                aria-label="Edit all properties"
               >
                 <Edit2 className="h-3 w-3" />
               </Button>
@@ -255,8 +299,32 @@ export default function NodePropertiesPanel({
             <div>
               <span className="font-semibold">Category:</span> {data?.category}
             </div>
-            <div>
-              <span className="font-semibold">Trust:</span> {data?.trustLevel}
+            <div className="flex items-center gap-1">
+              <span className="font-semibold">Trust:</span>
+              {editingTrust ? (
+                <div className="flex gap-0.5">
+                  {TRUST_OPTIONS.map((level) => (
+                    <button
+                      key={level}
+                      onClick={() => {
+                        onUpdateNodeData?.(selectedNode.id, { trustLevel: level });
+                        setEditingTrust(false);
+                      }}
+                      className={`text-[9px] px-1.5 py-0.5 rounded transition-all ${data?.trustLevel === level ? "ring-1 ring-primary font-bold" : ""} ${TRUST_COLORS[level]}`}
+                    >
+                      {level}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <button
+                  onClick={() => setEditingTrust(true)}
+                  className={`text-[10px] px-1.5 py-0.5 rounded cursor-pointer hover:ring-1 hover:ring-primary transition-all ${TRUST_COLORS[data?.trustLevel ?? "trusted"]}`}
+                  title="Click to change trust level"
+                >
+                  {data?.trustLevel}
+                </button>
+              )}
             </div>
             {data?.description && (
               <div>

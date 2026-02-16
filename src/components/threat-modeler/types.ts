@@ -143,6 +143,18 @@ export interface CustomComponentDefinition {
 }
 
 // ─── Threat Engine Output ────────────────────────────────────────
+export interface CiscoTaxonomyMapping {
+  objectiveId: string;
+  objectiveName: string;
+  techniques?: string[];
+}
+
+export interface OwaspAgenticMapping {
+  asiId: string;
+  asiName: string;
+  confidence: "high" | "medium" | "low";
+}
+
 export interface GeneratedThreat {
   id: string;
   threatId?: string;
@@ -159,6 +171,8 @@ export interface GeneratedThreat {
   mitigations: string[];
   mitigationIds?: string[];
   crossLayerChain?: { fromLayer: MaestroLayer; toLayer: MaestroLayer; description: string }[];
+  ciscoMapping?: CiscoTaxonomyMapping[];
+  owaspMapping?: OwaspAgenticMapping[];
 }
 
 export interface ThreatAnalysisResult {

@@ -1,3 +1,5 @@
+import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -31,6 +33,8 @@ import {
   FileCode,
   BookOpen,
   FileType,
+  ChevronDown,
+  FileDown,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { AnalysisMode } from "./types";
@@ -52,6 +56,7 @@ interface CanvasToolbarProps {
   onExportSVG: () => void;
   onExportCSV: () => void;
   onExportSARIF: () => void;
+  onExportPDF?: () => void;
   onImportJSON: () => void;
   onImportAibom: () => void;
   onClear: () => void;
@@ -67,6 +72,7 @@ interface CanvasToolbarProps {
   snapToGrid?: boolean;
   whatIfActive?: boolean;
   saveIndicator?: string;
+  userTemplates?: { id: string; name: string }[];
 }
 
 function ToolbarButton({
@@ -110,6 +116,83 @@ function ToolbarButton({
   );
 }
 
+function ToolbarDropdown({
+  icon: Icon,
+  label,
+  items,
+}: {
+  icon: React.ElementType;
+  label: string;
+  items: { icon: React.ElementType; label: string; onClick: () => void }[];
+}) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  const updatePosition = useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setPos({ top: rect.bottom + 4, left: rect.left });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    updatePosition();
+    const onClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [open, updatePosition]);
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        className={`inline-flex items-center gap-0.5 h-7 px-1.5 text-xs rounded-md transition-colors ${open ? "bg-accent" : "hover:bg-accent"}`}
+        onClick={() => setOpen((v) => !v)}
+        aria-label={label}
+        title={label}
+      >
+        <Icon className="h-3.5 w-3.5" />
+        <ChevronDown className={`h-2.5 w-2.5 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open &&
+        createPortal(
+          <div
+            ref={menuRef}
+            className="fixed bg-popover border rounded-md shadow-lg py-1 min-w-[170px] animate-in fade-in-0 zoom-in-95"
+            style={{ top: pos.top, left: pos.left, zIndex: 9999 }}
+          >
+            <p className="px-3 py-1 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">
+              {label}
+            </p>
+            {items.map((item, i) => {
+              const ItemIcon = item.icon;
+              return (
+                <button
+                  key={i}
+                  onClick={() => {
+                    item.onClick();
+                    setOpen(false);
+                  }}
+                  className="flex items-center gap-2 w-full px-3 py-1.5 text-[11px] hover:bg-accent transition-colors text-left"
+                >
+                  <ItemIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+}
+
 export default function CanvasToolbar({
   analysisMode,
   onAnalysisModeChange,
@@ -126,6 +209,7 @@ export default function CanvasToolbar({
   onExportMarkdown,
   onExportCSV,
   onExportSARIF,
+  onExportPDF,
   onImportJSON,
   onImportAibom,
   onClear,
@@ -141,11 +225,27 @@ export default function CanvasToolbar({
   snapToGrid,
   whatIfActive,
   saveIndicator,
+  userTemplates,
 }: CanvasToolbarProps) {
+  const exportItems = [
+    { icon: FileJson, label: "Export JSON", onClick: onExportJSON },
+    { icon: Image, label: "Export PNG", onClick: onExportPNG },
+    { icon: FileType, label: "Export SVG", onClick: onExportSVG },
+    { icon: FileText, label: "Export Markdown", onClick: onExportMarkdown },
+    { icon: FileSpreadsheet, label: "Export CSV", onClick: onExportCSV },
+    { icon: Download, label: "Export SARIF", onClick: onExportSARIF },
+    ...(onExportPDF ? [{ icon: FileDown, label: "Export PDF Report", onClick: onExportPDF }] : []),
+  ];
+
+  const importItems = [
+    { icon: Upload, label: "Import JSON", onClick: onImportJSON },
+    { icon: FileCode, label: "Import AIBOM", onClick: onImportAibom },
+  ];
+
   return (
     <TooltipProvider delayDuration={0}>
       <div className="h-10 border-b bg-background/95 backdrop-blur-sm flex items-center gap-1 px-2 shrink-0 overflow-x-auto relative z-10">
-        {/* Analysis Section */}
+        {/* ── Primary: Analysis ─────────────── */}
         <span className="text-[10px] font-semibold text-primary px-1.5 py-0.5 rounded bg-primary/10 shrink-0">
           MAESTRO
         </span>
@@ -195,21 +295,40 @@ export default function CanvasToolbar({
         <ToolbarButton
           icon={Flame}
           label={`Heat Map ${heatMapActive ? "(On)" : "(Off)"}`}
-          description="Color-code components by threat severity — red = high risk, green = low risk"
+          description="Color-code components by threat severity"
           onClick={onToggleHeatMap}
           active={heatMapActive}
         />
         <ToolbarButton
           icon={Crosshair}
           label={`What-If Mode ${whatIfActive ? "(On)" : "(Off)"}`}
-          description="Click a component to simulate its removal and see how the threat landscape changes"
+          description="Click a component to simulate its removal"
           onClick={onWhatIf}
           active={whatIfActive}
         />
 
         <div className="h-5 w-px bg-border mx-0.5" />
 
-        {/* Build Section */}
+        {/* ── Canvas: Edit & Layout ──────────── */}
+        <ToolbarButton icon={Undo2} label="Undo (Ctrl+Z)" onClick={onUndo} disabled={!canUndo} />
+        <ToolbarButton icon={Redo2} label="Redo (Ctrl+Y)" onClick={onRedo} disabled={!canRedo} />
+        <ToolbarButton
+          icon={LayoutGrid}
+          label="Auto Layout"
+          description="Arrange components in a clean hierarchy"
+          onClick={onAutoLayout}
+        />
+        <ToolbarButton
+          icon={Grid3x3}
+          label={`Snap to Grid ${snapToGrid ? "(On)" : "(Off)"}`}
+          description="Align components to grid when dragging"
+          onClick={onToggleSnapToGrid}
+          active={snapToGrid}
+        />
+
+        <div className="h-5 w-px bg-border mx-0.5" />
+
+        {/* ── Build: Templates & Custom ──────── */}
         <Tooltip>
           <TooltipTrigger asChild>
             <div>
@@ -223,6 +342,18 @@ export default function CanvasToolbar({
                       {t.name}
                     </SelectItem>
                   ))}
+                  {userTemplates && userTemplates.length > 0 && (
+                    <>
+                      <div className="px-2 py-1 text-[9px] font-semibold text-muted-foreground border-t mt-1 pt-1">
+                        YOUR TEMPLATES
+                      </div>
+                      {userTemplates.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.name}
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -230,8 +361,7 @@ export default function CanvasToolbar({
           <TooltipContent side="bottom" className="max-w-52">
             <p className="text-xs font-semibold">Load Architecture Template</p>
             <p className="text-[10px] text-muted-foreground mt-0.5">
-              Start from a pre-built agentic AI architecture pattern with components and connections
-              already placed.
+              Start from a pre-built agentic AI architecture pattern.
             </p>
           </TooltipContent>
         </Tooltip>
@@ -257,113 +387,37 @@ export default function CanvasToolbar({
           </TooltipContent>
         </Tooltip>
 
-        <div className="h-5 w-px bg-border mx-0.5" />
-
-        {/* Edit Section */}
-        <ToolbarButton
-          icon={Undo2}
-          label="Undo"
-          description="Undo the last canvas change (Ctrl+Z)"
-          onClick={onUndo}
-          disabled={!canUndo}
-        />
-        <ToolbarButton
-          icon={Redo2}
-          label="Redo"
-          description="Redo a previously undone change (Ctrl+Y)"
-          onClick={onRedo}
-          disabled={!canRedo}
-        />
-        <ToolbarButton
-          icon={LayoutGrid}
-          label="Auto Layout"
-          description="Automatically arrange all components in a clean top-to-bottom hierarchy"
-          onClick={onAutoLayout}
-        />
-        <ToolbarButton
-          icon={Grid3x3}
-          label={`Snap to Grid ${snapToGrid ? "(On)" : "(Off)"}`}
-          description="Align components to a grid when dragging for a tidier layout"
-          onClick={onToggleSnapToGrid}
-          active={snapToGrid}
-        />
-
         <div className="flex-1" />
 
         {saveIndicator && <span className="text-[9px] text-muted-foreground">{saveIndicator}</span>}
 
-        {/* Storage Section */}
+        {/* ── Storage ────────────────────────── */}
         <ToolbarButton
           icon={Save}
-          label="Save Model"
-          description="Save your current threat model to browser storage (Ctrl+S)"
+          label="Save Model (Ctrl+S)"
+          description="Save to browser storage"
           onClick={onSaveModel}
         />
         <ToolbarButton
           icon={FolderOpen}
           label="Load Model"
-          description="Open a previously saved threat model from browser storage"
+          description="Open a previously saved model"
           onClick={onLoadModel}
         />
 
         <div className="h-5 w-px bg-border mx-0.5" />
 
-        {/* Import/Export Section */}
-        <ToolbarButton
-          icon={Upload}
-          label="Import JSON"
-          description="Load a threat model from a JSON file on your computer"
-          onClick={onImportJSON}
-        />
-        <ToolbarButton
-          icon={FileCode}
-          label="Import AIBOM"
-          description="Import architecture from a Cisco AI BOM scan of your agentic AI codebase"
-          onClick={onImportAibom}
-        />
-        <ToolbarButton
-          icon={FileJson}
-          label="Export JSON"
-          description="Download the current model as a JSON file for sharing or backup"
-          onClick={onExportJSON}
-        />
-        <ToolbarButton
-          icon={Image}
-          label="Export PNG"
-          description="Save a screenshot of the canvas as a high-resolution PNG image"
-          onClick={onExportPNG}
-        />
-        <ToolbarButton
-          icon={FileType}
-          label="Export SVG"
-          description="Save the canvas as a scalable SVG vector image"
-          onClick={onExportSVG}
-        />
-        <ToolbarButton
-          icon={FileText}
-          label="Export Markdown"
-          description="Generate a comprehensive threat model report in Markdown format"
-          onClick={onExportMarkdown}
-        />
-        <ToolbarButton
-          icon={FileSpreadsheet}
-          label="Export CSV"
-          description="Download all threats as a CSV spreadsheet for analysis in Excel or Google Sheets"
-          onClick={onExportCSV}
-        />
-        <ToolbarButton
-          icon={Download}
-          label="Export SARIF"
-          description="Export threats in SARIF 2.1.0 format for integration with GitHub Security and other SAST tools"
-          onClick={onExportSARIF}
-        />
+        {/* ── Import / Export Dropdowns ───────── */}
+        <ToolbarDropdown icon={Upload} label="Import" items={importItems} />
+        <ToolbarDropdown icon={Download} label="Export" items={exportItems} />
 
         <div className="h-5 w-px bg-border mx-0.5" />
 
+        {/* ── Help & Destructive ─────────────── */}
         <ToolbarButton
           icon={HelpCircle}
           label="Help & Shortcuts"
-          description="Show a guided tour and keyboard shortcut reference"
+          description="Show guided tour and keyboard shortcuts"
           onClick={onToggleOnboarding}
         />
         <Tooltip>
@@ -381,10 +435,13 @@ export default function CanvasToolbar({
             </p>
           </TooltipContent>
         </Tooltip>
+
+        <div className="h-5 w-px bg-border mx-0.5" />
+
         <ToolbarButton
           icon={Trash2}
           label="Clear Canvas"
-          description="Remove all components and connections from the canvas"
+          description="Remove all components and connections"
           onClick={onClear}
           destructive
         />

@@ -15561,7 +15561,10 @@ export const aisvsData: Record<string, AISVSCategory> = {
             level: 3,
             category: "v13",
             role: "D/V",
-            references: [],
+            references: [
+              { title: "NIST CSF 2.0 RC.RP", url: "https://www.nist.gov/cyberframework" },
+              { title: "ISO/IEC 27001:2022 A.5.30", url: "https://www.iso.org/standard/27001" },
+            ],
           },
         ],
       },

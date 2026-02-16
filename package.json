@@ -52,6 +52,8 @@
     "d3": "^7.9.0",
     "geist": "1.7.0",
     "html-to-image": "^1.11.13",
+    "jspdf": "4.1.0",
+    "jspdf-autotable": "5.0.7",
     "lucide-react": "^0.462.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

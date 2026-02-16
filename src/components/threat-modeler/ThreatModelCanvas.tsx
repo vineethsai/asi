@@ -62,10 +62,11 @@ import NodePropertiesPanel from "./NodePropertiesPanel";
 import EdgeMetadataEditor from "./EdgeMetadataEditor";
 import CustomComponentDialog from "./CustomComponentDialog";
 import CanvasContextMenu from "./CanvasContextMenu";
-import ModelManager from "./ModelManager";
+import ModelManager, { getUserTemplates, type UserTemplate } from "./ModelManager";
 import OnboardingOverlay from "./OnboardingOverlay";
 import AibomImportDialog from "./AibomImportDialog";
 import NodeEditorDialog from "./NodeEditorDialog";
+import KeyboardShortcutsPanel from "./KeyboardShortcutsPanel";
 
 import { runThreatAnalysis, buildNodeProfiles } from "./engine/threatEngine";
 import { enrichThreatsWithSecurityData } from "./engine/dataIntegration";
@@ -80,6 +81,7 @@ import { exportCanvasPNG, exportCanvasSVG } from "./export/exportPNG";
 import { exportThreatsCSV } from "./export/exportCSV";
 import { exportSARIF } from "./export/exportSARIF";
 import { downloadMarkdownReport } from "./export/exportMarkdown";
+import { exportPDFReport } from "./export/exportPDF";
 import { ARCHITECTURE_TEMPLATES } from "./templates";
 
 const nodeTypes: NodeTypes = {
@@ -177,26 +179,55 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
 
   const [history, setHistory] = useState<HistoryEntry[]>([{ nodes: [], edges: [] }]);
   const [historyIndex, setHistoryIndex] = useState(0);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const clipboardRef = useRef<CanvasNode | null>(null);
   const historyDebounceRef = useRef<ReturnType<typeof setTimeout>>();
 
-  // Auto-save
+  // ─── Auto-save ──────────────────────────────────────────────
+  // Use a ref to hold the latest state so the interval and
+  // beforeunload handler always see current data without
+  // recreating the interval on every change.
+  const autoSaveDataRef = useRef({ nodes, edges, methodology, customComponents });
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (nodes.length > 0) {
-        const data = JSON.stringify({
-          nodes,
-          edges,
-          methodology,
-          customComponents,
-          timestamp: Date.now(),
-        });
-        localStorage.setItem(AUTO_SAVE_KEY, data);
-        setSaveIndicator("Saved");
-        setTimeout(() => setSaveIndicator(""), 2000);
-      }
-    }, 30000);
-    return () => clearInterval(interval);
+    autoSaveDataRef.current = { nodes, edges, methodology, customComponents };
   }, [nodes, edges, methodology, customComponents]);
+
+  const doAutoSave = useCallback(() => {
+    const { nodes: n, edges: e, methodology: m, customComponents: cc } = autoSaveDataRef.current;
+    if (n.length === 0) return;
+    const payload = JSON.stringify({
+      nodes: n,
+      edges: e,
+      methodology: m,
+      customComponents: cc,
+      timestamp: Date.now(),
+    });
+    localStorage.setItem(AUTO_SAVE_KEY, payload);
+    setSaveIndicator("Auto-saved");
+    setTimeout(() => setSaveIndicator(""), 2000);
+  }, []);
+
+  // Fixed interval — created once, never recreated
+  useEffect(() => {
+    const interval = setInterval(doAutoSave, 30000);
+    return () => clearInterval(interval);
+  }, [doAutoSave]);
+
+  // Debounced save on every meaningful change (5 s after last edit)
+  const autoSaveDebounceRef = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => {
+    if (nodes.length === 0) return;
+    clearTimeout(autoSaveDebounceRef.current);
+    autoSaveDebounceRef.current = setTimeout(doAutoSave, 5000);
+    return () => clearTimeout(autoSaveDebounceRef.current);
+  }, [nodes, edges, doAutoSave]);
+
+  // Save on tab close / navigation away
+  useEffect(() => {
+    const handler = () => doAutoSave();
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [doAutoSave]);
 
   // Restore auto-save on mount (skip if initial template will be loaded)
   useEffect(() => {
@@ -209,10 +240,11 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
           setNodes(data.nodes);
           setEdges(data.edges ?? []);
           if (data.methodology) setMethodology(data.methodology);
+          if (data.customComponents?.length > 0) setCustomComponents(data.customComponents);
           toast.info("Restored previous session");
         }
       } catch {
-        /* ignore */
+        /* ignore corrupt data */
       }
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -505,6 +537,21 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
     pushHistory(nodes, edges);
   }, [nodes, edges, selectedNodeId, selectedEdgeId, setNodes, setEdges, pushHistory]);
 
+  const duplicateSelected = useCallback(() => {
+    if (!selectedNodeId) return;
+    const original = nodes.find((n) => n.id === selectedNodeId);
+    if (!original) return;
+    const newNode: CanvasNode = {
+      ...JSON.parse(JSON.stringify(original)),
+      id: genNodeId(),
+      position: { x: original.position.x + 30, y: original.position.y + 30 },
+      selected: false,
+    };
+    setNodes((nds) => [...nds, newNode] as CanvasNode[]);
+    pushHistory([...nodes, newNode], edges);
+    toast.success("Node duplicated");
+  }, [selectedNodeId, nodes, edges, setNodes, pushHistory]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -512,6 +559,16 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
         (e.target as HTMLElement)?.tagName === "INPUT" ||
         (e.target as HTMLElement)?.tagName === "TEXTAREA";
       if (isInput) return;
+
+      // Escape: deselect / close panels
+      if (e.key === "Escape") {
+        setSelectedNodeId(null);
+        setSelectedEdgeId(null);
+        setShowShortcuts(false);
+        setNodes((nds) => nds.map((n) => ({ ...n, selected: false })) as CanvasNode[]);
+        return;
+      }
+
       if (e.key === "Delete" || e.key === "Backspace") {
         deleteSelected();
       }
@@ -530,27 +587,67 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
         }
         if (e.key === "s") {
           e.preventDefault();
-          const data = JSON.stringify({
-            nodes,
-            edges,
-            methodology,
-            customComponents,
-            timestamp: Date.now(),
-          });
-          localStorage.setItem(AUTO_SAVE_KEY, data);
+          doAutoSave();
           toast.success("Model saved");
-          setSaveIndicator("Saved");
-          setTimeout(() => setSaveIndicator(""), 2000);
         }
         if (e.key === "a") {
           e.preventDefault();
           setNodes((nds) => nds.map((n) => ({ ...n, selected: true })) as CanvasNode[]);
         }
+        // Ctrl+D: Duplicate selected
+        if (e.key === "d") {
+          e.preventDefault();
+          duplicateSelected();
+        }
+        // Ctrl+C: Copy selected
+        if (e.key === "c") {
+          e.preventDefault();
+          const sel = (nodes as CanvasNode[]).find((n) => n.id === selectedNodeId);
+          if (sel) {
+            clipboardRef.current = JSON.parse(JSON.stringify(sel));
+            toast.success("Node copied");
+          }
+        }
+        // Ctrl+V: Paste
+        if (e.key === "v") {
+          e.preventDefault();
+          if (clipboardRef.current) {
+            const newNode: CanvasNode = {
+              ...JSON.parse(JSON.stringify(clipboardRef.current)),
+              id: genNodeId(),
+              position: {
+                x: clipboardRef.current.position.x + 40,
+                y: clipboardRef.current.position.y + 40,
+              },
+              selected: false,
+            };
+            setNodes((nds) => [...nds, newNode] as CanvasNode[]);
+            pushHistory([...nodes, newNode], edges);
+            toast.success("Node pasted");
+          }
+        }
+        // Ctrl+0: Fit view
+        if (e.key === "0") {
+          e.preventDefault();
+          fitView({ duration: 300 });
+        }
+        // Ctrl+Shift+?: Show keyboard shortcuts
+        if (e.shiftKey && e.key === "?") {
+          e.preventDefault();
+          setShowShortcuts((v) => !v);
+        }
       }
-      if (e.key === "?") setShowOnboarding(true);
+      if (e.key === "?" && !e.ctrlKey && !e.metaKey) setShowOnboarding(true);
       if (e.key === " " && !isInput) {
         e.preventDefault();
         fitView({ duration: 300 });
+      }
+      // +/- for zoom
+      if (e.key === "+" || e.key === "=") {
+        reactFlowInstance?.zoomIn({ duration: 200 });
+      }
+      if (e.key === "-") {
+        reactFlowInstance?.zoomOut({ duration: 200 });
       }
     };
     window.addEventListener("keydown", handler);
@@ -559,29 +656,17 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
     undo,
     redo,
     doAnalysis,
+    doAutoSave,
     deleteSelected,
+    duplicateSelected,
+    selectedNodeId,
     nodes,
     edges,
-    methodology,
-    customComponents,
     fitView,
     setNodes,
+    pushHistory,
+    reactFlowInstance,
   ]);
-
-  const duplicateSelected = useCallback(() => {
-    if (!selectedNodeId) return;
-    const original = nodes.find((n) => n.id === selectedNodeId);
-    if (!original) return;
-    const newNode: CanvasNode = {
-      ...JSON.parse(JSON.stringify(original)),
-      id: genNodeId(),
-      position: { x: original.position.x + 30, y: original.position.y + 30 },
-      selected: false,
-    };
-    setNodes((nds) => [...nds, newNode] as CanvasNode[]);
-    pushHistory([...nodes, newNode], edges);
-    toast.success("Node duplicated");
-  }, [selectedNodeId, nodes, edges, setNodes, pushHistory]);
 
   const changeTrustLevel = useCallback(
     (level: TrustLevel) => {
@@ -866,8 +951,33 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
     });
   }, []);
 
+  const [userTemplatesList, setUserTemplatesList] = useState<UserTemplate[]>(() =>
+    getUserTemplates(),
+  );
+
+  const refreshUserTemplates = useCallback(() => {
+    setUserTemplatesList(getUserTemplates());
+  }, []);
+
   const loadTemplate = useCallback(
     (templateId: string) => {
+      // Check user templates first
+      const userTemplate = userTemplatesList.find((t) => t.id === templateId);
+      if (userTemplate) {
+        try {
+          const parsed = JSON.parse(userTemplate.data);
+          setNodes((parsed.nodes ?? []) as CanvasNode[]);
+          setEdges((parsed.edges ?? []) as CanvasEdge[]);
+          if (parsed.customComponents) setCustomComponents(parsed.customComponents);
+          pushHistory(parsed.nodes ?? [], parsed.edges ?? []);
+          setTimeout(() => fitView({ duration: 300 }), 100);
+          toast.success(`Loaded user template "${userTemplate.name}"`);
+        } catch {
+          toast.error("Failed to load user template");
+        }
+        return;
+      }
+
       const template = ARCHITECTURE_TEMPLATES.find((t) => t.id === templateId);
       if (!template) return;
       const newNodes: CanvasNode[] = template.nodes.map((n, i) => ({
@@ -889,7 +999,7 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
       setTimeout(() => fitView({ duration: 300 }), 100);
       toast.success(`Loaded "${template.name}" template`);
     },
-    [setNodes, setEdges, pushHistory, fitView],
+    [setNodes, setEdges, pushHistory, fitView, userTemplatesList, setCustomComponents],
   );
 
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -902,6 +1012,7 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
     setAttackPaths([]);
     pushHistory([], []);
     setShowClearConfirm(false);
+    localStorage.removeItem(AUTO_SAVE_KEY);
     toast.info("Canvas cleared");
   }, [setNodes, setEdges, pushHistory]);
 
@@ -1063,6 +1174,19 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
       aisvsResult,
     });
     toast.success("Markdown report exported");
+  }, [analysisResult, nodes, edges, riskSummary, attackPaths, aisvsResult]);
+
+  const handleExportPDF = useCallback(() => {
+    if (!analysisResult) {
+      toast.error("Run analysis first");
+      return;
+    }
+    exportPDFReport(nodes as CanvasNode[], edges as CanvasEdge[], analysisResult, {
+      riskSummary,
+      attackPaths,
+      aisvsResult,
+    });
+    toast.success("PDF report exported");
   }, [analysisResult, nodes, edges, riskSummary, attackPaths, aisvsResult]);
 
   const handleSaveModel = useCallback((name: string, description: string) => {
@@ -1345,6 +1469,7 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
           onExportMarkdown={handleExportMarkdown}
           onExportCSV={handleExportCSV}
           onExportSARIF={handleExportSARIF}
+          onExportPDF={handleExportPDF}
           onImportJSON={importJSON}
           onImportAibom={() => setShowAibomImport(true)}
           onClear={clearCanvas}
@@ -1375,6 +1500,7 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
           snapToGrid={snapToGrid}
           whatIfActive={whatIfActive}
           saveIndicator={saveIndicator}
+          userTemplates={userTemplatesList.map((t) => ({ id: t.id, name: t.name }))}
         />
 
         <div className="flex-1" ref={reactFlowWrapper}>
@@ -1449,6 +1575,15 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
           }}
           onEditEdge={(id) => setEditingEdgeId(id)}
           onEditNode={(id) => setEditingNodeId(id)}
+          onUpdateNodeData={(nodeId, partial) => {
+            setNodes(
+              (nds) =>
+                nds.map((n) =>
+                  n.id === nodeId ? { ...n, data: { ...n.data, ...partial } as CanvasNodeData } : n,
+                ) as CanvasNode[],
+            );
+            pushHistory();
+          }}
           allThreats={fullAnalysisResult?.threats}
           onToggleMitigation={handleToggleMitigation}
           onMitigationStatusChange={handleMitigationStatusChange}
@@ -1461,6 +1596,21 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
         attackPaths={attackPaths}
         nodes={nodes as CanvasNode[]}
         onThreatClick={onThreatClick}
+        onLocateThreat={(threat) => {
+          if (threat.affectedNodeIds.length > 0) {
+            const nodeIds = new Set(threat.affectedNodeIds);
+            setNodes(
+              (nds) => nds.map((n) => ({ ...n, selected: nodeIds.has(n.id) })) as CanvasNode[],
+            );
+            const firstNode = (nodes as CanvasNode[]).find((n) => nodeIds.has(n.id));
+            if (firstNode && reactFlowInstance) {
+              reactFlowInstance.setCenter(firstNode.position.x + 90, firstNode.position.y + 50, {
+                zoom: 1,
+                duration: 300,
+              });
+            }
+          }
+        }}
         showMitigated={showMitigated}
         onToggleShowMitigated={() => setShowMitigated((v) => !v)}
         totalBeforeMitigation={fullAnalysisResult?.threats.length ?? 0}
@@ -1512,9 +1662,15 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
 
       <ModelManager
         open={modelManagerOpen}
-        onOpenChange={setModelManagerOpen}
+        onOpenChange={(open) => {
+          setModelManagerOpen(open);
+          if (!open) refreshUserTemplates();
+        }}
         mode={modelManagerMode}
-        onSave={handleSaveModel}
+        onSave={(...args) => {
+          handleSaveModel(...args);
+          refreshUserTemplates();
+        }}
         onLoad={handleLoadModel}
         currentModelData={currentModelData}
         nodeCount={nodes.length}
@@ -1537,6 +1693,7 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
       />
 
       {showOnboarding && <OnboardingOverlay onDismiss={handleDismissOnboarding} />}
+      <KeyboardShortcutsPanel open={showShortcuts} onClose={() => setShowShortcuts(false)} />
 
       {/* Loading overlay during analysis */}
       {isAnalyzing && (
