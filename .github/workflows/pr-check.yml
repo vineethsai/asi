@@ -1,0 +1,88 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate PR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type check
+        run: npm run typecheck
+
+      - name: Lint code
+        run: npm run lint
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Run data integrity checks
+        run: npm run check:data
+
+      - name: Build project
+        run: npm run build
+
+      - name: Report build size
+        run: |
+          echo "## Build Output Size" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          du -sh docs/ >> $GITHUB_STEP_SUMMARY
+          du -sh docs/assets/ >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  dependency-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high || true
+        continue-on-error: true
+
+      - name: Report audit results
+        run: |
+          echo "## Dependency Audit" >> $GITHUB_STEP_SUMMARY
+          npm audit --json 2>/dev/null | node -e "
+            const data = require('fs').readFileSync('/dev/stdin','utf8');
+            try {
+              const audit = JSON.parse(data);
+              const meta = audit.metadata?.vulnerabilities || {};
+              console.log('| Severity | Count |');
+              console.log('|----------|-------|');
+              console.log('| Critical | ' + (meta.critical || 0) + ' |');
+              console.log('| High     | ' + (meta.high || 0) + ' |');
+              console.log('| Moderate | ' + (meta.moderate || 0) + ' |');
+              console.log('| Low      | ' + (meta.low || 0) + ' |');
+            } catch(e) { console.log('Audit completed.'); }
+          " >> $GITHUB_STEP_SUMMARY || echo "Audit completed." >> $GITHUB_STEP_SUMMARY

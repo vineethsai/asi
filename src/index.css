@@ -1,5 +1,5 @@
 /* Import modern fonts */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap");
 
 /* Tailwind CSS directives */
 @tailwind base;
@@ -35,13 +35,13 @@
     /* Security-themed colors */
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
-    
+
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-    
+
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    
+
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
 
@@ -107,20 +107,20 @@
 
     --success: 142 71% 50%;
     --success-foreground: 0 0% 100%;
-    
+
     --warning: 38 92% 55%;
     --warning-foreground: 0 0% 100%;
-    
+
     --destructive: 0 84% 65%;
     --destructive-foreground: 0 0% 100%;
-    
+
     --info: 199 89% 53%;
     --info-foreground: 0 0% 100%;
 
     --border: 240 4% 20%;
     --input: 240 4% 18%;
     --ring: 214 84% 56%;
-    
+
     --sidebar-background: 240 6% 9%;
     --sidebar-foreground: 240 5% 88%;
     --sidebar-primary: 214 84% 56%;
@@ -158,22 +158,43 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family:
+      "Inter",
+      system-ui,
+      -apple-system,
+      sans-serif;
     line-height: 1.6;
   }
 
   /* Typography improvements - Reverted to standard sizes */
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-semibold tracking-tight;
     line-height: 1.2;
   }
 
-  h1 { @apply text-3xl; }
-  h2 { @apply text-2xl; }
-  h3 { @apply text-xl; }
-  h4 { @apply text-lg; }
-  h5 { @apply text-base; }
-  h6 { @apply text-sm; }
+  h1 {
+    @apply text-3xl;
+  }
+  h2 {
+    @apply text-2xl;
+  }
+  h3 {
+    @apply text-xl;
+  }
+  h4 {
+    @apply text-lg;
+  }
+  h5 {
+    @apply text-base;
+  }
+  h6 {
+    @apply text-sm;
+  }
 
   p {
     @apply text-muted-foreground leading-relaxed;
@@ -184,14 +205,14 @@
     @apply font-mono text-sm rounded px-1.5 py-0.5;
     background-color: hsl(var(--code-bg));
     border: 1px solid hsl(var(--code-border));
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
   }
 
   pre {
     @apply font-mono text-sm rounded-lg p-4 overflow-auto border;
     background-color: hsl(var(--code-bg));
     border-color: hsl(var(--code-border));
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
   }
 
   pre code {
@@ -204,7 +225,7 @@
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
   }
-  
+
   .security-card {
     @apply bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-800/50 border rounded-xl shadow-sm hover:shadow-md transition-all duration-300;
   }
@@ -261,7 +282,7 @@
 
   .nav-link::before {
     @apply absolute inset-0 bg-primary/5 scale-x-0 transition-transform duration-200 origin-left rounded-lg;
-    content: '';
+    content: "";
   }
 
   .nav-link:hover::before {
@@ -346,10 +367,18 @@
   }
 
   /* Code syntax highlighting */
-  .code-keyword { color: hsl(var(--code-keyword)); }
-  .code-string { color: hsl(var(--code-string)); }
-  .code-comment { color: hsl(var(--code-comment)); }
-  .code-number { color: hsl(var(--code-number)); }
+  .code-keyword {
+    color: hsl(var(--code-keyword));
+  }
+  .code-string {
+    color: hsl(var(--code-string));
+  }
+  .code-comment {
+    color: hsl(var(--code-comment));
+  }
+  .code-number {
+    color: hsl(var(--code-number));
+  }
 
   /* Diagram and visual aid styles */
   .diagram-container {
@@ -445,8 +474,8 @@
 
 /* Radix UI Theme Integration */
 .radix-themes {
-  --default-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --code-font-family: 'JetBrains Mono', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  --default-font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --code-font-family: "JetBrains Mono", Consolas, "Liberation Mono", Menlo, Courier, monospace;
 }
 
 /* Enhanced Radix UI component styling */
@@ -526,22 +555,79 @@
 }
 
 /* Professional typography scaling */
-.rt-Text[data-size="1"] { @apply text-xs; }
-.rt-Text[data-size="2"] { @apply text-sm; }
-.rt-Text[data-size="3"] { @apply text-base; }
-.rt-Text[data-size="4"] { @apply text-lg; }
-.rt-Text[data-size="5"] { @apply text-xl; }
-.rt-Text[data-size="6"] { @apply text-2xl; }
-.rt-Text[data-size="7"] { @apply text-3xl; }
-.rt-Text[data-size="8"] { @apply text-4xl; }
-.rt-Text[data-size="9"] { @apply text-5xl; }
+.rt-Text[data-size="1"] {
+  @apply text-xs;
+}
+.rt-Text[data-size="2"] {
+  @apply text-sm;
+}
+.rt-Text[data-size="3"] {
+  @apply text-base;
+}
+.rt-Text[data-size="4"] {
+  @apply text-lg;
+}
+.rt-Text[data-size="5"] {
+  @apply text-xl;
+}
+.rt-Text[data-size="6"] {
+  @apply text-2xl;
+}
+.rt-Text[data-size="7"] {
+  @apply text-3xl;
+}
+.rt-Text[data-size="8"] {
+  @apply text-4xl;
+}
+.rt-Text[data-size="9"] {
+  @apply text-5xl;
+}
 
-.rt-Heading[data-size="1"] { @apply text-xs; }
-.rt-Heading[data-size="2"] { @apply text-sm; }
-.rt-Heading[data-size="3"] { @apply text-base; }
-.rt-Heading[data-size="4"] { @apply text-lg; }
-.rt-Heading[data-size="5"] { @apply text-xl; }
-.rt-Heading[data-size="6"] { @apply text-2xl; }
-.rt-Heading[data-size="7"] { @apply text-3xl; }
-.rt-Heading[data-size="8"] { @apply text-4xl; }
-.rt-Heading[data-size="9"] { @apply text-5xl; }
+.rt-Heading[data-size="1"] {
+  @apply text-xs;
+}
+.rt-Heading[data-size="2"] {
+  @apply text-sm;
+}
+.rt-Heading[data-size="3"] {
+  @apply text-base;
+}
+.rt-Heading[data-size="4"] {
+  @apply text-lg;
+}
+.rt-Heading[data-size="5"] {
+  @apply text-xl;
+}
+.rt-Heading[data-size="6"] {
+  @apply text-2xl;
+}
+.rt-Heading[data-size="7"] {
+  @apply text-3xl;
+}
+.rt-Heading[data-size="8"] {
+  @apply text-4xl;
+}
+.rt-Heading[data-size="9"] {
+  @apply text-5xl;
+}
+
+/* Skip to main content link */
+.skip-to-content {
+  @apply absolute -top-12 left-4 z-[100] bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium;
+  transition: top 0.2s;
+}
+.skip-to-content:focus {
+  @apply top-4;
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

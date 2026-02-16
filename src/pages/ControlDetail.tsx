@@ -1,11 +1,15 @@
 import { useParams, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { mitigationsData, threatsData, Mitigation, Threat } from "../components/components/securityData";
+import {
+  mitigationsData,
+  threatsData,
+  Mitigation,
+  Threat,
+} from "../components/components/securityData";
 import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
 import SidebarNav from "../components/layout/SidebarNav";
-import { frameworkData } from "../components/components/frameworkData";
-import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { duotoneLight, duotoneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { useEffect, useState } from "react";
@@ -15,22 +19,34 @@ import { Progress } from "@/components/ui/progress";
 import { Icon } from "@/components/ui/icon";
 import { Helmet } from "react-helmet";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CheckCircle2, Circle, Copy, Check, ExternalLink, AlertTriangle, Target, Shield, Hammer, Settings, Wrench, ArrowRight, Info } from "lucide-react";
+import {
+  CheckCircle2,
+  Copy,
+  Check,
+  ExternalLink,
+  AlertTriangle,
+  Target,
+  Shield,
+  Hammer,
+  Settings,
+  Wrench,
+  ArrowRight,
+  Info,
+} from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 
 export const ControlDetail = () => {
   const { controlId } = useParams<{ controlId: string }>();
   const mitigation: Mitigation | undefined = controlId ? mitigationsData[controlId] : undefined;
-  
+
   // Theme detection
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
-  
+
   // Interactive state management
-  const [checkedItems, setCheckedItems] = useState<{[key: string]: boolean}>({});
-  const [copiedCode, setCopiedCode] = useState<{[key: string]: boolean}>({});
-  
+  const [checkedItems, setCheckedItems] = useState<{ [key: string]: boolean }>({});
+  const [copiedCode, setCopiedCode] = useState<{ [key: string]: boolean }>({});
+
   // Mobile navigation state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -41,22 +57,22 @@ export const ControlDetail = () => {
   const handleMobileMenuClose = () => {
     setIsMobileMenuOpen(false);
   };
-  
+
   useEffect(() => {
     const checkTheme = () => {
       const isDark = document.documentElement.classList.contains("dark");
       setIsDarkMode(isDark);
     };
-    
+
     checkTheme();
-    
+
     // Watch for theme changes
     const observer = new MutationObserver(checkTheme);
     observer.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ['class']
+      attributeFilter: ["class"],
     });
-    
+
     return () => observer.disconnect();
   }, []);
 
@@ -87,105 +103,112 @@ export const ControlDetail = () => {
       setCopiedCode({ ...copiedCode, [codeId]: false });
     }, 2000);
   };
-  
+
   const threats: Threat[] = mitigation
-    ? mitigation.threatIds.map(id => threatsData[id]).filter(Boolean)
+    ? mitigation.threatIds.map((id) => threatsData[id]).filter(Boolean)
     : [];
 
   // Helper to extract code blocks and prose from a section
   function splitProseAndCode(content: string) {
     const codeBlockRegex = /```([\w]*)\n([\s\S]*?)```/g;
-    let parts: { type: 'code' | 'prose', value: string, lang?: string }[] = [];
+    const parts: { type: "code" | "prose"; value: string; lang?: string }[] = [];
     let lastIndex = 0;
     let match;
     while ((match = codeBlockRegex.exec(content)) !== null) {
       if (match.index > lastIndex) {
-        parts.push({ type: 'prose', value: content.slice(lastIndex, match.index) });
+        parts.push({ type: "prose", value: content.slice(lastIndex, match.index) });
       }
-      const lang = match[1] || '';
+      const lang = match[1] || "";
       const code = match[2];
-      parts.push({ type: 'code', value: code.trim(), lang });
+      parts.push({ type: "code", value: code.trim(), lang });
       lastIndex = match.index + match[0].length;
     }
     if (lastIndex < content.length) {
-      parts.push({ type: 'prose', value: content.slice(lastIndex) });
+      parts.push({ type: "prose", value: content.slice(lastIndex) });
     }
-    return parts.filter(p => p.value.trim() !== '');
+    return parts.filter((p) => p.value.trim() !== "");
   }
 
   // Enhanced text processing with interactive elements
   function enhanceTextWithInteractivity(text: string): JSX.Element {
-    if (!text || text.trim() === '') {
+    if (!text || text.trim() === "") {
       return <span>{text}</span>;
     }
 
     const technicalTerms: Record<string, { definition: string; icon: JSX.Element }> = {
-      'containerization': {
-        definition: 'A lightweight form of virtualization that packages applications with their dependencies into containers',
-        icon: <Target className="h-3 w-3" />
+      containerization: {
+        definition:
+          "A lightweight form of virtualization that packages applications with their dependencies into containers",
+        icon: <Target className="h-3 w-3" />,
       },
-      'virtualization': {
-        definition: 'Technology that creates virtual versions of computing resources like servers, storage, or networks',
-        icon: <Target className="h-3 w-3" />
+      virtualization: {
+        definition:
+          "Technology that creates virtual versions of computing resources like servers, storage, or networks",
+        icon: <Target className="h-3 w-3" />,
       },
-      'Docker': {
-        definition: 'A platform for developing, shipping, and running applications using containerization technology',
-        icon: <ExternalLink className="h-3 w-3" />
+      Docker: {
+        definition:
+          "A platform for developing, shipping, and running applications using containerization technology",
+        icon: <ExternalLink className="h-3 w-3" />,
       },
-      'Podman': {
-        definition: 'A daemonless container engine for developing, managing, and running OCI containers',
-        icon: <ExternalLink className="h-3 w-3" />
+      Podman: {
+        definition:
+          "A daemonless container engine for developing, managing, and running OCI containers",
+        icon: <ExternalLink className="h-3 w-3" />,
       },
-      'SELinux': {
-        definition: 'Security-Enhanced Linux - a mandatory access control security mechanism',
-        icon: <AlertTriangle className="h-3 w-3" />
+      SELinux: {
+        definition: "Security-Enhanced Linux - a mandatory access control security mechanism",
+        icon: <AlertTriangle className="h-3 w-3" />,
       },
-      'AppArmor': {
-        definition: 'A Linux kernel security module that restricts programs capabilities with per-program profiles',
-        icon: <AlertTriangle className="h-3 w-3" />
+      AppArmor: {
+        definition:
+          "A Linux kernel security module that restricts programs capabilities with per-program profiles",
+        icon: <AlertTriangle className="h-3 w-3" />,
       },
-      'WASM': {
-        definition: 'WebAssembly - a binary instruction format for a stack-based virtual machine',
-        icon: <Info className="h-3 w-3" />
+      WASM: {
+        definition: "WebAssembly - a binary instruction format for a stack-based virtual machine",
+        icon: <Info className="h-3 w-3" />,
       },
-      'QEMU': {
-        definition: 'Quick Emulator - a generic and open source machine emulator and virtualizer',
-        icon: <ExternalLink className="h-3 w-3" />
+      QEMU: {
+        definition: "Quick Emulator - a generic and open source machine emulator and virtualizer",
+        icon: <ExternalLink className="h-3 w-3" />,
       },
-      'KVM': {
-        definition: 'Kernel-based Virtual Machine - a virtualization infrastructure for Linux',
-        icon: <ExternalLink className="h-3 w-3" />
+      KVM: {
+        definition: "Kernel-based Virtual Machine - a virtualization infrastructure for Linux",
+        icon: <ExternalLink className="h-3 w-3" />,
       },
-      'Firecracker': {
-        definition: 'A virtualization technology for creating and managing secure, multi-tenant container environments',
-        icon: <ExternalLink className="h-3 w-3" />
+      Firecracker: {
+        definition:
+          "A virtualization technology for creating and managing secure, multi-tenant container environments",
+        icon: <ExternalLink className="h-3 w-3" />,
       },
-      'microVM': {
-        definition: 'Lightweight virtual machines optimized for serverless computing workloads',
-        icon: <Info className="h-3 w-3" />
+      microVM: {
+        definition: "Lightweight virtual machines optimized for serverless computing workloads",
+        icon: <Info className="h-3 w-3" />,
       },
-      'cgroups': {
-        definition: 'Control groups - a Linux kernel feature that limits and isolates resource usage',
-        icon: <Target className="h-3 w-3" />
+      cgroups: {
+        definition:
+          "Control groups - a Linux kernel feature that limits and isolates resource usage",
+        icon: <Target className="h-3 w-3" />,
       },
-      'namespaces': {
-        definition: 'Linux kernel feature that partitions kernel resources so that one set of processes sees one set of resources',
-        icon: <Target className="h-3 w-3" />
+      namespaces: {
+        definition:
+          "Linux kernel feature that partitions kernel resources so that one set of processes sees one set of resources",
+        icon: <Target className="h-3 w-3" />,
       },
-      'seccomp': {
-        definition: 'Secure computing mode - a computer security facility in Linux that restricts system calls',
-        icon: <AlertTriangle className="h-3 w-3" />
-      }
+      seccomp: {
+        definition:
+          "Secure computing mode - a computer security facility in Linux that restricts system calls",
+        icon: <AlertTriangle className="h-3 w-3" />,
+      },
     };
 
     const words = text.split(/(\s+)/);
     const elements: JSX.Element[] = [];
 
     words.forEach((word, index) => {
-      const cleanWord = word.replace(/[^\w]/g, '').toLowerCase();
-      const techTerm = Object.keys(technicalTerms).find(term => 
-        term.toLowerCase() === cleanWord
-      );
+      const cleanWord = word.replace(/[^\w]/g, "").toLowerCase();
+      const techTerm = Object.keys(technicalTerms).find((term) => term.toLowerCase() === cleanWord);
 
       if (techTerm && word.toLowerCase().includes(techTerm.toLowerCase())) {
         const termInfo = technicalTerms[techTerm];
@@ -202,7 +225,7 @@ export const ControlDetail = () => {
                 <p className="text-sm">{termInfo.definition}</p>
               </TooltipContent>
             </Tooltip>
-          </TooltipProvider>
+          </TooltipProvider>,
         );
       } else {
         elements.push(<span key={`text-${index}`}>{word}</span>);
@@ -214,19 +237,23 @@ export const ControlDetail = () => {
 
   // Enhanced function to render interactive checklists
   function renderInteractiveChecklist(content: string, sectionId: string) {
-    const lines = content.split("\n").filter(l => l.trim() !== "");
-    
-    if (lines.length > 1 && lines.every(l => l.trim().startsWith("- "))) {
-      const items = lines.map(l => l.replace(/^\s*-\s*/, "").trim());
+    const lines = content.split("\n").filter((l) => l.trim() !== "");
+
+    if (lines.length > 1 && lines.every((l) => l.trim().startsWith("- "))) {
+      const items = lines.map((l) => l.replace(/^\s*-\s*/, "").trim());
       const completedCount = items.filter((_, i) => checkedItems[`${sectionId}-${i}`]).length;
       const progressPercentage = items.length > 0 ? (completedCount / items.length) * 100 : 0;
-      
+
       return (
         <div className="space-y-4">
           {items.length > 5 && (
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-muted-foreground">Progress: {completedCount}/{items.length}</span>
-              <span className="text-sm text-muted-foreground">{Math.round(progressPercentage)}%</span>
+              <span className="text-sm font-medium text-muted-foreground">
+                Progress: {completedCount}/{items.length}
+              </span>
+              <span className="text-sm text-muted-foreground">
+                {Math.round(progressPercentage)}%
+              </span>
             </div>
           )}
           {items.length > 5 && <Progress value={progressPercentage} className="h-2 mb-4" />}
@@ -242,15 +269,17 @@ export const ControlDetail = () => {
                     onCheckedChange={(checked) => updateProgress(itemId, checked as boolean)}
                     className="mt-0.5"
                   />
-                  <label 
-                    htmlFor={itemId} 
+                  <label
+                    htmlFor={itemId}
                     className={`text-sm cursor-pointer transition-all flex-1 ${
-                      isChecked ? 'line-through text-muted-foreground' : 'text-foreground'
+                      isChecked ? "line-through text-muted-foreground" : "text-foreground"
                     }`}
                   >
                     {enhanceTextWithInteractivity(item)}
                   </label>
-                  {isChecked && <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />}
+                  {isChecked && (
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                  )}
                 </div>
               );
             })}
@@ -258,14 +287,14 @@ export const ControlDetail = () => {
         </div>
       );
     }
-    
+
     return renderSectionContent(content, sectionId);
   }
 
   // Enhanced function to render code with better interactions
   function renderEnhancedCode(code: string, language: string, codeId: string) {
     const isCopied = copiedCode[codeId];
-    
+
     return (
       <div className="relative group">
         <div className="absolute top-2 right-2 flex gap-2 z-10">
@@ -291,14 +320,14 @@ export const ControlDetail = () => {
             </span>
           )}
         </div>
-        <SyntaxHighlighter 
-          language={language} 
-          style={isDarkMode ? duotoneDark : duotoneLight} 
-          customStyle={{ 
-            borderRadius: 8, 
-            fontSize: 13, 
+        <SyntaxHighlighter
+          language={language}
+          style={isDarkMode ? duotoneDark : duotoneLight}
+          customStyle={{
+            borderRadius: 8,
+            fontSize: 13,
             padding: 16,
-            paddingTop: 40
+            paddingTop: 40,
           }}
         >
           {code}
@@ -308,18 +337,24 @@ export const ControlDetail = () => {
   }
 
   function renderSectionContent(content: string, sectionId: string) {
-    const lines = content.split("\n").filter(l => l.trim() !== "");
-    
-    if (lines.length > 1 && lines.every(l => l.trim().startsWith("- "))) {
+    const lines = content.split("\n").filter((l) => l.trim() !== "");
+
+    if (lines.length > 1 && lines.every((l) => l.trim().startsWith("- "))) {
       return renderInteractiveChecklist(content, sectionId);
     }
-    
+
     if (lines.length === 1 && (content.match(/ - /g) || []).length > 1) {
-      const items = content.split(/ - /).map(s => s.trim()).filter(Boolean);
+      const items = content
+        .split(/ - /)
+        .map((s) => s.trim())
+        .filter(Boolean);
       return (
         <div className="space-y-2">
           {items.map((item, i) => (
-            <div key={i} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group">
+            <div
+              key={i}
+              className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group"
+            >
               <div className="w-2 h-2 rounded-full bg-primary mt-2 group-hover:scale-125 transition-transform"></div>
               <div className="flex-1 text-sm text-muted-foreground">
                 {enhanceTextWithInteractivity(item)}
@@ -329,69 +364,70 @@ export const ControlDetail = () => {
         </div>
       );
     }
-    
+
     const parts = splitProseAndCode(content);
-    if (parts.length === 1 && parts[0].type === 'prose') {
+    if (parts.length === 1 && parts[0].type === "prose") {
       return formatProseContent(parts[0].value, sectionId);
     }
-    
-    const codeBlocks = parts.filter(p => p.type === 'code');
+
+    const codeBlocks = parts.filter((p) => p.type === "code");
     if (codeBlocks.length > 1) {
       return (
-        <Tabs defaultValue={codeBlocks[0].lang || 'code'} className="w-full mt-2">
+        <Tabs defaultValue={codeBlocks[0].lang || "code"} className="w-full mt-2">
           <TabsList>
             {codeBlocks.map((block, i) => (
               <TabsTrigger key={i} value={block.lang || `code${i}`}>
-                {block.lang ? block.lang.toUpperCase() : `Code ${i+1}`}
+                {block.lang ? block.lang.toUpperCase() : `Code ${i + 1}`}
               </TabsTrigger>
             ))}
           </TabsList>
           {codeBlocks.map((block, i) => (
-            <TabsContent key={i} value={block.lang || `code${i}`}> 
-              {renderEnhancedCode(block.value, block.lang || '', `${sectionId}-code-${i}`)}
+            <TabsContent key={i} value={block.lang || `code${i}`}>
+              {renderEnhancedCode(block.value, block.lang || "", `${sectionId}-code-${i}`)}
             </TabsContent>
           ))}
         </Tabs>
       );
     }
-    
+
     return (
       <div className="space-y-6">
         {parts.map((part, i) =>
-          part.type === 'prose' ? (
-            <div key={i}>
-              {formatProseContent(part.value, `${sectionId}-${i}`)}
-            </div>
+          part.type === "prose" ? (
+            <div key={i}>{formatProseContent(part.value, `${sectionId}-${i}`)}</div>
           ) : (
             <div key={i}>
-              {renderEnhancedCode(part.value, part.lang || '', `${sectionId}-code-${i}`)}
+              {renderEnhancedCode(part.value, part.lang || "", `${sectionId}-code-${i}`)}
             </div>
-          )
+          ),
         )}
       </div>
     );
   }
 
   // Enhanced prose formatting function
-  function formatProseContent(content: string, sectionId: string): JSX.Element {
-    const lines = content.trim().split('\n');
+  function formatProseContent(content: string, _sectionId: string): JSX.Element {
+    const lines = content.trim().split("\n");
     const elements: JSX.Element[] = [];
     let currentList: JSX.Element[] = [];
-    let currentListType: 'bullet' | 'numbered' | null = null;
+    let currentListType: "bullet" | "numbered" | null = null;
 
     const flushList = () => {
       if (currentList.length > 0) {
-        if (currentListType === 'bullet') {
+        if (currentListType === "bullet") {
           elements.push(
             <ul key={`list-${elements.length}`} className="space-y-2 ml-0 my-4">
               {currentList}
-            </ul>
+            </ul>,
           );
-        } else if (currentListType === 'numbered') {
+        } else if (currentListType === "numbered") {
           elements.push(
-            <ol key={`list-${elements.length}`} className="space-y-2 ml-0 my-4 list-decimal list-inside">
+            <ol
+              key={`list-${elements.length}`}
+              className="space-y-2 ml-0 my-4 list-decimal list-inside"
+            >
               {currentList}
-            </ol>
+            </ol>,
           );
         }
         currentList = [];
@@ -401,7 +437,7 @@ export const ControlDetail = () => {
 
     lines.forEach((line, index) => {
       const trimmedLine = line.trim();
-      
+
       if (!trimmedLine) {
         flushList();
         return;
@@ -409,17 +445,20 @@ export const ControlDetail = () => {
 
       if (trimmedLine.match(/^\*\*([^*]+)\*\*:?\s*$/)) {
         flushList();
-        const headingText = trimmedLine.replace(/^\*\*([^*]+)\*\*:?\s*$/, '$1');
+        const headingText = trimmedLine.replace(/^\*\*([^*]+)\*\*:?\s*$/, "$1");
         elements.push(
-          <h3 key={`heading-${index}`} className="text-lg font-semibold text-foreground mb-3 mt-6 flex items-center gap-3 pb-2 border-b border-border/50">
+          <h3
+            key={`heading-${index}`}
+            className="text-lg font-semibold text-foreground mb-3 mt-6 flex items-center gap-3 pb-2 border-b border-border/50"
+          >
             <div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full"></div>
             <span>{headingText}</span>
-          </h3>
+          </h3>,
         );
         return;
       }
 
-      if (trimmedLine.startsWith('**') && trimmedLine.includes(':**')) {
+      if (trimmedLine.startsWith("**") && trimmedLine.includes(":**")) {
         flushList();
         const headingMatch = trimmedLine.match(/^\*\*([^*]+)\*\*:\s*(.*)$/);
         if (headingMatch) {
@@ -435,61 +474,70 @@ export const ControlDetail = () => {
                   {enhanceTextWithInteractivity(content)}
                 </p>
               )}
-            </div>
+            </div>,
           );
           return;
         }
       }
 
-      if (trimmedLine.startsWith('- ')) {
+      if (trimmedLine.startsWith("- ")) {
         const content = trimmedLine.substring(2).trim();
-        const isSubBullet = line.startsWith('  - ') || line.startsWith('    - ');
-        
-        if (currentListType !== 'bullet') {
+        const isSubBullet = line.startsWith("  - ") || line.startsWith("    - ");
+
+        if (currentListType !== "bullet") {
           flushList();
-          currentListType = 'bullet';
+          currentListType = "bullet";
         }
 
         const bulletContent = formatBulletContent(content);
         currentList.push(
-          <li key={`bullet-${index}`} className={`flex items-start gap-3 ${isSubBullet ? 'ml-6' : ''} p-2 rounded-lg hover:bg-muted/30 transition-colors group`}>
-            <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-2 transition-all group-hover:scale-110 ${
-              isSubBullet 
-                ? 'bg-blue-400 dark:bg-blue-500' 
-                : 'bg-primary shadow-sm'
-            }`}></div>
+          <li
+            key={`bullet-${index}`}
+            className={`flex items-start gap-3 ${isSubBullet ? "ml-6" : ""} p-2 rounded-lg hover:bg-muted/30 transition-colors group`}
+          >
+            <div
+              className={`w-2 h-2 rounded-full flex-shrink-0 mt-2 transition-all group-hover:scale-110 ${
+                isSubBullet ? "bg-blue-400 dark:bg-blue-500" : "bg-primary shadow-sm"
+              }`}
+            ></div>
             <div className="flex-1 leading-relaxed text-muted-foreground text-sm">
               {bulletContent}
             </div>
-          </li>
+          </li>,
         );
         return;
       }
 
       if (trimmedLine.match(/^\d+\.\s/)) {
-        const content = trimmedLine.replace(/^\d+\.\s/, '');
-        
-        if (currentListType !== 'numbered') {
+        const content = trimmedLine.replace(/^\d+\.\s/, "");
+
+        if (currentListType !== "numbered") {
           flushList();
-          currentListType = 'numbered';
+          currentListType = "numbered";
         }
 
         const bulletContent = formatBulletContent(content);
         currentList.push(
-          <li key={`numbered-${index}`} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
+          <li
+            key={`numbered-${index}`}
+            className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors"
+          >
             <div className="flex-1 leading-relaxed text-muted-foreground text-sm">
               {bulletContent}
             </div>
-          </li>
+          </li>,
         );
         return;
       }
 
       flushList();
       elements.push(
-        <p key={`paragraph-${index}`} className="leading-relaxed text-muted-foreground mb-3 text-sm">
+        <p
+          key={`paragraph-${index}`}
+          className="leading-relaxed text-muted-foreground mb-3 text-sm"
+        >
           {enhanceTextWithInteractivity(trimmedLine)}
-        </p>
+        </p>,
       );
     });
 
@@ -500,7 +548,7 @@ export const ControlDetail = () => {
   function formatBulletContent(content: string): JSX.Element {
     const boldPattern = /\*\*([^*]+)\*\*/g;
     const parts = content.split(boldPattern);
-    
+
     return (
       <span className="text-sm">
         {parts.map((part, index) => {
@@ -511,11 +559,7 @@ export const ControlDetail = () => {
               </span>
             );
           } else {
-            return (
-              <span key={index}>
-                {enhanceTextWithInteractivity(part)}
-              </span>
-            );
+            return <span key={index}>{enhanceTextWithInteractivity(part)}</span>;
           }
         })}
       </span>
@@ -539,11 +583,11 @@ export const ControlDetail = () => {
       mitigation.implementationDetail.design,
       mitigation.implementationDetail.build,
       mitigation.implementationDetail.operations,
-      mitigation.implementationDetail.toolsAndFrameworks
+      mitigation.implementationDetail.toolsAndFrameworks,
     ].filter(Boolean);
-    
+
     return sections.reduce((total, section) => {
-      const lines = section.split('\n').filter(l => l.trim().startsWith('- '));
+      const lines = section.split("\n").filter((l) => l.trim().startsWith("- "));
       return total + lines.length;
     }, 0);
   };
@@ -557,33 +601,41 @@ export const ControlDetail = () => {
   const overallProgress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
 
   // Determine which phases are available
-  const hasDesign = mitigation.implementationDetail.design && mitigation.implementationDetail.design.trim();
-  const hasBuild = mitigation.implementationDetail.build && mitigation.implementationDetail.build.trim();
-  const hasOperations = mitigation.implementationDetail.operations && mitigation.implementationDetail.operations.trim();
-  const hasTools = mitigation.implementationDetail.toolsAndFrameworks && mitigation.implementationDetail.toolsAndFrameworks.trim();
+  const hasDesign =
+    mitigation.implementationDetail.design && mitigation.implementationDetail.design.trim();
+  const hasBuild =
+    mitigation.implementationDetail.build && mitigation.implementationDetail.build.trim();
+  const hasOperations =
+    mitigation.implementationDetail.operations && mitigation.implementationDetail.operations.trim();
+  const hasTools =
+    mitigation.implementationDetail.toolsAndFrameworks &&
+    mitigation.implementationDetail.toolsAndFrameworks.trim();
 
   return (
     <>
       <Helmet>
         <title>{mitigation.name} | OWASP Securing Agentic Applications Guide</title>
-        <meta name="description" content={`${mitigation.description} Learn how to implement this AI security control to mitigate threats in agentic systems.`} />
+        <meta
+          name="description"
+          content={`${mitigation.description} Learn how to implement this AI security control to mitigate threats in agentic systems.`}
+        />
       </Helmet>
-      <Header 
-        onMobileMenuToggle={handleMobileMenuToggle} 
-        isMobileMenuOpen={isMobileMenuOpen} 
+      <Header onMobileMenuToggle={handleMobileMenuToggle} isMobileMenuOpen={isMobileMenuOpen} />
+
+      <SidebarNav
+        type="controls"
+        activeId={mitigation.id}
+        isOpen={isMobileMenuOpen}
+        onClose={handleMobileMenuClose}
       />
-      
-      <SidebarNav 
-        type="controls" 
-        activeId={mitigation.id} 
-        isOpen={isMobileMenuOpen} 
-        onClose={handleMobileMenuClose} 
-      />
-      
+
       <section className="py-8 bg-background min-h-screen">
         <div className="container px-4 md:px-6 max-w-7xl">
           {/* Breadcrumb */}
-          <Link to="/controls" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6">
+          <Link
+            to="/controls"
+            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6"
+          >
             <ArrowRight className="h-4 w-4 mr-2 rotate-180" />
             Back to Controls
           </Link>
@@ -609,14 +661,15 @@ export const ControlDetail = () => {
                   {enhanceTextWithInteractivity(mitigation.description)}
                 </p>
                 <div className="flex flex-wrap gap-2 mb-3">
-                  {(mitigation.tags || []).map(tag => (
+                  {(mitigation.tags || []).map((tag) => (
                     <Badge key={tag} variant="secondary" className="text-xs">
                       {tag}
                     </Badge>
                   ))}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Version {mitigation.version || "-"} • Updated {mitigation.lastUpdated || "-"} • By {mitigation.updatedBy || "-"}
+                  Version {mitigation.version || "-"} • Updated {mitigation.lastUpdated || "-"} • By{" "}
+                  {mitigation.updatedBy || "-"}
                 </div>
               </div>
             </div>
@@ -653,7 +706,9 @@ export const ControlDetail = () => {
                       <span className="text-xs text-muted-foreground">Progress</span>
                     </div>
                     <div className="text-2xl font-bold">{Math.round(overallProgress)}%</div>
-                    <div className="text-xs text-muted-foreground">{completedItems}/{totalItems} tasks</div>
+                    <div className="text-xs text-muted-foreground">
+                      {completedItems}/{totalItems} tasks
+                    </div>
                   </CardContent>
                 </Card>
               )}
@@ -718,8 +773,8 @@ export const ControlDetail = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="grid gap-3">
-                      {threats.map(threat => (
-                        <Link 
+                      {threats.map((threat) => (
+                        <Link
                           key={threat.id}
                           to={`/threats/${threat.id}`}
                           className="flex items-start gap-4 p-4 rounded-lg border hover:bg-muted/50 transition-colors group"
@@ -733,8 +788,14 @@ export const ControlDetail = () => {
                               {threat.description}
                             </p>
                             {threat.impactLevel && (
-                              <Badge 
-                                variant={threat.impactLevel === 'high' ? 'destructive' : threat.impactLevel === 'medium' ? 'secondary' : 'outline'}
+                              <Badge
+                                variant={
+                                  threat.impactLevel === "high"
+                                    ? "destructive"
+                                    : threat.impactLevel === "medium"
+                                      ? "secondary"
+                                      : "outline"
+                                }
                                 className="mt-2 text-xs"
                               >
                                 {threat.impactLevel} impact
@@ -790,9 +851,16 @@ export const ControlDetail = () => {
                       <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
                         <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                         <div className="flex-1">
-                          <div className="font-medium text-blue-900 dark:text-blue-100">Design Phase</div>
+                          <div className="font-medium text-blue-900 dark:text-blue-100">
+                            Design Phase
+                          </div>
                           <div className="text-sm text-muted-foreground">
-                            {mitigation.implementationDetail.design.split('\n').filter(l => l.trim().startsWith('- ')).length} tasks
+                            {
+                              mitigation.implementationDetail.design
+                                .split("\n")
+                                .filter((l) => l.trim().startsWith("- ")).length
+                            }{" "}
+                            tasks
                           </div>
                         </div>
                         <Button variant="ghost" size="sm" onClick={() => setActiveTab("design")}>
@@ -804,9 +872,16 @@ export const ControlDetail = () => {
                       <div className="flex items-center gap-3 p-3 rounded-lg bg-yellow-50/50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800">
                         <Hammer className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
                         <div className="flex-1">
-                          <div className="font-medium text-yellow-900 dark:text-yellow-100">Build Phase</div>
+                          <div className="font-medium text-yellow-900 dark:text-yellow-100">
+                            Build Phase
+                          </div>
                           <div className="text-sm text-muted-foreground">
-                            {mitigation.implementationDetail.build.split('\n').filter(l => l.trim().startsWith('- ')).length} tasks
+                            {
+                              mitigation.implementationDetail.build
+                                .split("\n")
+                                .filter((l) => l.trim().startsWith("- ")).length
+                            }{" "}
+                            tasks
                           </div>
                         </div>
                         <Button variant="ghost" size="sm" onClick={() => setActiveTab("build")}>
@@ -818,12 +893,23 @@ export const ControlDetail = () => {
                       <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50/50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
                         <Settings className="h-5 w-5 text-green-600 dark:text-green-400" />
                         <div className="flex-1">
-                          <div className="font-medium text-green-900 dark:text-green-100">Operations Phase</div>
+                          <div className="font-medium text-green-900 dark:text-green-100">
+                            Operations Phase
+                          </div>
                           <div className="text-sm text-muted-foreground">
-                            {mitigation.implementationDetail.operations.split('\n').filter(l => l.trim().startsWith('- ')).length} tasks
+                            {
+                              mitigation.implementationDetail.operations
+                                .split("\n")
+                                .filter((l) => l.trim().startsWith("- ")).length
+                            }{" "}
+                            tasks
                           </div>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => setActiveTab("operations")}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setActiveTab("operations")}
+                        >
                           View <ArrowRight className="h-4 w-4 ml-1" />
                         </Button>
                       </div>
@@ -832,9 +918,16 @@ export const ControlDetail = () => {
                       <div className="flex items-center gap-3 p-3 rounded-lg bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
                         <Wrench className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                         <div className="flex-1">
-                          <div className="font-medium text-purple-900 dark:text-purple-100">Tools & Frameworks</div>
+                          <div className="font-medium text-purple-900 dark:text-purple-100">
+                            Tools & Frameworks
+                          </div>
                           <div className="text-sm text-muted-foreground">
-                            {mitigation.implementationDetail.toolsAndFrameworks.split('\n').filter(l => l.trim().startsWith('- ')).length} items
+                            {
+                              mitigation.implementationDetail.toolsAndFrameworks
+                                .split("\n")
+                                .filter((l) => l.trim().startsWith("- ")).length
+                            }{" "}
+                            items
                           </div>
                         </div>
                         <Button variant="ghost" size="sm" onClick={() => setActiveTab("tools")}>
@@ -892,7 +985,10 @@ export const ControlDetail = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {renderSectionContent(mitigation.implementationDetail.operations, "operation-phase")}
+                    {renderSectionContent(
+                      mitigation.implementationDetail.operations,
+                      "operation-phase",
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -909,7 +1005,10 @@ export const ControlDetail = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {renderSectionContent(mitigation.implementationDetail.toolsAndFrameworks, "tools-frameworks")}
+                    {renderSectionContent(
+                      mitigation.implementationDetail.toolsAndFrameworks,
+                      "tools-frameworks",
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -917,6 +1016,7 @@ export const ControlDetail = () => {
           </Tabs>
         </div>
       </section>
+      <Footer />
     </>
   );
 };

@@ -1,51 +1,65 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, CheckCircle, ShieldCheck, Network, Target, Zap, BookOpen, Users, Globe, Sparkles, Brain, Shield, Play } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle,
+  ShieldCheck,
+  Network,
+  Target,
+  Brain,
+  Shield,
+  Crosshair,
+} from "lucide-react";
 import { Link } from "react-router-dom";
-import { cn } from "@/lib/utils";
-import { Text, Heading, Container, Flex, Box, Grid, Button as RadixButton, Badge as RadixBadge } from '@radix-ui/themes';
+import { Text, Heading, Box, Grid } from "@radix-ui/themes";
 
 export const HeroSection = () => {
   const features = [
     {
       icon: Network,
       title: "NIST AI RMF Mapping",
-      description: "Interactive D3.js visualization mapping NIST AI Risk Management Framework to OWASP AISVS",
+      description:
+        "Interactive D3.js visualization mapping NIST AI Risk Management Framework to OWASP AISVS",
       color: "bg-blue-500",
-      link: "/nist-mapping"
+      link: "/nist-mapping",
     },
     {
       icon: ShieldCheck,
       title: "AISVS Security Standards",
       description: "Comprehensive AI Security Verification Standard with 13 control categories",
       color: "bg-green-500",
-      link: "/aisvs"
+      link: "/aisvs",
     },
     {
       icon: Brain,
       title: "Component Framework",
       description: "Six key components of agentic systems with detailed threat analysis",
       color: "bg-orange-500",
-      link: "/components"
+      link: "/components",
     },
     {
       icon: Target,
       title: "Security Controls",
       description: "Comprehensive security controls and mitigations for AI agentic systems",
       color: "bg-purple-500",
-      link: "/controls"
-    }
+      link: "/controls",
+    },
+    {
+      icon: Crosshair,
+      title: "Threat Modeler",
+      description: "Interactive drag-and-drop threat modeling for agentic AI with MAESTRO analysis",
+      color: "bg-red-500",
+      link: "/threat-modeler",
+    },
   ];
 
   const stats = [
     { number: "13", label: "AISVS Categories", color: "text-blue-600" },
     { number: "15", label: "AI Threats", color: "text-red-600" },
     { number: "6", label: "Key Components", color: "text-green-600" },
-    { number: "100+", label: "Security Controls", color: "text-purple-600" }
+    { number: "16", label: "Security Mitigations", color: "text-purple-600" },
   ];
-
-
 
   return (
     <section className="relative py-12 md:py-20 lg:py-28 overflow-hidden">
@@ -53,7 +67,7 @@ export const HeroSection = () => {
       <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-muted/30" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-secondary/20 via-transparent to-transparent" />
-      
+
       {/* Floating particles effect */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-primary/20 rounded-full animate-pulse" />
@@ -75,7 +89,10 @@ export const HeroSection = () => {
 
             {/* Main heading */}
             <Box className="space-y-6 text-center lg:text-left">
-              <Heading size="9" className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+              <Heading
+                size="9"
+                className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl"
+              >
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary via-primary to-secondary">
                   Secure Your
                 </span>
@@ -87,16 +104,18 @@ export const HeroSection = () => {
                 <span className="text-foreground">Applications</span>
               </Heading>
               <Text size="5" className="text-lg text-muted-foreground md:text-xl leading-relaxed">
-                The most comprehensive OWASP guide for securing AI agentic systems. 
-                Features NIST AI RMF mapping, advanced threat analysis, 
-                and cutting-edge security frameworks.
+                The most comprehensive OWASP guide for securing AI agentic systems. Features NIST AI
+                RMF mapping, advanced threat analysis, and cutting-edge security frameworks.
               </Text>
             </Box>
-            
+
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <Link to="/nist-mapping" className="w-full sm:w-auto">
-                <Button size="lg" className="w-full gap-2 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white font-semibold shadow-lg">
+                <Button
+                  size="lg"
+                  className="w-full gap-2 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white font-semibold shadow-lg"
+                >
                   <Network className="h-5 w-5" />
                   NIST Mapping
                   <ArrowRight className="h-4 w-4" />
@@ -114,13 +133,17 @@ export const HeroSection = () => {
             <Grid columns="4" gap="3" className="pt-4">
               {stats.map((stat, i) => (
                 <Box key={i} className="text-center p-3 rounded-lg bg-muted/30 backdrop-blur-sm">
-                  <Text size="6" weight="bold" className={stat.color}>{stat.number}</Text>
-                  <Text size="2" className="text-muted-foreground">{stat.label}</Text>
+                  <Text size="6" weight="bold" className={stat.color}>
+                    {stat.number}
+                  </Text>
+                  <Text size="2" className="text-muted-foreground">
+                    {stat.label}
+                  </Text>
                 </Box>
               ))}
             </Grid>
           </div>
-          
+
           {/* Right column - Feature showcase */}
           <div className="relative">
             {/* Main feature cards */}
@@ -129,7 +152,9 @@ export const HeroSection = () => {
                 <Link key={i} to={feature.link} className="group">
                   <Card className="h-full border-2 border-transparent hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:scale-105 bg-gradient-to-br from-background to-muted/20">
                     <CardContent className="p-6 space-y-4">
-                      <div className={`w-12 h-12 rounded-lg ${feature.color} flex items-center justify-center text-white group-hover:scale-110 transition-transform duration-300`}>
+                      <div
+                        className={`w-12 h-12 rounded-lg ${feature.color} flex items-center justify-center text-white group-hover:scale-110 transition-transform duration-300`}
+                      >
                         <feature.icon className="h-6 w-6" />
                       </div>
                       <div>
@@ -155,26 +180,29 @@ export const HeroSection = () => {
           </div>
         </div>
 
-
-
         {/* Quick navigation */}
         <Box className="mt-16 lg:mt-20">
           <Box className="text-center mb-8">
-            <Heading size="5" className="mb-2">Quick Navigation</Heading>
-            <Text className="text-muted-foreground">Jump directly to the tools and resources you need</Text>
+            <Heading size="5" className="mb-2">
+              Quick Navigation
+            </Heading>
+            <Text className="text-muted-foreground">
+              Jump directly to the tools and resources you need
+            </Text>
           </Box>
-          
-          <Grid columns="5" gap="3">
+
+          <Grid columns="6" gap="3">
             {[
               { label: "NIST Mapping", link: "/nist-mapping", icon: Network },
               { label: "Threats", link: "/threats", icon: Shield },
               { label: "Controls", link: "/controls", icon: CheckCircle },
               { label: "AISVS", link: "/aisvs", icon: ShieldCheck },
-              { label: "Components", link: "/components", icon: Brain }
+              { label: "Components", link: "/components", icon: Brain },
+              { label: "Threat Modeler", link: "/threat-modeler", icon: Crosshair },
             ].map((item, i) => (
               <Link key={i} to={item.link}>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="w-full h-auto p-4 flex flex-col gap-2 hover:bg-primary/5 hover:border-primary/30 transition-all duration-200"
                 >
                   <item.icon className="h-5 w-5" />

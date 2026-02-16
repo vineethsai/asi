@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from "react-router-dom";
 
 export const Footer = () => {
   return (
@@ -15,31 +15,98 @@ export const Footer = () => {
           <div>
             <h4 className="font-semibold mb-3">Guide Sections</h4>
             <ul className="space-y-2">
-              <li><Link to="/components" className="text-muted-foreground hover:text-foreground">Components</Link></li>
-              <li><Link to="/architectures" className="text-muted-foreground hover:text-foreground">Architecture</Link></li>
-              <li><Link to="/threats" className="text-muted-foreground hover:text-foreground">Threats</Link></li>
-              <li><Link to="/controls" className="text-muted-foreground hover:text-foreground">Controls</Link></li>
-              <li><Link to="/aisvs" className="text-muted-foreground hover:text-foreground">AISVS</Link></li>
+              <li>
+                <Link to="/components" className="text-muted-foreground hover:text-foreground">
+                  Components
+                </Link>
+              </li>
+              <li>
+                <Link to="/architectures" className="text-muted-foreground hover:text-foreground">
+                  Architecture
+                </Link>
+              </li>
+              <li>
+                <Link to="/threats" className="text-muted-foreground hover:text-foreground">
+                  Threats
+                </Link>
+              </li>
+              <li>
+                <Link to="/controls" className="text-muted-foreground hover:text-foreground">
+                  Controls
+                </Link>
+              </li>
+              <li>
+                <Link to="/aisvs" className="text-muted-foreground hover:text-foreground">
+                  AISVS
+                </Link>
+              </li>
             </ul>
           </div>
 
           <div>
             <h4 className="font-semibold mb-3">Tools</h4>
             <ul className="space-y-2">
-              <li><Link to="/assessment" className="text-muted-foreground hover:text-foreground">Architecture Assessment</Link></li>
-              <li><Link to="/checklist" className="text-muted-foreground hover:text-foreground">Security Checklist</Link></li>
-              <li><Link to="/implementation" className="text-muted-foreground hover:text-foreground">Implementation Guide</Link></li>
+              <li>
+                <Link to="/interactive" className="text-muted-foreground hover:text-foreground">
+                  Security Checklist
+                </Link>
+              </li>
+              <li>
+                <Link to="/implementation" className="text-muted-foreground hover:text-foreground">
+                  Implementation Guide
+                </Link>
+              </li>
             </ul>
           </div>
 
           <div>
             <h4 className="font-semibold mb-3">Resources</h4>
             <ul className="space-y-2">
-              <li><Link to="/references" className="text-muted-foreground hover:text-foreground">References & Links</Link></li>
-              <li><a href="https://owasp.org/www-project-securing-agentic-applications/" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">OWASP Official</a></li>
-              <li><a href="https://github.com/vineethsai/asi/" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">GitHub</a></li>
-              <li><a href="http://vineethsai.com/" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">Author</a></li>
-              <li><a href="https://www.linkedin.com/in/vineethsai/" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">LinkedIn</a></li>
+              <li>
+                <Link to="/references" className="text-muted-foreground hover:text-foreground">
+                  References & Links
+                </Link>
+              </li>
+              <li>
+                <a
+                  href="https://owasp.org/www-project-securing-agentic-applications/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  OWASP Official
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://github.com/vineethsai/asi/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  GitHub
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://vineethsai.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Author
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://www.linkedin.com/in/vineethsai/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  LinkedIn
+                </a>
+              </li>
             </ul>
           </div>
         </div>

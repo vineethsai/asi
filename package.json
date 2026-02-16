@@ -6,15 +6,30 @@
   "homepage": "https://vineethsai.github.io/asi/",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && npm run postbuild",
+    "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\"",
     "preview": "vite preview",
+    "validate": "npm run typecheck && npm run lint && npm run check:data && npm run build",
     "postbuild": "cp docs/index.html docs/404.html",
-    "create-vuln": "node scripts/create-vulnerability.js",
-    "test-vulns": "node scripts/test-vulnerabilities.js"
+    "check:data": "node scripts/check-data-integrity.js",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": [
+      "eslint --max-warnings=0",
+      "prettier --check"
+    ],
+    "src/**/*.{css,json}": [
+      "prettier --check"
+    ]
   },
   "dependencies": {
+    "@dagrejs/dagre": "^2.0.4",
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.1",
@@ -46,15 +61,16 @@
     "@radix-ui/react-tooltip": "^1.1.4",
     "@radix-ui/themes": "^3.2.1",
     "@tanstack/react-query": "^5.56.2",
+    "@xyflow/react": "^12.10.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
     "d3": "^7.9.0",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.3.0",
+    "html-to-image": "^1.11.13",
     "input-otp": "^1.2.4",
     "lucide-react": "^0.462.0",
-    "next-themes": "^0.3.0",
     "react": "^18.3.1",
     "react-copy-to-clipboard": "^5.1.0",
     "react-day-picker": "^8.10.1",
@@ -85,8 +101,11 @@
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.9",
     "globals": "^15.9.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "lovable-tagger": "^1.1.7",
     "postcss": "^8.5.6",
+    "prettier": "^3.8.1",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",

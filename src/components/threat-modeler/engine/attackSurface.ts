@@ -1,0 +1,71 @@
+import type { CanvasNode, CanvasEdge } from "../types";
+
+export interface AttackSurfaceScore {
+  nodeId: string;
+  label: string;
+  score: number;
+  factors: {
+    connections: number;
+    trustLevel: number;
+    externalExposure: number;
+    unencryptedFlows: number;
+    unauthenticatedFlows: number;
+    piiExposure: number;
+  };
+  riskLevel: "critical" | "high" | "medium" | "low";
+}
+
+export function calculateAttackSurface(
+  nodes: CanvasNode[],
+  edges: CanvasEdge[],
+): AttackSurfaceScore[] {
+  const scores: AttackSurfaceScore[] = [];
+  const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+
+  for (const node of nodes) {
+    if (!node.data || node.type === "trustBoundary") continue;
+
+    const connectedEdges = edges.filter((e) => e.source === node.id || e.target === node.id);
+    const connections = connectedEdges.length;
+    const trustLevel =
+      node.data.trustLevel === "untrusted" ? 30 : node.data.trustLevel === "semi-trusted" ? 15 : 5;
+
+    const externalConnections = connectedEdges.filter((e) => {
+      const other = e.source === node.id ? nodeMap.get(e.target) : nodeMap.get(e.source);
+      return other?.data?.category === "external" || other?.data?.category === "actor";
+    });
+    const externalExposure = externalConnections.length * 15;
+
+    const unencryptedFlows = connectedEdges.filter((e) => e.data && !e.data.encrypted).length * 20;
+    const unauthenticatedFlows =
+      connectedEdges.filter((e) => e.data?.authentication === "None").length * 15;
+    const piiExposure = connectedEdges.filter((e) => e.data?.containsPII).length * 10;
+
+    const score =
+      connections * 5 +
+      trustLevel +
+      externalExposure +
+      unencryptedFlows +
+      unauthenticatedFlows +
+      piiExposure;
+    const riskLevel: AttackSurfaceScore["riskLevel"] =
+      score >= 100 ? "critical" : score >= 60 ? "high" : score >= 30 ? "medium" : "low";
+
+    scores.push({
+      nodeId: node.id,
+      label: node.data.label,
+      score,
+      factors: {
+        connections,
+        trustLevel,
+        externalExposure,
+        unencryptedFlows,
+        unauthenticatedFlows,
+        piiExposure,
+      },
+      riskLevel,
+    });
+  }
+
+  return scores.sort((a, b) => b.score - a.score);
+}

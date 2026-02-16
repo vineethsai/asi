@@ -1,321 +1,96 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import SidebarNav from "@/components/layout/SidebarNav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, ArrowRight, Shield, AlertTriangle, GitMerge, Wrench, Code, Database } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Shield,
+  AlertTriangle,
+  GitMerge,
+  Wrench,
+  Code,
+  Database,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import { threatsData, mitigationsData, Threat, Mitigation } from "../components/components/securityData";
+import { threatsData, mitigationsData, Threat } from "../components/components/securityData";
 import { Helmet } from "react-helmet";
+import {
+  getComponentById,
+  getMainComponentId,
+  buildComponentMap,
+} from "../components/components/frameworkData";
 
-// Define the component data structure
-type Component = {
-  id: string;
-  title: string;
-  description: string;
-  subComponents: Array<{
-    id: string;
-    title: string;
-    description: string;
-  }>;
-  threatCodes: string[];
-  controls: string[];
-  relatedArchitectures: Array<{
-    id: string;
-    name: string;
-    relevance: "primary" | "secondary";
-  }>;
-  relatedComponents: string[];
-  color: string;
-  securityImplications: string;
-  implementationConsiderations: string;
-};
-
-// Enhanced component data from OWASP Agentic Applications guide
-const componentsData: Record<string, Component> = {
-  "kc1": {
-    id: "kc1",
-    title: "Language Models (KC1)",
-    description: "The core cognitive engine or 'brain' of agentic systems, responsible for understanding, reasoning, planning, and generating responses.",
-    subComponents: [
-      {
-        id: "kc1.1",
-        title: "Large Language Models (LLMs)",
-        description: "Pre-trained foundation models like GPT, Claude, and Llama series that serve as the core cognitive engine utilizing pre-trained parameters for reasoning, planning, and generation"
-      },
-      {
-        id: "kc1.2",
-        title: "Multimodal LLMs (MLLMs)",
-        description: "Models capable of processing multiple data types beyond text (images, audio, video), enabling agents to perform tasks involving visual or auditory information"
-      },
-      {
-        id: "kc1.3",
-        title: "Small Language Models (SLMs)",
-        description: "Models with fewer parameters, trained on smaller, focused datasets for specific tasks rather than general capabilities"
-      },
-      {
-        id: "kc1.4",
-        title: "Fine-tuned Models",
-        description: "Models that undergo additional training on specific datasets to specialize capabilities for particular tasks, domains, or interaction styles"
-      }
-    ],
-    threatCodes: ["T5", "T6", "T7", "T15"],
-    controls: ["Prompt Hardening", "Input Sanitization", "Output Filtering", "Adversarial Training"],
-    relatedArchitectures: [
-      { id: "sequential", name: "Sequential Agent", relevance: "primary" },
-      { id: "hierarchical", name: "Hierarchical", relevance: "primary" },
-      { id: "collaborative", name: "Collaborative Swarm", relevance: "primary" }
-    ],
-    relatedComponents: ["kc3", "kc4"],
-    color: "border-primary/30 bg-primary/5",
-    securityImplications: "Foundation models can propagate hallucinations, be susceptible to intent manipulation, develop misaligned behaviors, and potentially manipulate human trust. Security controls must consider both the model's inherent capabilities and how it interfaces with other components.",
-    implementationConsiderations: "Implementation should focus on robust prompt engineering with explicit boundaries, input validation, model alignment techniques, and monitoring for unexpected outputs or behaviors."
-  },
-  "kc2": {
-    id: "kc2",
-    title: "Orchestration (KC2)",
-    description: "Control flow mechanisms that dictate the agent's behavior, information flow, and decision-making processes between components or agents.",
-    subComponents: [
-      {
-        id: "kc2.1",
-        title: "Workflows",
-        description: "Structured, pre-defined sequences of tasks that agents follow to achieve goals, defining information flow and actions"
-      },
-      {
-        id: "kc2.2",
-        title: "Hierarchical Planning",
-        description: "Orchestrator breaks down complex tasks and distributes them to specialized sub-agents, managing the overall process"
-      },
-      {
-        id: "kc2.3",
-        title: "Multi-agent Collaboration",
-        description: "Multiple agents working together to achieve common goals, communicating and coordinating their actions, sharing information and resources"
-      }
-    ],
-    threatCodes: ["T6", "T8", "T9", "T10", "T12", "T13", "T14"],
-    controls: ["Communication Verification", "Intent Validation", "Agent Isolation", "Trust Boundaries"],
-    relatedArchitectures: [
-      { id: "hierarchical", name: "Hierarchical", relevance: "primary" },
-      { id: "collaborative", name: "Collaborative Swarm", relevance: "primary" }
-    ],
-    relatedComponents: ["kc1", "kc3", "kc6"],
-    color: "border-architecture/30 bg-architecture/5",
-    securityImplications: "Orchestration mechanisms can be manipulated to achieve unauthorized goals, obscure actions, impersonate trusted entities, overwhelm human oversight, or corrupt inter-agent communications.",
-    implementationConsiderations: "Secure implementation requires robust authentication and authorization between agents, validated communication protocols, auditable workflows, and defined trust boundaries."
-  },
-  "kc3": {
-    id: "kc3",
-    title: "Reasoning/Planning (KC3)",
-    description: "Paradigms that enable AI agents to solve complex problems by breaking down tasks, making decisions, and forming plans.",
-    subComponents: [
-      {
-        id: "kc3.1",
-        title: "Structured Planning/Execution",
-        description: "Formal task decomposition into sequences of actions, often with separate planner and executor components"
-      },
-      {
-        id: "kc3.2",
-        title: "ReAct (Reason + Act)",
-        description: "Dynamically interleaves reasoning steps with actions and updates reasoning based on feedback"
-      },
-      {
-        id: "kc3.3",
-        title: "Chain of Thought (CoT)",
-        description: "Enhances reasoning by prompting step-by-step thinking before arriving at actions or conclusions"
-      },
-      {
-        id: "kc3.4",
-        title: "Tree of Thoughts (ToT)",
-        description: "Explores multiple reasoning paths in parallel with lookahead, backtracking, and self-evaluation"
-      }
-    ],
-    threatCodes: ["T5", "T6", "T7", "T8", "T15"],
-    controls: ["Reasoning Validation", "Goal Alignment Checks", "Logic Verification", "Transparent Decision Paths"],
-    relatedArchitectures: [
-      { id: "sequential", name: "Sequential Agent", relevance: "primary" },
-      { id: "hierarchical", name: "Hierarchical", relevance: "secondary" },
-      { id: "collaborative", name: "Collaborative Swarm", relevance: "secondary" }
-    ],
-    relatedComponents: ["kc1", "kc4"],
-    color: "border-control/30 bg-control/5",
-    securityImplications: "Reasoning processes can propagate hallucinations, be manipulated to achieve unauthorized goals, exhibit misaligned behaviors, create untraceable decision trails, or craft manipulative responses.",
-    implementationConsiderations: "Security requires verification at key decision points, traceability of reasoning chains, validation of intermediate conclusions, and checks for logic consistency and alignment with intended goals."
-  },
-  "kc4": {
-    id: "kc4",
-    title: "Memory Modules (KC4)",
-    description: "Systems that enable agents to retain information across interactions, with varying scope and security boundaries.",
-    subComponents: [
-      {
-        id: "kc4.1",
-        title: "In-agent session memory",
-        description: "Limited to a single agent and a single session, restricting the ability to compromise additional agents/sessions"
-      },
-      {
-        id: "kc4.2",
-        title: "Cross-agent session memory",
-        description: "Shared across multiple agents but limited to a single session"
-      },
-      {
-        id: "kc4.3",
-        title: "In-agent cross-session memory",
-        description: "Limited to a single agent but shared across multiple sessions"
-      },
-      {
-        id: "kc4.4",
-        title: "Cross-agent cross-session memory",
-        description: "Shared across multiple agents and sessions"
-      },
-      {
-        id: "kc4.5",
-        title: "In-agent cross-user memory",
-        description: "Limited to a single agent but shared across multiple users"
-      },
-      {
-        id: "kc4.6",
-        title: "Cross-agent cross-user memory",
-        description: "Shared across multiple agents and users"
-      }
-    ],
-    threatCodes: ["T1", "T3", "T5", "T6", "T8", "T12"],
-    controls: ["Memory Isolation", "Data Validation", "Access Control", "Memory Sanitization", "Expiration Policies"],
-    relatedArchitectures: [
-      { id: "sequential", name: "Sequential Agent", relevance: "primary" },
-      { id: "hierarchical", name: "Hierarchical", relevance: "secondary" },
-      { id: "collaborative", name: "Collaborative Swarm", relevance: "primary" }
-    ],
-    relatedComponents: ["kc1", "kc3", "kc6"],
-    color: "border-primary/30 bg-primary/5",
-    securityImplications: "Memory systems can be poisoned with malicious data, cause information leakage across contexts, store and amplify hallucinations, facilitate goal manipulation, enable tampering with audit trails, or allow communication poisoning in multi-agent systems.",
-    implementationConsiderations: "Implementation should include input validation before storage, encryption for sensitive data, strict access controls, memory compartmentalization, and time-to-live (TTL) policies for sensitive information."
-  },
-  "kc5": {
-    id: "kc5",
-    title: "Tool Integration (KC5)",
-    description: "Frameworks allowing agents to extend capabilities beyond text by using external tools, APIs, functions, data stores, and services.",
-    subComponents: [
-      {
-        id: "kc5.1",
-        title: "Flexible Libraries/SDK Features",
-        description: "Code-level building blocks like LangChain, AG2, CrewAI that provide high flexibility but require more coding effort"
-      },
-      {
-        id: "kc5.2",
-        title: "Managed Platforms/Services",
-        description: "Vendor-provided solutions like Amazon Bedrock Agents or Microsoft Copilot Platform that handle infrastructure and simplify setup"
-      },
-      {
-        id: "kc5.3",
-        title: "Managed APIs",
-        description: "Vendor-hosted services like OpenAI's Assistants API that provide higher-level abstractions via API calls"
-      }
-    ],
-    threatCodes: ["T2", "T3", "T6", "T7", "T8", "T11"],
-    controls: ["Tool Sandboxing", "Permission Boundaries", "Resource Limitations", "Tool Verification", "Least Privilege"],
-    relatedArchitectures: [
-      { id: "sequential", name: "Sequential Agent", relevance: "primary" },
-      { id: "hierarchical", name: "Hierarchical", relevance: "primary" },
-      { id: "collaborative", name: "Collaborative Swarm", relevance: "primary" }
-    ],
-    relatedComponents: ["kc2", "kc6"],
-    color: "border-threat/30 bg-threat/5",
-    securityImplications: "Tool integration can lead to misuse of tools in harmful ways, privilege escalation through excessive permissions, manipulation of tools to achieve unauthorized goals, subtle misalignments in tool usage, lack of proper auditability, and unexpected code execution.",
-    implementationConsiderations: "Secure implementation requires running tools in isolated environments with strict resource limitations, implementing least privilege access, validating tool inputs/outputs, and maintaining detailed audit logs of all tool invocations."
-  },
-  "kc6": {
-    id: "kc6",
-    title: "Operational Environment (KC6)",
-    description: "Capabilities that allow agents to interface with external environments through tools and function calls, including APIs, code execution, database access, and more.",
-    subComponents: [
-      {
-        id: "kc6.1",
-        title: "API Access",
-        description: "Limited or extensive access to external APIs, with varying levels of control over parameter generation"
-      },
-      {
-        id: "kc6.2",
-        title: "Code Execution",
-        description: "Capabilities to generate or run code with different levels of restriction"
-      },
-      {
-        id: "kc6.3",
-        title: "Database Execution",
-        description: "Access to query or modify databases, including RAG systems"
-      },
-      {
-        id: "kc6.4",
-        title: "Web Access",
-        description: "Browser operation capabilities for interacting with web content"
-      },
-      {
-        id: "kc6.5",
-        title: "PC Operations",
-        description: "File system and OS level access for operating with the operating system"
-      },
-      {
-        id: "kc6.6",
-        title: "Critical Systems",
-        description: "Access to SCADA or other critical infrastructure with potential for significant impact"
-      },
-      {
-        id: "kc6.7",
-        title: "IoT Devices",
-        description: "Control over connected devices in physical environments"
-      }
-    ],
-    threatCodes: ["T2", "T3", "T4", "T10", "T11", "T12", "T13", "T15"],
-    controls: ["Resource Quotas", "Container Hardening", "API Rate Limiting", "Sandboxing", "HITL Approval"],
-    relatedArchitectures: [
-      { id: "sequential", name: "Sequential Agent", relevance: "secondary" },
-      { id: "hierarchical", name: "Hierarchical", relevance: "primary" },
-      { id: "collaborative", name: "Collaborative Swarm", relevance: "primary" }
-    ],
-    relatedComponents: ["kc2", "kc4", "kc5"],
-    color: "border-control/30 bg-control/5",
-    securityImplications: "Operational environments create risk of misusing access to external systems, exploiting excessive permissions, overwhelming services, generating excessive approval requests, executing malicious code, using external systems for side channels, operating outside monitoring boundaries, or leveraging operational access to manipulate humans.",
-    implementationConsiderations: "Security implementation should include strong isolation through containerization, strict network access controls, mandatory resource limits, comprehensive logging of all operations, and human approval for critical actions."
-  }
-};
+const componentMap = buildComponentMap();
+const normalizeId = (id: string) => id.replace(/-/g, ".").toLowerCase();
 
 const ComponentDetail = () => {
   const { componentId } = useParams<{ componentId: string }>();
-  const [activeTab, setActiveTab] = useState<"overview" | "threats" | "mitigations" | "architectures">("overview");
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "threats" | "mitigations" | "architectures"
+  >("overview");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
-  // Normalize component ID (handle both dash and dot notation)
-  const normalizedComponentId = componentId?.replace(/\./g, '-');
-  
-  // Check if this is a sub-component ID (contains a dot in original or dash in normalized)
-  const isSubComponent = componentId?.includes('.') || normalizedComponentId?.includes('-');
-  const mainComponentId = isSubComponent 
-    ? (componentId?.includes('.') ? componentId.split('.')[0] : normalizedComponentId?.split('-')[0])
-    : componentId;
-  
-  // Get component data - first check if it exists directly, then with normalization
-  let component = componentId ? componentsData[componentId] : undefined;
-  if (!component && mainComponentId) {
-    component = componentsData[mainComponentId];
-  }
-  
-  // If it's a sub-component, find the specific sub-component data
-  // Try both original ID and normalized ID formats
-  const subComponent = isSubComponent && component 
-    ? component.subComponents.find(sub => sub.id === componentId || sub.id === normalizedComponentId)
-    : null;
-  
-  // Get related threats by matching component ID with threat componentIds
-  const relatedThreats: Threat[] = component 
-    ? Object.values(threatsData).filter((threat: Threat) => 
-        threat.componentIds.includes(component.id))
-    : [];
-    
-  // Get related mitigations by matching threat IDs with mitigation threatIds
-  const relatedMitigations: Mitigation[] = component
-    ? Object.values(mitigationsData).filter((mitigation: Mitigation) =>
-        relatedThreats.some((threat: Threat) => mitigation.threatIds.includes(threat.id)))
-    : [];
+
+  const {
+    component,
+    subComponent,
+    isSubComponent,
+    mainComponentId,
+    threatCodes,
+    relatedThreats,
+    relatedMitigations,
+  } = useMemo(() => {
+    const mainId = getMainComponentId(componentId ?? "");
+    const currentNode = componentId ? getComponentById(componentId) : undefined;
+    const mainNode = getComponentById(mainId);
+    const parentNode = mainNode ?? currentNode;
+    const isSub = currentNode && parentNode && currentNode.id !== parentNode.id;
+
+    const viewComponent = parentNode
+      ? {
+          id: parentNode.id,
+          title: parentNode.title,
+          description: parentNode.description ?? "",
+          color: parentNode.color,
+          subComponents: (parentNode.children ?? []).map((c) => ({
+            id: c.id,
+            title: c.title,
+            description: c.description ?? "",
+          })),
+          relatedArchitectures: parentNode.relatedArchitectures ?? [],
+          relatedComponents: parentNode.relatedComponents ?? [],
+          securityImplications: parentNode.securityImplications ?? "",
+          implementationConsiderations: parentNode.implementationConsiderations ?? "",
+        }
+      : null;
+
+    const threatIds = (currentNode ?? parentNode)?.threatIds ?? [];
+    const threats = threatIds.map((tid) => threatsData[tid]).filter((t): t is Threat => !!t);
+    const mitigations = Object.values(mitigationsData).filter((m) =>
+      threats.some((t) => m.threatIds.includes(t.id)),
+    );
+    const codes = threatIds.map((tid) => threatsData[tid]?.code).filter(Boolean) as string[];
+
+    return {
+      component: viewComponent,
+      subComponent:
+        currentNode && isSub
+          ? {
+              id: currentNode.id,
+              title: currentNode.title,
+              description: currentNode.description ?? "",
+            }
+          : null,
+      isSubComponent: !!isSub,
+      mainComponentId: mainId,
+      threatCodes: codes,
+      relatedThreats: threats,
+      relatedMitigations: mitigations,
+    };
+  }, [componentId]);
 
   const handleMobileMenuToggle = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -327,17 +102,25 @@ const ComponentDetail = () => {
 
   // Icons for subcomponents based on component type
   const getSubcomponentIcon = (componentId: string) => {
-    switch(componentId) {
-      case 'kc1': return null;
-      case 'kc2': return <GitMerge className="w-4 h-4 mr-2" />;
-      case 'kc3': return null;
-      case 'kc4': return null;
-      case 'kc5': return <Wrench className="w-4 h-4 mr-2" />;
-      case 'kc6': 
-        return componentId.includes('kc6.2') ? <Code className="w-4 h-4 mr-2" /> : 
-               componentId.includes('kc6.3') ? <Database className="w-4 h-4 mr-2" /> : 
-               null;
-      default: return null;
+    switch (componentId) {
+      case "kc1":
+        return null;
+      case "kc2":
+        return <GitMerge className="w-4 h-4 mr-2" />;
+      case "kc3":
+        return null;
+      case "kc4":
+        return null;
+      case "kc5":
+        return <Wrench className="w-4 h-4 mr-2" />;
+      case "kc6":
+        return componentId.includes("kc6.2") ? (
+          <Code className="w-4 h-4 mr-2" />
+        ) : componentId.includes("kc6.3") ? (
+          <Database className="w-4 h-4 mr-2" />
+        ) : null;
+      default:
+        return null;
     }
   };
 
@@ -345,25 +128,19 @@ const ComponentDetail = () => {
   if (!component || (isSubComponent && !subComponent)) {
     return (
       <>
-        <Header 
-          onMobileMenuToggle={handleMobileMenuToggle} 
-          isMobileMenuOpen={isMobileMenuOpen} 
-        />
-        
+        <Header onMobileMenuToggle={handleMobileMenuToggle} isMobileMenuOpen={isMobileMenuOpen} />
+
         {/* Mobile Navigation Sidebar */}
-        <SidebarNav 
-          type="components" 
-          isOpen={isMobileMenuOpen} 
-          onClose={handleMobileMenuClose} 
-        />
-        
+        <SidebarNav type="components" isOpen={isMobileMenuOpen} onClose={handleMobileMenuClose} />
+
         <main className="container py-12">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-3xl font-bold mb-4">
               {isSubComponent ? "Sub-Component Not Found" : "Component Not Found"}
             </h1>
             <p className="text-muted-foreground mb-6">
-              The {isSubComponent ? "sub-component" : "component"} you're looking for does not exist or has been removed.
+              The {isSubComponent ? "sub-component" : "component"} you're looking for does not exist
+              or has been removed.
             </p>
             <Link to="/components">
               <Button>
@@ -387,8 +164,14 @@ const ComponentDetail = () => {
     <>
       <Helmet>
         <title>{pageTitle} | OWASP Securing Agentic Applications Guide</title>
-        <meta name="description" content={`${pageDescription} Learn about security threats, mitigations, and best practices for this AI component.`} />
-        <meta name="keywords" content={`${pageTitle}, AI security, OWASP, agentic systems, ${component.threatCodes.join(', ')}, AI threats, security controls`} />
+        <meta
+          name="description"
+          content={`${pageDescription} Learn about security threats, mitigations, and best practices for this AI component.`}
+        />
+        <meta
+          name="keywords"
+          content={`${pageTitle}, AI security, OWASP, agentic systems, ${threatCodes.join(", ")}, AI threats, security controls`}
+        />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href={pageUrl} />
         <meta property="og:title" content={`${pageTitle} | OWASP Guide`} />
@@ -404,56 +187,56 @@ const ComponentDetail = () => {
           {JSON.stringify({
             "@context": "https://schema.org",
             "@type": "TechArticle",
-            "headline": pageTitle,
-            "description": pageDescription,
-            "url": pageUrl,
-            "datePublished": new Date().toISOString(),
-            "dateModified": new Date().toISOString(),
-            "author": {
+            headline: pageTitle,
+            description: pageDescription,
+            url: pageUrl,
+            datePublished: new Date().toISOString(),
+            dateModified: new Date().toISOString(),
+            author: {
               "@type": "Organization",
-              "name": "OWASP"
+              name: "OWASP",
             },
-            "publisher": {
+            publisher: {
               "@type": "Organization",
-              "name": "OWASP",
-              "url": "https://owasp.org"
+              name: "OWASP",
+              url: "https://owasp.org",
             },
-            "about": "AI Security",
-            "keywords": component.threatCodes.join(', '),
-                         "isPartOf": {
-               "@type": "WebSite",
-               "name": "OWASP Securing Agentic Applications Guide",
-               "url": "https://agenticsecurity.info"
-             }
+            about: "AI Security",
+            keywords: threatCodes.join(", "),
+            isPartOf: {
+              "@type": "WebSite",
+              name: "OWASP Securing Agentic Applications Guide",
+              url: "https://agenticsecurity.info",
+            },
           })}
         </script>
       </Helmet>
-      <Header 
-        onMobileMenuToggle={handleMobileMenuToggle} 
-        isMobileMenuOpen={isMobileMenuOpen} 
-      />
-      
+      <Header onMobileMenuToggle={handleMobileMenuToggle} isMobileMenuOpen={isMobileMenuOpen} />
+
       {/* Mobile Navigation Sidebar */}
-      <SidebarNav 
-        type="components" 
-        activeId={componentId} 
-        isOpen={isMobileMenuOpen} 
-        onClose={handleMobileMenuClose} 
+      <SidebarNav
+        type="components"
+        activeId={componentId}
+        isOpen={isMobileMenuOpen}
+        onClose={handleMobileMenuClose}
       />
-      
+
       <main className="container py-12">
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
-            <Link to="/components" className="inline-flex items-center text-muted-foreground hover:text-foreground">
+            <Link
+              to="/components"
+              className="inline-flex items-center text-muted-foreground hover:text-foreground"
+            >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Components
             </Link>
-            
+
             {isSubComponent && (
               <>
                 <span className="text-muted-foreground">/</span>
-                <Link 
-                  to={`/components/${mainComponentId}`} 
+                <Link
+                  to={`/components/${mainComponentId}`}
                   className="text-muted-foreground hover:text-foreground"
                 >
                   {component.title}
@@ -461,7 +244,7 @@ const ComponentDetail = () => {
               </>
             )}
           </div>
-          
+
           <div className={cn("p-6 rounded-lg mb-8", component.color)}>
             <h1 className="text-3xl font-bold mb-2 text-foreground">
               {isSubComponent ? subComponent!.title : component.title}
@@ -470,33 +253,31 @@ const ComponentDetail = () => {
               {isSubComponent ? subComponent!.description : component.description}
             </p>
             {isSubComponent && (
-              <p className="text-sm text-muted-foreground mt-2">
-                Part of: {component.title}
-              </p>
+              <p className="text-sm text-muted-foreground mt-2">Part of: {component.title}</p>
             )}
           </div>
-          
+
           {/* Tab navigation */}
           <div className="border-b mb-6">
             <div className="flex flex-wrap gap-y-2 md:gap-y-0 space-x-6">
-              <button 
+              <button
                 onClick={() => setActiveTab("overview")}
                 className={cn(
                   "pb-2 px-1 font-medium",
-                  activeTab === "overview" 
-                    ? "border-b-2 border-primary text-foreground" 
-                    : "text-muted-foreground hover:text-foreground"
+                  activeTab === "overview"
+                    ? "border-b-2 border-primary text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 Overview
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab("threats")}
                 className={cn(
                   "pb-2 px-1 font-medium flex items-center",
-                  activeTab === "threats" 
-                    ? "border-b-2 border-threat text-foreground" 
-                    : "text-muted-foreground hover:text-foreground"
+                  activeTab === "threats"
+                    ? "border-b-2 border-threat text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 <AlertTriangle className="mr-1 h-4 w-4" />
@@ -505,13 +286,13 @@ const ComponentDetail = () => {
                   {relatedThreats.length}
                 </span>
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab("mitigations")}
                 className={cn(
                   "pb-2 px-1 font-medium flex items-center",
-                  activeTab === "mitigations" 
-                    ? "border-b-2 border-control text-foreground" 
-                    : "text-muted-foreground hover:text-foreground"
+                  activeTab === "mitigations"
+                    ? "border-b-2 border-control text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 <Shield className="mr-1 h-4 w-4" />
@@ -520,13 +301,13 @@ const ComponentDetail = () => {
                   {relatedMitigations.length}
                 </span>
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab("architectures")}
                 className={cn(
                   "pb-2 px-1 font-medium flex items-center",
-                  activeTab === "architectures" 
-                    ? "border-b-2 border-architecture text-foreground" 
-                    : "text-muted-foreground hover:text-foreground"
+                  activeTab === "architectures"
+                    ? "border-b-2 border-architecture text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 <GitMerge className="mr-1 h-4 w-4" />
@@ -534,7 +315,7 @@ const ComponentDetail = () => {
               </button>
             </div>
           </div>
-          
+
           {/* Tab content */}
           <div>
             {activeTab === "overview" && (
@@ -543,7 +324,7 @@ const ComponentDetail = () => {
                   <div>
                     <h2 className="text-xl font-semibold mb-4">Subcomponents</h2>
                     <div className="grid grid-cols-1 gap-4">
-                      {component.subComponents.map(subComp => (
+                      {component.subComponents.map((subComp) => (
                         <Link to={`/components/${subComp.id}`} key={subComp.id}>
                           <Card className="hover:shadow-md transition-shadow cursor-pointer">
                             <CardContent className="pt-6">
@@ -554,9 +335,7 @@ const ComponentDetail = () => {
                                 </div>
                                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
                               </div>
-                              <p className="text-muted-foreground">
-                                {subComp.description}
-                              </p>
+                              <p className="text-muted-foreground">{subComp.description}</p>
                             </CardContent>
                           </Card>
                         </Link>
@@ -564,7 +343,7 @@ const ComponentDetail = () => {
                     </div>
                   </div>
                 )}
-                
+
                 {isSubComponent && (
                   <div>
                     <h2 className="text-xl font-semibold mb-4">Detailed Information</h2>
@@ -573,17 +352,17 @@ const ComponentDetail = () => {
                         <div className="space-y-4">
                           <div>
                             <h3 className="font-medium mb-2">Description</h3>
-                            <p className="text-muted-foreground">
-                              {subComponent!.description}
-                            </p>
+                            <p className="text-muted-foreground">{subComponent!.description}</p>
                           </div>
                           <div>
                             <h3 className="font-medium mb-2">Parent Component</h3>
                             <Link to={`/components/${mainComponentId}`}>
-                              <div className={cn(
-                                "inline-block border rounded-md p-3 transition-colors hover:bg-accent",
-                                component.color
-                              )}>
+                              <div
+                                className={cn(
+                                  "inline-block border rounded-md p-3 transition-colors hover:bg-accent",
+                                  component.color,
+                                )}
+                              >
                                 {component.title}
                               </div>
                             </Link>
@@ -593,20 +372,18 @@ const ComponentDetail = () => {
                     </Card>
                   </div>
                 )}
-                
+
                 {!isSubComponent && (
                   <>
                     <div>
                       <h2 className="text-xl font-semibold mb-4">Security Implications</h2>
                       <Card>
                         <CardContent className="pt-6">
-                          <p className="text-muted-foreground">
-                            {component.securityImplications}
-                          </p>
+                          <p className="text-muted-foreground">{component.securityImplications}</p>
                         </CardContent>
                       </Card>
                     </div>
-                    
+
                     <div>
                       <h2 className="text-xl font-semibold mb-4">Implementation Considerations</h2>
                       <Card>
@@ -617,17 +394,19 @@ const ComponentDetail = () => {
                         </CardContent>
                       </Card>
                     </div>
-                    
+
                     <div>
                       <h2 className="text-xl font-semibold mb-4">Related Components</h2>
                       <div className="flex flex-wrap gap-3">
-                        {component.relatedComponents.map(id => (
+                        {component.relatedComponents.map((id) => (
                           <Link to={`/components/${id}`} key={id}>
-                            <div className={cn(
-                              "border rounded-md p-3 transition-colors hover:bg-accent",
-                              componentsData[id]?.color
-                            )}>
-                              {componentsData[id]?.title}
+                            <div
+                              className={cn(
+                                "border rounded-md p-3 transition-colors hover:bg-accent",
+                                componentMap.get(normalizeId(id))?.color,
+                              )}
+                            >
+                              {componentMap.get(normalizeId(id))?.title}
                             </div>
                           </Link>
                         ))}
@@ -635,15 +414,15 @@ const ComponentDetail = () => {
                     </div>
                   </>
                 )}
-                              </div>
+              </div>
             )}
-            
+
             {activeTab === "threats" && (
               <div className="space-y-6">
                 <h2 className="text-xl font-semibold mb-4">Threats to {component.title}</h2>
                 {relatedThreats.length > 0 ? (
                   <div className="space-y-4">
-                    {relatedThreats.map(threat => (
+                    {relatedThreats.map((threat) => (
                       <Card key={threat.id} className="border-threat/20">
                         <CardContent className="pt-6">
                           <div className="flex items-center justify-between mb-2">
@@ -653,25 +432,29 @@ const ComponentDetail = () => {
                               </span>
                               {threat.name}
                             </h3>
-                            <span className={cn(
-                              "text-xs px-2 py-0.5 rounded-full",
-                              threat.impactLevel === "high" ? "bg-destructive/10 text-destructive" :
-                              threat.impactLevel === "medium" ? "bg-warning/10 text-warning" :
-                              "bg-primary/10 text-primary"
-                            )}>
-                              {threat.impactLevel.charAt(0).toUpperCase() + threat.impactLevel.slice(1)} Impact
+                            <span
+                              className={cn(
+                                "text-xs px-2 py-0.5 rounded-full",
+                                threat.impactLevel === "high"
+                                  ? "bg-destructive/10 text-destructive"
+                                  : threat.impactLevel === "medium"
+                                    ? "bg-warning/10 text-warning"
+                                    : "bg-primary/10 text-primary",
+                              )}
+                            >
+                              {threat.impactLevel.charAt(0).toUpperCase() +
+                                threat.impactLevel.slice(1)}{" "}
+                              Impact
                             </span>
                           </div>
-                          <p className="text-muted-foreground mb-4">
-                            {threat.description}
-                          </p>
+                          <p className="text-muted-foreground mb-4">{threat.description}</p>
                           <div className="text-sm">
                             <span className="font-medium">Affected Components: </span>
                             <div className="flex flex-wrap gap-2 mt-1">
-                              {threat.componentIds.map(id => (
+                              {threat.componentIds.map((id) => (
                                 <Link to={`/components/${id}`} key={id}>
                                   <span className="inline-block bg-secondary px-2 py-1 rounded text-xs">
-                                    {componentsData[id]?.title.split(" ")[0]} {/* Just get the first word of the title */}
+                                    {componentMap.get(normalizeId(id))?.title?.split(" ")[0] ?? id}
                                   </span>
                                 </Link>
                               ))}
@@ -682,24 +465,26 @@ const ComponentDetail = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-muted-foreground">No specific threats documented for this component.</p>
+                  <p className="text-muted-foreground">
+                    No specific threats documented for this component.
+                  </p>
                 )}
               </div>
             )}
-            
+
             {activeTab === "mitigations" && (
               <div className="space-y-6">
                 <h2 className="text-xl font-semibold mb-4">Security Controls & Mitigations</h2>
                 {relatedMitigations.length > 0 ? (
                   <div className="space-y-4">
-                    {relatedMitigations.map(mitigation => (
+                    {relatedMitigations.map((mitigation) => (
                       <Card key={mitigation.id} className="border-control/20">
                         <CardContent className="pt-6">
-                          <h3 className="text-lg font-medium mb-2 text-foreground">{mitigation.name}</h3>
-                          <p className="text-muted-foreground mb-4">
-                            {mitigation.description}
-                          </p>
-                          
+                          <h3 className="text-lg font-medium mb-2 text-foreground">
+                            {mitigation.name}
+                          </h3>
+                          <p className="text-muted-foreground mb-4">{mitigation.description}</p>
+
                           <div className="flex flex-wrap gap-2 mb-4">
                             {mitigation.designPhase && (
                               <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
@@ -717,15 +502,15 @@ const ComponentDetail = () => {
                               </span>
                             )}
                           </div>
-                          
+
                           <div className="mb-4">
                             <span className="text-sm font-medium">Mitigates Threats: </span>
                             <div className="flex flex-wrap gap-2 mt-1">
-                              {mitigation.threatIds.map(threatId => {
+                              {mitigation.threatIds.map((threatId) => {
                                 const threat = threatsData[threatId];
                                 return threat ? (
-                                  <span 
-                                    key={threatId} 
+                                  <span
+                                    key={threatId}
                                     className="text-xs bg-threat/10 text-threat px-2 py-0.5 rounded-full"
                                   >
                                     <span className="font-mono">{threat.code}</span> - {threat.name}
@@ -741,30 +526,40 @@ const ComponentDetail = () => {
                                 {mitigation.implementationDetail.design && (
                                   <div>
                                     <span className="font-semibold">Design Phase:</span>
-                                    <div className="text-sm text-muted-foreground whitespace-pre-line">{mitigation.implementationDetail.design}</div>
+                                    <div className="text-sm text-muted-foreground whitespace-pre-line">
+                                      {mitigation.implementationDetail.design}
+                                    </div>
                                   </div>
                                 )}
                                 {mitigation.implementationDetail.build && (
                                   <div>
                                     <span className="font-semibold">Build Phase:</span>
-                                    <div className="text-sm text-muted-foreground whitespace-pre-line">{mitigation.implementationDetail.build}</div>
+                                    <div className="text-sm text-muted-foreground whitespace-pre-line">
+                                      {mitigation.implementationDetail.build}
+                                    </div>
                                   </div>
                                 )}
                                 {mitigation.implementationDetail.operations && (
                                   <div>
                                     <span className="font-semibold">Operation Phase:</span>
-                                    <div className="text-sm text-muted-foreground whitespace-pre-line">{mitigation.implementationDetail.operations}</div>
+                                    <div className="text-sm text-muted-foreground whitespace-pre-line">
+                                      {mitigation.implementationDetail.operations}
+                                    </div>
                                   </div>
                                 )}
                                 {mitigation.implementationDetail.toolsAndFrameworks && (
                                   <div>
                                     <span className="font-semibold">Tools & Frameworks:</span>
-                                    <div className="text-sm text-muted-foreground whitespace-pre-line">{mitigation.implementationDetail.toolsAndFrameworks}</div>
+                                    <div className="text-sm text-muted-foreground whitespace-pre-line">
+                                      {mitigation.implementationDetail.toolsAndFrameworks}
+                                    </div>
                                   </div>
                                 )}
                               </div>
                             ) : (
-                              <p className="text-sm text-muted-foreground">No implementation guidance available.</p>
+                              <p className="text-sm text-muted-foreground">
+                                No implementation guidance available.
+                              </p>
                             )}
                           </div>
                         </CardContent>
@@ -772,30 +567,37 @@ const ComponentDetail = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-muted-foreground">No specific mitigations documented for this component's threats.</p>
+                  <p className="text-muted-foreground">
+                    No specific mitigations documented for this component's threats.
+                  </p>
                 )}
               </div>
             )}
-            
+
             {activeTab === "architectures" && (
               <div className="space-y-6">
                 <h2 className="text-xl font-semibold mb-4">Relevant Architectures</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {component.relatedArchitectures.map(arch => (
-                    <Card key={arch.id} className={cn(
-                      arch.relevance === "primary" 
-                        ? "border-architecture/30 bg-architecture/5" 
-                        : "border-muted"
-                    )}>
+                  {component.relatedArchitectures.map((arch) => (
+                    <Card
+                      key={arch.id}
+                      className={cn(
+                        arch.relevance === "primary"
+                          ? "border-architecture/30 bg-architecture/5"
+                          : "border-muted",
+                      )}
+                    >
                       <CardContent className="pt-6">
                         <h3 className="text-lg font-medium mb-2">{arch.name}</h3>
                         <p className="text-sm text-muted-foreground mb-4">
-                          {arch.relevance === "primary" 
+                          {arch.relevance === "primary"
                             ? `${component.title} is a primary component in this architecture.`
                             : `${component.title} plays a supporting role in this architecture.`}
                         </p>
                         <Link to={`/architectures/${arch.id}`}>
-                          <Button variant="outline" size="sm">View Architecture</Button>
+                          <Button variant="outline" size="sm">
+                            View Architecture
+                          </Button>
                         </Link>
                       </CardContent>
                     </Card>

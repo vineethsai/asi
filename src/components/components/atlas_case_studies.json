@@ -31,21 +31,9 @@
       "Regular adversarial testing is essential for ML security",
       "Defense-in-depth approaches needed for ML security"
     ],
-    "mitigations": [
-      "m1",
-      "m5",
-      "m9"
-    ],
-    "aisvsMapping": [
-      "v2.8.1",
-      "v9.1.1",
-      "v9.2.1",
-      "v1.6.1"
-    ],
-    "threatMapping": [
-      "t2",
-      "t6"
-    ]
+    "mitigations": ["m1", "m5", "m9"],
+    "aisvsMapping": ["v2.8.1", "v9.1.1", "v9.2.1", "v1.6.1"],
+    "threatMapping": ["t2", "t6"]
   },
   {
     "id": "AML.CS0001",
@@ -83,20 +71,9 @@
       "Need for robust DGA detection methods",
       "Testing before production deployment essential"
     ],
-    "mitigations": [
-      "m1",
-      "m5",
-      "m11"
-    ],
-    "aisvsMapping": [
-      "v2.8.1",
-      "v9.1.1",
-      "v9.2.1"
-    ],
-    "threatMapping": [
-      "t2",
-      "t6"
-    ]
+    "mitigations": ["m1", "m5", "m11"],
+    "aisvsMapping": ["v2.8.1", "v9.1.1", "v9.2.1"],
+    "threatMapping": ["t2", "t6"]
   },
   {
     "id": "AML.CS0002",
@@ -105,12 +82,7 @@
     "summary": "McAfee Advanced Threat Research noticed an increase in reports of a certain ransomware family that was out of the ordinary. Case investigation revealed that many samples of that particular ransomware family were submitted through a popular virus-sharing platform within a short amount of time. Further investigation revealed that based on string similarity the samples were all equivalent, and based on code similarity they were between 98 and 74 percent similar. Interestingly enough, the compile time was the same for all the samples. After more digging, researchers discovered that someone used 'metame' a metamorphic code manipulating tool to manipulate the original file towards mutant variants. The variants would not always be executable, but are still classified as the same ransomware family.",
     "targetSystem": "VirusTotal",
     "attackVector": "Data Poisoning via Metamorphic Code",
-    "techniques": [
-      "AML.T0016.000",
-      "AML.T0043",
-      "AML.T0010.002",
-      "AML.T0020"
-    ],
+    "techniques": ["AML.T0016.000", "AML.T0043", "AML.T0010.002", "AML.T0020"],
     "impact": {
       "confidentiality": false,
       "integrity": false,
@@ -123,20 +95,9 @@
       "String and code similarity analysis needed",
       "Temporal correlation detection important"
     ],
-    "mitigations": [
-      "m1",
-      "m10",
-      "m17"
-    ],
-    "aisvsMapping": [
-      "v1.6.1",
-      "v1.8.1",
-      "v8.1.1"
-    ],
-    "threatMapping": [
-      "t1",
-      "t12"
-    ]
+    "mitigations": ["m1", "m10", "m17"],
+    "aisvsMapping": ["v1.6.1", "v1.8.1", "v8.1.1"],
+    "threatMapping": ["t1", "t12"]
   },
   {
     "id": "AML.CS0003",
@@ -174,20 +135,9 @@
       "Need for diverse detection mechanisms",
       "Regular model updating required"
     ],
-    "mitigations": [
-      "m5",
-      "m11",
-      "m15"
-    ],
-    "aisvsMapping": [
-      "v2.8.1",
-      "v9.1.1",
-      "v1.6.1"
-    ],
-    "threatMapping": [
-      "t2",
-      "t6"
-    ]
+    "mitigations": ["m5", "m11", "m15"],
+    "aisvsMapping": ["v2.8.1", "v9.1.1", "v1.6.1"],
+    "threatMapping": ["t2", "t6"]
   },
   {
     "id": "AML.CS0004",
@@ -222,20 +172,9 @@
       "Need for liveness detection",
       "Multi-factor authentication recommended"
     ],
-    "mitigations": [
-      "m7",
-      "m14",
-      "m15"
-    ],
-    "aisvsMapping": [
-      "v7.1.1",
-      "v7.2.1",
-      "v4.1.1"
-    ],
-    "threatMapping": [
-      "t3",
-      "t9"
-    ]
+    "mitigations": ["m7", "m14", "m15"],
+    "aisvsMapping": ["v7.1.1", "v7.2.1", "v4.1.1"],
+    "threatMapping": ["t3", "t9"]
   },
   {
     "id": "AML.CS0005",
@@ -280,20 +219,9 @@
       "Transfer attacks work across similar models",
       "Rate limiting insufficient protection alone"
     ],
-    "mitigations": [
-      "m6",
-      "m9",
-      "m16"
-    ],
-    "aisvsMapping": [
-      "v3.1.1",
-      "v3.2.1",
-      "v4.11.1"
-    ],
-    "threatMapping": [
-      "t1",
-      "t3"
-    ]
+    "mitigations": ["m6", "m9", "m16"],
+    "aisvsMapping": ["v3.1.1", "v3.2.1", "v4.11.1"],
+    "threatMapping": ["t1", "t3"]
   },
   {
     "id": "AML.CS0006",
@@ -302,12 +230,7 @@
     "summary": "Clearview AI makes a facial recognition tool that searches publicly available photos for matches.  This tool has been used for investigative purposes by law enforcement agencies and other parties.\n\nClearview AI's source code repository, though password protected, was misconfigured to allow an arbitrary user to register an account.\nThis allowed an external researcher to gain access to a private code repository that contained Clearview AI production credentials, keys to cloud storage buckets containing 70K video samples, and copies of its applications and Slack tokens.\nWith access to training data, a bad actor has the ability to cause an arbitrary misclassification in the deployed model.\nThese kinds of attacks illustrate that any attempt to secure ML system should be on top of \"traditional\" good cybersecurity hygiene such as locking down the system with least privileges, multi-factor authentication and monitoring and auditing.",
     "targetSystem": "Clearview AI facial recognition tool",
     "attackVector": "Backdoor Injection Attack",
-    "techniques": [
-      "AML.T0021",
-      "AML.T0036",
-      "AML.T0002",
-      "AML.T0031"
-    ],
+    "techniques": ["AML.T0021", "AML.T0036", "AML.T0002", "AML.T0031"],
     "impact": {
       "confidentiality": true,
       "integrity": true,
@@ -333,20 +256,9 @@
       "Supply chain security critical",
       "Model validation before deployment essential"
     ],
-    "mitigations": [
-      "m16",
-      "m5",
-      "m1"
-    ],
-    "aisvsMapping": [
-      "v1.6.1",
-      "v6.2.1",
-      "v8.1.1"
-    ],
-    "threatMapping": [
-      "t1",
-      "t13"
-    ]
+    "mitigations": ["m16", "m5", "m1"],
+    "aisvsMapping": ["v1.6.1", "v6.2.1", "v8.1.1"],
+    "threatMapping": ["t1", "t13"]
   },
   {
     "id": "AML.CS0007",
@@ -355,13 +267,7 @@
     "summary": "OpenAI built GPT-2, a language model capable of generating high quality text samples. Over concerns that GPT-2 could be used for malicious purposes such as impersonating others, or generating misleading news articles, fake social media content, or spam, OpenAI adopted a tiered release schedule. They initially released a smaller, less powerful version of GPT-2 along with a technical description of the approach, but held back the full trained model.\n\nBefore the full model was released by OpenAI, researchers at Brown University successfully replicated the model using information released by OpenAI and open source ML artifacts. This demonstrates that a bad actor with sufficient technical skill and compute resources could have replicated GPT-2 and used it for harmful goals before the AI Security community is prepared.\n",
     "targetSystem": "OpenAI GPT-2",
     "attackVector": "Prompt Injection via Indirect Input",
-    "techniques": [
-      "AML.T0000",
-      "AML.T0002.001",
-      "AML.T0002.000",
-      "AML.T0008.000",
-      "AML.T0005.000"
-    ],
+    "techniques": ["AML.T0000", "AML.T0002.001", "AML.T0002.000", "AML.T0008.000", "AML.T0005.000"],
     "impact": {
       "confidentiality": false,
       "integrity": false,
@@ -383,20 +289,9 @@
       "Content filtering not sufficient alone",
       "Need for input source validation"
     ],
-    "mitigations": [
-      "m4",
-      "m11",
-      "m1"
-    ],
-    "aisvsMapping": [
-      "v2.1.1",
-      "v2.2.1",
-      "v2.8.1"
-    ],
-    "threatMapping": [
-      "t1",
-      "t6"
-    ]
+    "mitigations": ["m4", "m11", "m1"],
+    "aisvsMapping": ["v2.1.1", "v2.2.1", "v2.8.1"],
+    "threatMapping": ["t1", "t6"]
   },
   {
     "id": "AML.CS0008",
@@ -405,13 +300,7 @@
     "summary": "Proof Pudding (CVE-2019-20634) is a code repository that describes how ML researchers evaded ProofPoint's email protection system by first building a copy-cat email protection ML model, and using the insights to bypass the live system. More specifically, the insights allowed researchers to craft malicious emails that received preferable scores, going undetected by the system. Each word in an email is scored numerically based on multiple variables and if the overall score of the email is too low, ProofPoint will output an error, labeling it as SPAM.",
     "targetSystem": "ProofPoint Email Protection System",
     "attackVector": "Membership Inference Attack",
-    "techniques": [
-      "AML.T0063",
-      "AML.T0047",
-      "AML.T0005.001",
-      "AML.T0043.002",
-      "AML.T0015"
-    ],
+    "techniques": ["AML.T0063", "AML.T0047", "AML.T0005.001", "AML.T0043.002", "AML.T0015"],
     "impact": {
       "confidentiality": false,
       "integrity": true,
@@ -441,20 +330,9 @@
       "Privacy risks in model deployment",
       "Differential privacy needed"
     ],
-    "mitigations": [
-      "m11",
-      "m15",
-      "m6"
-    ],
-    "aisvsMapping": [
-      "v11.1.1",
-      "v11.2.1",
-      "v3.1.1"
-    ],
-    "threatMapping": [
-      "t1",
-      "t14"
-    ]
+    "mitigations": ["m11", "m15", "m6"],
+    "aisvsMapping": ["v11.1.1", "v11.2.1", "v3.1.1"],
+    "threatMapping": ["t1", "t14"]
   },
   {
     "id": "AML.CS0009",
@@ -463,12 +341,7 @@
     "summary": "Microsoft created Tay, a Twitter chatbot designed to engage and entertain users.\nWhile previous chatbots used pre-programmed scripts\nto respond to prompts, Tay's machine learning capabilities allowed it to be\ndirectly influenced by its conversations.\n\nA coordinated attack encouraged malicious users to tweet abusive and offensive language at Tay,\nwhich eventually led to Tay generating similarly inflammatory content towards other users.\n\nMicrosoft decommissioned Tay within 24 hours of its launch and issued a public apology\nwith lessons learned from the bot's failure.\n",
     "targetSystem": "Microsoft's Tay AI Chatbot",
     "attackVector": "Model Inversion Attack",
-    "techniques": [
-      "AML.T0047",
-      "AML.T0010.002",
-      "AML.T0020",
-      "AML.T0031"
-    ],
+    "techniques": ["AML.T0047", "AML.T0010.002", "AML.T0020", "AML.T0031"],
     "impact": {
       "confidentiality": false,
       "integrity": true,
@@ -498,20 +371,9 @@
       "Black-box protection insufficient",
       "Output monitoring required"
     ],
-    "mitigations": [
-      "m11",
-      "m6",
-      "m15"
-    ],
-    "aisvsMapping": [
-      "v11.1.1",
-      "v11.2.1",
-      "v3.2.1"
-    ],
-    "threatMapping": [
-      "t1",
-      "t14"
-    ]
+    "mitigations": ["m11", "m6", "m15"],
+    "aisvsMapping": ["v11.1.1", "v11.2.1", "v3.2.1"],
+    "threatMapping": ["t1", "t14"]
   },
   {
     "id": "AML.CS0010",
@@ -542,20 +404,9 @@
       "Real-world robustness testing needed",
       "Multi-modal detection helpful"
     ],
-    "mitigations": [
-      "m5",
-      "m11",
-      "m13"
-    ],
-    "aisvsMapping": [
-      "v2.8.1",
-      "v9.1.1",
-      "v4.3.1"
-    ],
-    "threatMapping": [
-      "t2",
-      "t11"
-    ]
+    "mitigations": ["m5", "m11", "m13"],
+    "aisvsMapping": ["v2.8.1", "v9.1.1", "v4.3.1"],
+    "threatMapping": ["t2", "t11"]
   },
   {
     "id": "AML.CS0011",
@@ -564,13 +415,7 @@
     "summary": "The Azure Red Team performed a red team exercise on a new Microsoft product designed for running AI workloads at the edge. This exercise was meant to use an automated system to continuously manipulate a target image to cause the ML model to produce misclassifications.\n",
     "targetSystem": "New Microsoft AI Product",
     "attackVector": "Training Data Extraction",
-    "techniques": [
-      "AML.T0000",
-      "AML.T0002",
-      "AML.T0040",
-      "AML.T0043.001",
-      "AML.T0015"
-    ],
+    "techniques": ["AML.T0000", "AML.T0002", "AML.T0040", "AML.T0043.001", "AML.T0015"],
     "impact": {
       "confidentiality": false,
       "integrity": true,
@@ -583,20 +428,9 @@
       "Privacy risks from data extraction",
       "Access controls and monitoring needed"
     ],
-    "mitigations": [
-      "m1",
-      "m6",
-      "m11"
-    ],
-    "aisvsMapping": [
-      "v1.6.1",
-      "v11.1.1",
-      "v11.2.1"
-    ],
-    "threatMapping": [
-      "t1",
-      "t14"
-    ]
+    "mitigations": ["m1", "m6", "m11"],
+    "aisvsMapping": ["v1.6.1", "v11.1.1", "v11.2.1"],
+    "threatMapping": ["t1", "t14"]
   },
   {
     "id": "AML.CS0012",
@@ -629,20 +463,9 @@
       "Secure aggregation needed",
       "Differential privacy in gradients required"
     ],
-    "mitigations": [
-      "m15",
-      "m3",
-      "m6"
-    ],
-    "aisvsMapping": [
-      "v11.1.1",
-      "v11.2.1",
-      "v7.3.1"
-    ],
-    "threatMapping": [
-      "t1",
-      "t14"
-    ]
+    "mitigations": ["m15", "m3", "m6"],
+    "aisvsMapping": ["v11.1.1", "v11.2.1", "v7.3.1"],
+    "threatMapping": ["t1", "t14"]
   },
   {
     "id": "AML.CS0013",
@@ -680,20 +503,9 @@
       "Query monitoring insufficient",
       "Rate limiting and access controls needed"
     ],
-    "mitigations": [
-      "m9",
-      "m6",
-      "m7"
-    ],
-    "aisvsMapping": [
-      "v3.1.1",
-      "v3.2.1",
-      "v4.11.1"
-    ],
-    "threatMapping": [
-      "t3",
-      "t4"
-    ]
+    "mitigations": ["m9", "m6", "m7"],
+    "aisvsMapping": ["v3.1.1", "v3.2.1", "v4.11.1"],
+    "threatMapping": ["t3", "t4"]
   },
   {
     "id": "AML.CS0014",
@@ -737,11 +549,7 @@
     "summary": "Linux packages for PyTorch's pre-release version, called Pytorch-nightly, were compromised from December 25 to 30, 2022 by a malicious binary uploaded to the Python Package Index (PyPI) code repository.  The malicious binary had the same name as a PyTorch dependency and the PyPI package manager (pip) installed this malicious package instead of the legitimate one.\n\nThis supply chain attack, also known as \"dependency confusion,\" exposed sensitive information of Linux machines with the affected pip-installed versions of PyTorch-nightly. On December 30, 2022, PyTorch announced the incident and initial steps towards mitigation, including the rename and removal of `torchtriton` dependencies.",
     "targetSystem": "PyTorch",
     "attackVector": "AI Security Incident",
-    "techniques": [
-      "AML.T0010.001",
-      "AML.T0037",
-      "AML.T0025"
-    ],
+    "techniques": ["AML.T0010.001", "AML.T0037", "AML.T0025"],
     "impact": {
       "confidentiality": true,
       "integrity": false,
@@ -817,11 +625,7 @@
     "summary": "An individual filed at least 180 false unemployment claims in the state of California from October 2020 to December 2021 by bypassing ID.me's automated identity verification system. Dozens of fraudulent claims were approved and the individual received at least $3.4 million in payments.\n\nThe individual collected several real identities and obtained fake driver licenses using the stolen personal details and photos of himself wearing wigs. Next, he created accounts on ID.me and went through their identity verification process. The process validates personal details and verifies the user is who they claim by matching a photo of an ID to a selfie. The individual was able to verify stolen identities by wearing the same wig in his submitted selfie.\n\nThe individual then filed fraudulent unemployment claims with the California Employment Development Department (EDD) under the ID.me verified identities.\n  Due to flaws in ID.me's identity verification process at the time, the forged\nlicenses were accepted by the system. Once approved, the individual had payments sent to various addresses he could access and withdrew the money via ATMs.\nThe individual was able to withdraw at least $3.4 million in unemployment benefits. EDD and ID.me eventually identified the fraudulent activity and reported it to federal authorities.  In May 2023, the individual was sentenced to 6 years and 9 months in prison for wire fraud and aggravated identify theft in relation to this and another fraud case.",
     "targetSystem": "California Employment Development Department",
     "attackVector": "AI Security Incident",
-    "techniques": [
-      "AML.T0047",
-      "AML.T0015",
-      "AML.T0048.000"
-    ],
+    "techniques": ["AML.T0047", "AML.T0015", "AML.T0048.000"],
     "impact": {
       "confidentiality": false,
       "integrity": true,
@@ -937,13 +741,7 @@
     "summary": "Whenever interacting with Microsoft's new Bing Chat LLM Chatbot, a user can allow Bing Chat permission to view and access currently open websites throughout the chat session. Researchers demonstrated the ability for an attacker to plant an injection in a website the user is visiting, which silently turns Bing Chat into a Social Engineer who seeks out and exfiltrates personal information. The user doesn't have to ask about the website or do anything except interact with Bing Chat while the website is opened in the browser in order for this attack to be executed.\n\nIn the provided demonstration, a user opened a prepared malicious website containing an indirect prompt injection attack (could also be on a social media site) in Edge. The website includes a prompt which is read by Bing and changes its behavior to access user information, which in turn can sent to an attacker.",
     "targetSystem": "Microsoft Bing Chat",
     "attackVector": "AI Security Incident",
-    "techniques": [
-      "AML.T0017",
-      "AML.T0068",
-      "AML.T0051.001",
-      "AML.T0052.000",
-      "AML.T0048.003"
-    ],
+    "techniques": ["AML.T0017", "AML.T0068", "AML.T0051.001", "AML.T0052.000", "AML.T0048.003"],
     "impact": {
       "confidentiality": false,
       "integrity": true,

@@ -23,7 +23,7 @@ interface Reference {
 const References = () => {
   usePageTracking("References - AI Security Resources", {
     page_type: "references",
-    content_category: "resources"
+    content_category: "resources",
   });
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -34,64 +34,64 @@ const References = () => {
     const references: Reference[] = [];
 
     // Collect from threats
-    Object.values(threatsData).forEach(threat => {
+    Object.values(threatsData).forEach((threat) => {
       if (threat.references) {
-        threat.references.forEach(ref => {
+        threat.references.forEach((ref) => {
           references.push({
             title: ref.title,
             url: ref.url,
             source: threat.code,
             sourceId: threat.id,
             sourceType: "threat",
-            sourceName: threat.name
+            sourceName: threat.name,
           });
         });
       }
     });
 
     // Collect from mitigations
-    Object.values(mitigationsData).forEach(mitigation => {
+    Object.values(mitigationsData).forEach((mitigation) => {
       if (mitigation.references) {
-        mitigation.references.forEach(ref => {
+        mitigation.references.forEach((ref) => {
           references.push({
             title: ref.title,
             url: ref.url,
             source: mitigation.id,
             sourceId: mitigation.id,
             sourceType: "mitigation",
-            sourceName: mitigation.name
+            sourceName: mitigation.name,
           });
         });
       }
     });
 
     // Collect from AISVS
-    Object.values(aisvsData).forEach(category => {
+    Object.values(aisvsData).forEach((category) => {
       if (category.references) {
-        category.references.forEach(ref => {
+        category.references.forEach((ref) => {
           references.push({
             title: ref.title,
             url: ref.url,
             source: category.code,
             sourceId: category.id,
             sourceType: "aisvs",
-            sourceName: category.name
+            sourceName: category.name,
           });
         });
       }
 
       // Also collect from AISVS requirements
-      category.subCategories?.forEach(subCat => {
-        subCat.requirements?.forEach(req => {
+      category.subCategories?.forEach((subCat) => {
+        subCat.requirements?.forEach((req) => {
           if (req.references) {
-            req.references.forEach(ref => {
+            req.references.forEach((ref) => {
               references.push({
                 title: ref.title,
                 url: ref.url,
                 source: req.code,
                 sourceId: req.id,
                 sourceType: "aisvs",
-                sourceName: req.title
+                sourceName: req.title,
               });
             });
           }
@@ -100,8 +100,8 @@ const References = () => {
     });
 
     // Remove duplicates based on URL
-    const uniqueReferences = references.filter((ref, index, self) => 
-      index === self.findIndex(r => r.url === ref.url)
+    const uniqueReferences = references.filter(
+      (ref, index, self) => index === self.findIndex((r) => r.url === ref.url),
     );
 
     return uniqueReferences.sort((a, b) => a.title.localeCompare(b.title));
@@ -109,13 +109,14 @@ const References = () => {
 
   // Filter references
   const filteredReferences = useMemo(() => {
-    return allReferences.filter(ref => {
-      const matchesSearch = searchTerm === "" || 
+    return allReferences.filter((ref) => {
+      const matchesSearch =
+        searchTerm === "" ||
         ref.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         ref.sourceName.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       const matchesType = selectedType === "all" || ref.sourceType === selectedType;
-      
+
       return matchesSearch && matchesType;
     });
   }, [allReferences, searchTerm, selectedType]);
@@ -123,8 +124,8 @@ const References = () => {
   // Group references by domain for better organization
   const groupedByDomain = useMemo(() => {
     const groups: { [domain: string]: Reference[] } = {};
-    
-    filteredReferences.forEach(ref => {
+
+    filteredReferences.forEach((ref) => {
       try {
         const domain = new URL(ref.url).hostname;
         if (!groups[domain]) {
@@ -145,26 +146,34 @@ const References = () => {
 
   const getSourceIcon = (sourceType: string) => {
     switch (sourceType) {
-      case "threat": return <Target className="h-4 w-4 text-red-500" />;
-      case "mitigation": return <Shield className="h-4 w-4 text-blue-500" />;
-      case "aisvs": return <Database className="h-4 w-4 text-purple-500" />;
-      default: return <BookOpen className="h-4 w-4" />;
+      case "threat":
+        return <Target className="h-4 w-4 text-red-500" />;
+      case "mitigation":
+        return <Shield className="h-4 w-4 text-blue-500" />;
+      case "aisvs":
+        return <Database className="h-4 w-4 text-purple-500" />;
+      default:
+        return <BookOpen className="h-4 w-4" />;
     }
   };
 
   const getSourceBadgeColor = (sourceType: string) => {
     switch (sourceType) {
-      case "threat": return "bg-red-100 text-red-800 dark:bg-red-950/30 dark:text-red-300";
-      case "mitigation": return "bg-blue-100 text-blue-800 dark:bg-blue-950/30 dark:text-blue-300";
-      case "aisvs": return "bg-purple-100 text-purple-800 dark:bg-purple-950/30 dark:text-purple-300";
-      default: return "bg-gray-100 text-gray-800 dark:bg-gray-950/30 dark:text-gray-300";
+      case "threat":
+        return "bg-red-100 text-red-800 dark:bg-red-950/30 dark:text-red-300";
+      case "mitigation":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-950/30 dark:text-blue-300";
+      case "aisvs":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-950/30 dark:text-purple-300";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-950/30 dark:text-gray-300";
     }
   };
 
   const stats = useMemo(() => {
-    const threatRefs = allReferences.filter(r => r.sourceType === "threat").length;
-    const mitigationRefs = allReferences.filter(r => r.sourceType === "mitigation").length;
-    const aisvsRefs = allReferences.filter(r => r.sourceType === "aisvs").length;
+    const threatRefs = allReferences.filter((r) => r.sourceType === "threat").length;
+    const mitigationRefs = allReferences.filter((r) => r.sourceType === "mitigation").length;
+    const aisvsRefs = allReferences.filter((r) => r.sourceType === "aisvs").length;
     const uniqueDomains = Object.keys(groupedByDomain).length;
 
     return { threatRefs, mitigationRefs, aisvsRefs, uniqueDomains, total: allReferences.length };
@@ -174,21 +183,33 @@ const References = () => {
     <>
       <Helmet>
         <title>References & Resources | AI Agents Security Guide</title>
-        <meta name="description" content="Comprehensive collection of references and resources for AI agents security, including research papers, standards, tools, and documentation from OWASP AISVS, threats, and security controls." />
-        <meta name="keywords" content="AI security references, AI agents resources, OWASP AISVS references, AI security research, AI threat references, security controls documentation, AI security standards" />
+        <meta
+          name="description"
+          content="Comprehensive collection of references and resources for AI agents security, including research papers, standards, tools, and documentation from OWASP AISVS, threats, and security controls."
+        />
+        <meta
+          name="keywords"
+          content="AI security references, AI agents resources, OWASP AISVS references, AI security research, AI threat references, security controls documentation, AI security standards"
+        />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://agenticsecurity.info/references" />
         <meta property="og:title" content="AI Security References & Resources" />
-        <meta property="og:description" content="Comprehensive collection of AI agents security references and resources." />
+        <meta
+          property="og:description"
+          content="Comprehensive collection of AI agents security references and resources."
+        />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://agenticsecurity.info/references" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="AI Security References & Resources" />
-        <meta name="twitter:description" content="Comprehensive collection of AI agents security references and resources." />
+        <meta
+          name="twitter:description"
+          content="Comprehensive collection of AI agents security references and resources."
+        />
       </Helmet>
 
       <Header />
-      
+
       <main className="container mx-auto px-4 py-8">
         {/* Header Section */}
         <div className="mb-8">
@@ -198,13 +219,16 @@ const References = () => {
             </div>
             <div>
               <h1 className="text-3xl font-bold">References & Resources</h1>
-              <p className="text-xl text-muted-foreground">Comprehensive AI Security Resource Library</p>
+              <p className="text-xl text-muted-foreground">
+                Comprehensive AI Security Resource Library
+              </p>
             </div>
           </div>
-          
+
           <p className="text-lg text-muted-foreground mb-6 max-w-4xl">
-            This page aggregates all external references from our AI security framework, including research papers, 
-            standards documents, tools, and resources related to threats, mitigations, and AISVS requirements.
+            This page aggregates all external references from our AI security framework, including
+            research papers, standards documents, tools, and resources related to threats,
+            mitigations, and AISVS requirements.
           </p>
 
           {/* Statistics Cards */}
@@ -306,7 +330,9 @@ const References = () => {
             {filteredReferences.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground">No references found matching your search criteria.</p>
+                  <p className="text-muted-foreground">
+                    No references found matching your search criteria.
+                  </p>
                 </CardContent>
               </Card>
             ) : (
@@ -330,12 +356,7 @@ const References = () => {
                             <Badge variant="outline">{ref.source}</Badge>
                           </div>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          asChild
-                          className="shrink-0"
-                        >
+                        <Button variant="outline" size="sm" asChild className="shrink-0">
                           <a
                             href={ref.url}
                             target="_blank"
@@ -358,7 +379,9 @@ const References = () => {
             {Object.keys(groupedByDomain).length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground">No references found matching your search criteria.</p>
+                  <p className="text-muted-foreground">
+                    No references found matching your search criteria.
+                  </p>
                 </CardContent>
               </Card>
             ) : (
@@ -373,7 +396,10 @@ const References = () => {
                   <CardContent>
                     <div className="grid gap-3">
                       {refs.map((ref, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-3 border rounded-lg"
+                        >
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               {getSourceIcon(ref.sourceType)}
@@ -381,16 +407,15 @@ const References = () => {
                             </div>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <span>From: {ref.sourceName}</span>
-                              <Badge className={getSourceBadgeColor(ref.sourceType)} variant="outline">
+                              <Badge
+                                className={getSourceBadgeColor(ref.sourceType)}
+                                variant="outline"
+                              >
                                 {ref.sourceType}
                               </Badge>
                             </div>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            asChild
-                          >
+                          <Button variant="ghost" size="sm" asChild>
                             <a
                               href={ref.url}
                               target="_blank"
@@ -416,4 +441,4 @@ const References = () => {
   );
 };
 
-export default References; 
+export default References;

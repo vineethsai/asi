@@ -1,4 +1,3 @@
-
 import { useState, forwardRef, useImperativeHandle } from "react";
 import { frameworkData } from "./frameworkData";
 import ComponentNode from "./ComponentNode";
@@ -12,8 +11,10 @@ export type ComponentFrameworkHandle = {
 const ComponentFramework = forwardRef<ComponentFrameworkHandle, { searchQuery?: string }>(
   ({ searchQuery = "" }, ref) => {
     // Track expanded nodes
-    const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(["kc1", "kc2", "kc3", "kc4", "kc5", "kc6"]));
-    
+    const [expandedNodes, setExpandedNodes] = useState<Set<string>>(
+      new Set(["kc1", "kc2", "kc3", "kc4", "kc5", "kc6"]),
+    );
+
     const toggleNode = (id: string) => {
       const newExpanded = new Set(expandedNodes);
       if (newExpanded.has(id)) {
@@ -23,40 +24,40 @@ const ComponentFramework = forwardRef<ComponentFrameworkHandle, { searchQuery?: 
       }
       setExpandedNodes(newExpanded);
     };
-    
+
     const expandAll = () => {
       const allNodes = new Set<string>();
-      
+
       const collectNodeIds = (nodes: typeof frameworkData) => {
-        nodes.forEach(node => {
+        nodes.forEach((node) => {
           allNodes.add(node.id);
           if (node.children) {
             collectNodeIds(node.children);
           }
         });
       };
-      
+
       collectNodeIds(frameworkData);
       setExpandedNodes(allNodes);
     };
-    
+
     const collapseAll = () => {
       // Keep only the top-level nodes expanded
       setExpandedNodes(new Set(["kc1", "kc2", "kc3", "kc4", "kc5", "kc6"]));
     };
-    
+
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
       expandAll,
-      collapseAll
+      collapseAll,
     }));
-    
+
     return (
       <div className="w-full">
         <div className="space-y-4">
-          {frameworkData.map(node => (
-            <ComponentNode 
-              key={node.id} 
+          {frameworkData.map((node) => (
+            <ComponentNode
+              key={node.id}
               node={node}
               searchQuery={searchQuery}
               expandedNodes={expandedNodes}
@@ -66,7 +67,7 @@ const ComponentFramework = forwardRef<ComponentFrameworkHandle, { searchQuery?: 
         </div>
       </div>
     );
-  }
+  },
 );
 
 ComponentFramework.displayName = "ComponentFramework";

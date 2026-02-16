@@ -41,6 +41,27 @@ npm run dev
 
 The application will be available at `http://localhost:5173`
 
+## Quality Checks
+
+Run these checks before opening a pull request:
+
+```sh
+# Validate vulnerability markdown schema and cross-links
+npm run test-vulns
+
+# Validate cross-dataset integrity (threats, controls, AISVS, MITRE mappings)
+npm run check:data
+
+# Optional: lint and build
+npm run lint
+npm run build
+```
+
+## OSS Contribution Docs
+
+- Contribution guide: `CONTRIBUTING.md`
+- Security reporting policy: `SECURITY.md`
+
 ## Technologies Used
 
 This project is built with:
