@@ -81,7 +81,7 @@ export function exportPDFReport(
     headStyles: { fillColor: [41, 128, 185] },
     margin: { left: 14 },
   });
-  y = (doc as unknown as Record<string, number>).lastAutoTable?.finalY ?? y + 40;
+  y = (doc as unknown as Record<string, Record<string, number>>).lastAutoTable?.finalY ?? y + 40;
 
   // ─── Risk Assessment ───────────────────────────────────────
   if (riskSummary) {
@@ -97,7 +97,7 @@ export function exportPDFReport(
       headStyles: { fillColor: [192, 57, 43] },
       margin: { left: 14 },
     });
-    y = (doc as unknown as Record<string, number>).lastAutoTable?.finalY ?? y + 20;
+    y = (doc as unknown as Record<string, Record<string, number>>).lastAutoTable?.finalY ?? y + 20;
 
     if (riskSummary.topRisks.length > 0) {
       addPageCheck(30);
@@ -114,7 +114,8 @@ export function exportPDFReport(
         headStyles: { fillColor: [192, 57, 43] },
         margin: { left: 14 },
       });
-      y = (doc as unknown as Record<string, number>).lastAutoTable?.finalY ?? y + 20;
+      y =
+        (doc as unknown as Record<string, Record<string, number>>).lastAutoTable?.finalY ?? y + 20;
     }
   }
 
@@ -144,7 +145,7 @@ export function exportPDFReport(
       4: { cellWidth: 20 },
     },
   });
-  y = (doc as unknown as Record<string, number>).lastAutoTable?.finalY ?? y + 20;
+  y = (doc as unknown as Record<string, Record<string, number>>).lastAutoTable?.finalY ?? y + 20;
 
   // ─── Component Inventory ───────────────────────────────────
   sectionTitle("Component Inventory");
@@ -165,7 +166,7 @@ export function exportPDFReport(
     headStyles: { fillColor: [39, 174, 96] },
     margin: { left: 14 },
   });
-  y = (doc as unknown as Record<string, number>).lastAutoTable?.finalY ?? y + 20;
+  y = (doc as unknown as Record<string, Record<string, number>>).lastAutoTable?.finalY ?? y + 20;
 
   // ─── Attack Paths ─────────────────────────────────────────
   if (attackPaths && attackPaths.length > 0) {
@@ -186,7 +187,7 @@ export function exportPDFReport(
       margin: { left: 14 },
       columnStyles: { 0: { cellWidth: 10 }, 3: { cellWidth: 100 } },
     });
-    y = (doc as unknown as Record<string, number>).lastAutoTable?.finalY ?? y + 20;
+    y = (doc as unknown as Record<string, Record<string, number>>).lastAutoTable?.finalY ?? y + 20;
   }
 
   // ─── AISVS Compliance ─────────────────────────────────────
@@ -208,7 +209,7 @@ export function exportPDFReport(
       headStyles: { fillColor: [22, 160, 133] },
       margin: { left: 14 },
     });
-    y = (doc as unknown as Record<string, number>).lastAutoTable?.finalY ?? y + 20;
+    y = (doc as unknown as Record<string, Record<string, number>>).lastAutoTable?.finalY ?? y + 20;
   }
 
   // ─── Cisco Taxonomy Mapping ────────────────────────────────
@@ -234,7 +235,7 @@ export function exportPDFReport(
       headStyles: { fillColor: [0, 151, 167] },
       margin: { left: 14 },
     });
-    y = (doc as unknown as Record<string, number>).lastAutoTable?.finalY ?? y + 20;
+    y = (doc as unknown as Record<string, Record<string, number>>).lastAutoTable?.finalY ?? y + 20;
   }
 
   // ─── OWASP Agentic Top 10 Mapping ─────────────────────────
@@ -276,7 +277,7 @@ export function exportPDFReport(
       headStyles: { fillColor: [102, 51, 153] },
       margin: { left: 14 },
     });
-    y = (doc as unknown as Record<string, number>).lastAutoTable?.finalY ?? y + 20;
+    y = (doc as unknown as Record<string, Record<string, number>>).lastAutoTable?.finalY ?? y + 20;
   }
 
   // ─── Data Flow Inventory ───────────────────────────────────
@@ -302,7 +303,7 @@ export function exportPDFReport(
     headStyles: { fillColor: [52, 73, 94] },
     margin: { left: 14 },
   });
-  y = (doc as unknown as Record<string, number>).lastAutoTable?.finalY ?? y + 20;
+  y = (doc as unknown as Record<string, Record<string, number>>).lastAutoTable?.finalY ?? y + 20;
 
   // ─── Prioritized Remediation ───────────────────────────────
   if (riskSummary && riskSummary.topRisks.length > 0) {

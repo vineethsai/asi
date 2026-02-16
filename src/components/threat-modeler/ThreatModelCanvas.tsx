@@ -1582,7 +1582,7 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
                   n.id === nodeId ? { ...n, data: { ...n.data, ...partial } as CanvasNodeData } : n,
                 ) as CanvasNode[],
             );
-            pushHistory();
+            pushHistory(nodes, edges);
           }}
           allThreats={fullAnalysisResult?.threats}
           onToggleMitigation={handleToggleMitigation}

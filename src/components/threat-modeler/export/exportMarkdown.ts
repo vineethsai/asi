@@ -159,7 +159,7 @@ export function generateMarkdownReport(
     }
     md += `| ASI ID | Category | High Confidence | Medium | Low |\n|---|---|---|---|---|\n`;
     for (const [id, data] of Array.from(owaspMap.entries()).sort(
-      (a, b) => b.high + b.med - (a.high + a.med),
+      (a, b) => b[1].high + b[1].med - (a[1].high + a[1].med),
     )) {
       md += `| ${id} | ${data.name} | ${data.high} | ${data.med} | ${data.low} |\n`;
     }
