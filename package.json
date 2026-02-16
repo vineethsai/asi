@@ -1,7 +1,9 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "owasp-agentic-security",
   "private": true,
-  "version": "0.0.0",
+  "version": "2.0.0",
+  "description": "Interactive guide for securing AI agentic applications using OWASP best practices",
+  "license": "Apache-2.0",
   "type": "module",
   "homepage": "https://vineethsai.github.io/asi/",
   "scripts": {
@@ -104,7 +106,6 @@
     "globals": "^15.9.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
-    "lovable-tagger": "^1.1.7",
     "postcss": "^8.5.6",
     "prettier": "^3.8.1",
     "tailwindcss": "^3.4.17",

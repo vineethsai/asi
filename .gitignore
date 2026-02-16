@@ -8,6 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+dist/
 dist-ssr
 *.local
 
@@ -21,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# AI editor configs
+.cursor/
+.windsurf/
+
+# Bun lockfile (project uses npm)
+bun.lockb

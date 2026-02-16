@@ -1,131 +1,115 @@
 # OWASP Securing Agentic Applications Guide
 
-## Project Info
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Deploy](https://github.com/vineethsai/asi/actions/workflows/deploy.yml/badge.svg)](https://github.com/vineethsai/asi/actions/workflows/deploy.yml)
+[![PR Check](https://github.com/vineethsai/asi/actions/workflows/pr-check.yml/badge.svg)](https://github.com/vineethsai/asi/actions/workflows/pr-check.yml)
 
-**Live Site**: https://agenticsecurity.info/  
-**GitHub Repository**: https://github.com/vineethsai/asi/  
-**Author**: [Vineeth Sai](http://vineethsai.com/) | [LinkedIn](https://www.linkedin.com/in/vineethsai/)
+An interactive web application providing a comprehensive, visual guide for securing AI agentic applications using OWASP best practices, NIST AI RMF, MITRE ATLAS, and industry taxonomies.
 
-## About
+**Live Site** -- <https://agenticsecurity.info/>
+**OWASP Project** -- [Securing Agentic Applications](https://owasp.org/www-project-securing-agentic-applications/)
 
-This is an interactive web application that provides a comprehensive guide for securing AI agentic applications using OWASP best practices. The guide includes:
+---
 
-- **Components**: 6 key components of agentic AI systems with security considerations
-- **Architectures**: Common AI system architectures and their security patterns
-- **Threats**: Comprehensive threat catalog with attack vectors and impact analysis
-- **Controls**: Security controls and mitigations with implementation guidance
-- **Assessment Tool**: Interactive security assessment for agentic AI systems
-- **Interactive Explorer**: Visual graph-based exploration of components, threats, and mitigations
+## Features
 
-## How to Run Locally
+- **Threat Modeler** -- Drag-and-drop canvas for modeling agentic AI systems with automated MAESTRO-layer threat analysis, STRIDE classification, and exportable reports.
+- **NIST AI RMF Mapping** -- Interactive force-directed graph mapping NIST AI Risk Management Framework functions to AISVS security controls.
+- **AISVS Controls** -- Full OWASP AI Security Verification Standard (AISVS) with searchable categories, requirements, and implementation guidance.
+- **AIVSS Calculator** -- AI Vulnerability Severity Score calculator for quantifying risk in AI/ML systems.
+- **Architecture Explorer** -- Visual exploration of common agentic AI architecture patterns (sequential, router, parallel, hierarchical, etc.) with associated threats and mitigations.
+- **Threat Catalog** -- Comprehensive catalog of 15 agentic AI threats with attack vectors, impact analysis, and linked mitigations.
+- **Security Controls** -- 18 security controls and mitigations with implementation details.
+- **OWASP Agentic Top 10** -- Dedicated page for the OWASP Agentic AI Top 10 risks.
+- **Cisco AI Security Taxonomy** -- Browsable view of the Cisco AI security taxonomy.
+- **Cross-Framework Taxonomy** -- Sankey diagram linking threats across OWASP Agentic, Cisco, and AIVSS frameworks.
+- **MITRE ATLAS** -- Tactics, techniques, and case studies from the MITRE ATLAS framework for adversarial ML.
+- **Interactive Checklist** -- Security checklist and testing navigator for agentic AI systems.
 
-If you want to work locally using your own IDE, you can clone this repo and run it locally.
+## Getting Started
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Prerequisites
 
-Follow these steps:
+- [Node.js](https://nodejs.org/) 20+ and npm 10+ (install via [nvm](https://github.com/nvm-sh/nvm#installing-and-updating))
+
+### Local Development
 
 ```sh
-# Step 1: Clone the repository
 git clone https://github.com/vineethsai/asi.git
-
-# Step 2: Navigate to the project directory
 cd asi
-
-# Step 3: Install the necessary dependencies
 npm install
-
-# Step 4: Start the development server
 npm run dev
 ```
 
-The application will be available at `http://localhost:5173`
+The app will be available at `http://localhost:8080`.
 
-## Quality Checks
+## Scripts
 
-Run these checks before opening a pull request:
-
-```sh
-# Validate vulnerability markdown schema and cross-links
-npm run test-vulns
-
-# Validate cross-dataset integrity (threats, controls, AISVS, MITRE mappings)
-npm run check:data
-
-# Optional: lint and build
-npm run lint
-npm run build
-```
-
-## OSS Contribution Docs
-
-- Contribution guide: `CONTRIBUTING.md`
-- Security reporting policy: `SECURITY.md`
-
-## Technologies Used
-
-This project is built with:
-
-- **Vite** - Fast build tool and dev server
-- **TypeScript** - Type-safe JavaScript
-- **React** - UI framework
-- **shadcn/ui** - Modern UI components
-- **Tailwind CSS** - Utility-first CSS framework
-- **React Router** - Client-side routing
-- **D3.js** - Interactive data visualizations
-- **React Helmet** - SEO optimization
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start the Vite development server |
+| `npm run build` | Production build (outputs to `docs/`) |
+| `npm run preview` | Preview the production build locally |
+| `npm run lint` | Run ESLint |
+| `npm run lint:fix` | Run ESLint with auto-fix |
+| `npm run typecheck` | TypeScript type checking |
+| `npm run format` | Format source files with Prettier |
+| `npm run format:check` | Check formatting without writing |
+| `npm run check:data` | Validate cross-dataset integrity (threats, controls, AISVS, architectures) |
+| `npm run validate` | Run all checks: typecheck, lint, data integrity, and build |
 
 ## Project Structure
 
 ```
 src/
-├── components/          # Reusable UI components
-│   ├── ui/             # shadcn/ui components
-│   ├── layout/         # Layout components (Header, Footer, etc.)
-│   ├── home/           # Homepage sections
-│   ├── architecture/   # Architecture explorer components
-│   ├── assessment/     # Assessment tool components
-│   └── components/     # Framework data and component logic
-├── pages/              # Page components
-├── hooks/              # Custom React hooks
-└── lib/                # Utility functions and data
+  components/
+    architecture/     Architecture explorer (D3 force graph)
+    components/       Framework data files (security, architectures, taxonomy)
+    home/             Homepage sections
+    interactive/      Security checklist and test navigator
+    layout/           Header, Footer, Sidebar
+    threat-modeler/   Drag-and-drop threat modeling canvas
+      edges/          Custom ReactFlow edge types
+      engine/         MAESTRO analysis engine and rules
+      export/         Report export (PNG, JSON)
+      nodes/          Custom ReactFlow node types
+      parsers/        Import parsers
+    ui/               shadcn/ui primitives
+    visual/           Architecture diagrams
+  hooks/              Custom React hooks
+  lib/                Utilities (analytics, helpers)
+  pages/              Route-level page components
+scripts/
+  check-data-integrity.js   Cross-dataset validation
+docs/                       Production build output (GitHub Pages)
+public/                     Static assets (favicons, fonts, manifest)
 ```
 
-## Features
+## Tech Stack
 
-### 🔍 Interactive Security Explorer
-- Visual graph-based exploration of AI security components
-- Interactive node selection and relationship mapping
-- Fullscreen mode for detailed analysis
-
-### 📊 Security Assessment Tool
-- Comprehensive questionnaire for AI system evaluation
-- Risk scoring and personalized recommendations
-- Export capabilities for security reports
-
-### 📚 Comprehensive Documentation
-- Detailed component security guides
-- Architecture pattern analysis
-- Threat modeling with attack vectors
-- Implementation-ready security controls
-
-### 🎯 SEO Optimized
-- Complete meta tag optimization
-- Open Graph and Twitter Card support
-- Structured data (Schema.org) implementation
-- Social media sharing optimization
+- [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) -- UI framework
+- [Vite](https://vitejs.dev/) -- Build tool and dev server
+- [Tailwind CSS](https://tailwindcss.com/) -- Utility-first styling
+- [shadcn/ui](https://ui.shadcn.com/) + [Radix UI](https://www.radix-ui.com/) -- Component library
+- [D3.js](https://d3js.org/) -- Data visualizations (force graphs, Sankey diagrams)
+- [React Flow](https://reactflow.dev/) -- Threat modeler node canvas
+- [React Router](https://reactrouter.com/) -- Client-side routing
+- [Geist](https://vercel.com/font) -- Typography (Geist Sans + Geist Mono)
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request.
+
+## Security
+
+To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
 ## License
 
-This project is part of the OWASP Securing Agentic Applications project.
+This project is licensed under the [Apache License 2.0](LICENSE).
 
 ## Contact
 
-- **Author**: [Vineeth Sai](http://vineethsai.com/)
-- **LinkedIn**: [vineethsai](https://www.linkedin.com/in/vineethsai/)
-- **GitHub**: [vineethsai/asi](https://github.com/vineethsai/asi/)
+- **Author**: [Vineeth Sai](http://vineethsai.com/) -- [LinkedIn](https://www.linkedin.com/in/vineethsai/)
+- **Repository**: [github.com/vineethsai/asi](https://github.com/vineethsai/asi/)
 - **OWASP Project**: [Securing Agentic Applications](https://owasp.org/www-project-securing-agentic-applications/)

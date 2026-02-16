@@ -1,66 +1,43 @@
 # Changelog
 
-## [Latest] - 2025-01-25
+## [2.0.0] - 2025-02-16
 
-### 🐛 Bug Fixes
-- **Fixed Browser Compatibility**: Resolved `Buffer is not defined` error by replacing `gray-matter` with custom browser-compatible frontmatter parser
-- **Added Defensive Programming**: Added null checks and default values throughout `VulnerabilityDetail.tsx` to prevent runtime errors
-- **Fixed Reference Parsing**: Properly handle undefined reference types and URLs in vulnerability details
-- **Enhanced Error Handling**: Added comprehensive error handling for missing or malformed vulnerability data
+Major rewrite. The project was restructured from a vulnerability database into a comprehensive, interactive security guide for agentic AI applications.
 
-### 🚀 New Features
-- **GitHub Actions Deployment**: Automated build and deployment to GitHub Pages on every push to main
-- **Vulnerability Validation**: Automatic validation of vulnerability markdown files with required field checking
-- **Local Testing Script**: Added `npm run test-vulns` command to validate vulnerabilities locally
-- **Enhanced SEO**: Comprehensive SEO optimization for both main page and individual vulnerability pages
+### Added
 
-### 🔧 Improvements
-- **Robust Frontmatter Parser**: Custom YAML-like parser that handles nested objects, arrays, and various data types
-- **Better Error Messages**: More descriptive error messages and validation feedback
-- **Documentation**: Added comprehensive deployment guide and workflow documentation
-- **Performance**: Optimized build process and reduced bundle size warnings
+- Threat Modeler with drag-and-drop canvas, MAESTRO-layer analysis, and STRIDE classification
+- NIST AI RMF interactive mapping with force-directed D3 graph
+- AIVSS Calculator for AI vulnerability severity scoring
+- OWASP Agentic Top 10 dedicated page
+- Cisco AI Security Taxonomy browser
+- Cross-framework Sankey diagram (OWASP Agentic, Cisco, AIVSS)
+- MITRE ATLAS tactics, techniques, and case studies
+- Security testing navigator and interactive checklist
+- Architecture detail pages with threat/mitigation associations
+- Geist font family (replacing Inter/JetBrains Mono)
+- Pre-commit hooks via Husky and lint-staged
+- PR validation workflow with dependency auditing
+- Data integrity check script (`npm run check:data`)
+- Apache 2.0 license
 
-### 📚 Documentation
-- **Deployment Guide**: Complete guide for GitHub Actions workflows and deployment process
-- **Vulnerability Testing**: Documentation for local testing and validation of vulnerability files
-- **SEO Optimization**: Enhanced meta tags, Open Graph, Twitter Cards, and Schema.org structured data
+### Changed
 
-### 🛠️ Technical Changes
-- Removed dependency on `gray-matter` library
-- Added custom frontmatter parsing with browser compatibility
-- Enhanced error boundaries and null safety
-- Improved build process with validation steps
-- Added comprehensive GitHub Actions workflows
+- Redesigned homepage with terminal-inspired hero section
+- Updated color palette to Deep Indigo theme
+- Switched build output to `docs/` for GitHub Pages deployment
+- Expanded AISVS from categories to full requirement-level detail (556 requirements)
+- Replaced Google Fonts CDN with locally bundled Geist fonts
 
-### 🎯 SEO Enhancements
-- **Main Page**: Optimized for "agentic vulnerability database", "AVD", "AI security vulnerabilities"
-- **Detail Pages**: Dynamic meta tags with vulnerability-specific information
-- **Structured Data**: Schema.org markup for better search engine understanding
-- **Social Sharing**: Proper Open Graph and Twitter Card tags
+### Removed
 
-### 🔄 Workflow Improvements
-- **Automated Deployment**: Push to main triggers automatic build and deployment
-- **Validation Pipeline**: Automatic validation of vulnerability files on changes
-- **Error Prevention**: Pre-commit validation to catch issues early
-- **Monitoring**: Build status and deployment monitoring through GitHub Actions
+- Vulnerability database and markdown-based vulnerability files
+- Assessment tool questionnaire
+- `gray-matter` dependency and custom frontmatter parser
+- `npm run test-vulns` and `npm run create-vuln` scripts
+- `src/data/vulnerabilities/` directory
+- `src/lib/generatedData.json`, `mitreAtlasData.ts`, `vulnerabilityLoader.ts`
 
-### 📦 Scripts Added
-- `npm run test-vulns` - Validate vulnerability files locally
-- `npm run create-vuln "Title"` - Create new vulnerability files
-- GitHub Actions workflows for deployment and validation
+## [1.0.0] - 2025-01-25
 
-### 🌐 Deployment
-- **GitHub Pages**: Automatic deployment to GitHub Pages
-- **Build Time**: ~3-6 minutes for complete pipeline
-- **Zero Downtime**: Seamless deployments with GitHub Actions
-- **Static Site**: Fully static site with no server dependencies
-
----
-
-## Previous Versions
-
-### [v1.0.0] - Initial Release
-- Basic vulnerability database functionality
-- Markdown-based vulnerability storage
-- React-based web interface
-- Manual deployment process 
+- Initial release with vulnerability database, basic component explorer, and manual deployment process.
