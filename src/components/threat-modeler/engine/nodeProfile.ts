@@ -121,11 +121,32 @@ function buildSingleProfile(node: CanvasNode): NodeRiskProfile {
   };
 }
 
+const BOUNDARY_TRUST_MODIFIER: Record<TrustLevel, number> = {
+  trusted: 0.85,
+  "semi-trusted": 1.0,
+  untrusted: 1.3,
+};
+
 export function buildNodeProfiles(nodes: CanvasNode[]): Map<string, NodeRiskProfile> {
   const profiles = new Map<string, NodeRiskProfile>();
+  const boundaryMap = new Map<string, CanvasNode>();
+  for (const node of nodes) {
+    if (node.type === "trustBoundary") boundaryMap.set(node.id, node);
+  }
+
   for (const node of nodes) {
     if (!node.data || node.type === "trustBoundary") continue;
-    profiles.set(node.id, buildSingleProfile(node));
+    const profile = buildSingleProfile(node);
+
+    if (node.parentId && boundaryMap.has(node.parentId)) {
+      const boundary = boundaryMap.get(node.parentId)!;
+      const boundaryTrust = boundary.data?.trustLevel ?? "semi-trusted";
+      const modifier = BOUNDARY_TRUST_MODIFIER[boundaryTrust] ?? 1.0;
+      profile.inherentRiskMultiplier =
+        Math.round(profile.inherentRiskMultiplier * modifier * 100) / 100;
+    }
+
+    profiles.set(node.id, profile);
   }
   return profiles;
 }

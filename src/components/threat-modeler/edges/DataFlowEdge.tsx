@@ -1,4 +1,5 @@
-import { memo } from "react";
+import { memo, useState, useRef, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from "@xyflow/react";
 import type { CanvasEdgeData } from "../types";
 import { Lock, Unlock, ShieldAlert } from "lucide-react";
@@ -9,6 +10,54 @@ const CLASSIFICATION_COLORS: Record<string, string> = {
   Confidential: "#f97316",
   Restricted: "#ef4444",
 };
+
+function EdgeTooltip({
+  anchorRef,
+  edgeData,
+  label,
+  encrypted,
+  classification,
+  containsPII,
+}: {
+  anchorRef: React.RefObject<HTMLDivElement | null>;
+  edgeData: CanvasEdgeData | undefined;
+  label: string;
+  encrypted: boolean;
+  classification: string;
+  containsPII: boolean;
+}) {
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if (!anchorRef.current) return;
+    const rect = anchorRef.current.getBoundingClientRect();
+    setPos({
+      top: rect.top - 4,
+      left: rect.left + rect.width / 2,
+    });
+  }, [anchorRef]);
+
+  return createPortal(
+    <div
+      className="fixed w-52 p-2.5 rounded-md border bg-popover text-popover-foreground shadow-lg text-[10px] space-y-0.5 pointer-events-none animate-in fade-in-0 zoom-in-95"
+      style={{
+        top: pos.top,
+        left: pos.left,
+        transform: "translate(-50%, -100%)",
+        zIndex: 99999,
+      }}
+    >
+      <p className="font-semibold text-xs">{label}</p>
+      <p>Protocol: {edgeData?.protocol ?? "HTTPS"}</p>
+      <p>Encrypted: {encrypted ? "Yes" : "No"}</p>
+      <p>Auth: {edgeData?.authentication ?? "None"}</p>
+      <p>Classification: {classification}</p>
+      {containsPII && <p className="text-orange-500 font-semibold">Contains PII</p>}
+      {edgeData?.bidirectional && <p>Bidirectional: Yes</p>}
+    </div>,
+    document.body,
+  );
+}
 
 function DataFlowEdge(props: EdgeProps) {
   const {
@@ -39,6 +88,23 @@ function DataFlowEdge(props: EdgeProps) {
   });
   const strokeColor = CLASSIFICATION_COLORS[classification] ?? "#eab308";
 
+  const [hovered, setHovered] = useState(false);
+  const labelRef = useRef<HTMLDivElement>(null);
+  const hoverTimeout = useRef<ReturnType<typeof setTimeout>>();
+
+  const onEnter = useCallback(() => {
+    clearTimeout(hoverTimeout.current);
+    setHovered(true);
+  }, []);
+
+  const onLeave = useCallback(() => {
+    hoverTimeout.current = setTimeout(() => setHovered(false), 100);
+  }, []);
+
+  useEffect(() => {
+    return () => clearTimeout(hoverTimeout.current);
+  }, []);
+
   return (
     <>
       <BaseEdge
@@ -62,7 +128,10 @@ function DataFlowEdge(props: EdgeProps) {
           className="nodrag nopan"
         >
           <div
-            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-medium border bg-background/90 backdrop-blur-sm shadow-sm ${selected ? "border-primary" : "border-border"} group/edge relative`}
+            ref={labelRef}
+            onMouseEnter={onEnter}
+            onMouseLeave={onLeave}
+            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-medium border bg-background/90 backdrop-blur-sm shadow-sm ${selected ? "border-primary" : "border-border"}`}
           >
             {encrypted ? (
               <Lock className="h-2.5 w-2.5 text-green-500" />
@@ -76,16 +145,17 @@ function DataFlowEdge(props: EdgeProps) {
                 {threatCount}
               </span>
             )}
-            <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 hidden group-hover/edge:block z-50 w-48 p-2 rounded-md border bg-popover text-popover-foreground shadow-md text-[10px] space-y-0.5">
-              <p className="font-semibold text-xs">{label}</p>
-              <p>Protocol: {edgeData?.protocol ?? "HTTPS"}</p>
-              <p>Encrypted: {encrypted ? "Yes" : "No"}</p>
-              <p>Auth: {edgeData?.authentication ?? "None"}</p>
-              <p>Classification: {classification}</p>
-              {containsPII && <p className="text-orange-500 font-semibold">Contains PII</p>}
-              {edgeData?.bidirectional && <p>Bidirectional: Yes</p>}
-            </div>
           </div>
+          {hovered && (
+            <EdgeTooltip
+              anchorRef={labelRef}
+              edgeData={edgeData}
+              label={label}
+              encrypted={encrypted}
+              classification={classification}
+              containsPII={containsPII}
+            />
+          )}
         </div>
       </EdgeLabelRenderer>
     </>

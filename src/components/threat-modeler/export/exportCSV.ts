@@ -8,6 +8,8 @@ export function exportThreatsCSV(result: ThreatAnalysisResult, filename?: string
     "Methodology",
     "MAESTRO Layer",
     "Inherited",
+    "Status",
+    "Status Justification",
     "Affected Components",
     "Mitigations",
   ];
@@ -18,6 +20,8 @@ export function exportThreatsCSV(result: ThreatAnalysisResult, filename?: string
     t.methodology,
     t.maestroLayer !== undefined ? MAESTRO_LAYER_LABELS[t.maestroLayer] : "",
     t.inherited ? "Yes" : "No",
+    t.status ?? "open",
+    `"${(t.statusJustification ?? "").replace(/"/g, '""')}"`,
     t.affectedNodeIds.join("; "),
     `"${t.mitigations.join("; ").replace(/"/g, '""')}"`,
   ]);

@@ -35,6 +35,7 @@ import {
   type ThreatBadge,
   type DataFlowMetadata,
   type TrustLevel,
+  type ThreatStatus,
   DEFAULT_EDGE_METADATA,
   MaestroLayer,
 } from "./types";
@@ -77,6 +78,7 @@ import { runAISVSMapping, type AISVSCoverageResult } from "./engine/aisvsMapping
 import { runDataFlowComplianceCheck, type ComplianceViolation } from "./engine/dataFlowCompliance";
 import { runComplianceGapAnalysis, type ComplianceGapReport } from "./engine/complianceGap";
 import { calculateAttackSurface, type AttackSurfaceScore } from "./engine/attackSurface";
+import { runAiuc1Compliance, type Aiuc1ComplianceResult } from "./engine/aiuc1Compliance";
 import { exportCanvasPNG, exportCanvasSVG } from "./export/exportPNG";
 import { exportThreatsCSV } from "./export/exportCSV";
 import { exportSARIF } from "./export/exportSARIF";
@@ -140,6 +142,48 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
   const [attackPaths, setAttackPaths] = useState<AttackPath[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+  const [threatStatuses, setThreatStatuses] = useState<
+    Map<string, { status: ThreatStatus; justification?: string }>
+  >(() => {
+    try {
+      const stored = localStorage.getItem("threat-modeler-threat-statuses");
+      if (stored) {
+        const entries = JSON.parse(stored) as [
+          string,
+          { status: ThreatStatus; justification?: string },
+        ][];
+        return new Map(entries);
+      }
+    } catch {
+      /* empty */
+    }
+    return new Map();
+  });
+
+  const persistThreatStatuses = useCallback(
+    (statuses: Map<string, { status: ThreatStatus; justification?: string }>) => {
+      setThreatStatuses(statuses);
+      try {
+        localStorage.setItem(
+          "threat-modeler-threat-statuses",
+          JSON.stringify(Array.from(statuses.entries())),
+        );
+      } catch {
+        /* quota exceeded - silently fail */
+      }
+    },
+    [],
+  );
+
+  const onUpdateThreatStatus = useCallback(
+    (threatId: string, status: ThreatStatus, justification?: string) => {
+      const next = new Map(threatStatuses);
+      next.set(threatId, { status, justification });
+      persistThreatStatuses(next);
+    },
+    [threatStatuses, persistThreatStatuses],
+  );
+
   const [customComponents, setCustomComponents] = useState<CustomComponentDefinition[]>(() => {
     try {
       return JSON.parse(localStorage.getItem("threat-modeler-custom-components") ?? "[]");
@@ -168,6 +212,7 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
   const [complianceViolations, setComplianceViolations] = useState<ComplianceViolation[]>([]);
   const [complianceGapReport, setComplianceGapReport] = useState<ComplianceGapReport | null>(null);
   const [attackSurfaceScores, setAttackSurfaceScores] = useState<AttackSurfaceScore[]>([]);
+  const [aiuc1Result, setAiuc1Result] = useState<Aiuc1ComplianceResult | null>(null);
   const [whatIfResult, setWhatIfResult] = useState<{
     removedNodeLabel: string;
     beforeCount: number;
@@ -381,6 +426,17 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
           threats: enrichThreatsWithSecurityData(result.threats),
           summary: { ...result.summary, mitigated: 0 },
         };
+        if (threatStatuses.size > 0) {
+          result = {
+            ...result,
+            threats: result.threats.map((t) => {
+              const saved = threatStatuses.get(t.id);
+              return saved
+                ? { ...t, status: saved.status, statusJustification: saved.justification }
+                : t;
+            }),
+          };
+        }
         setFullAnalysisResult(result);
         setAnalysisResult(result);
 
@@ -424,6 +480,15 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
           profiles,
         );
         setAttackSurfaceScores(surfaceScores);
+
+        const aiuc1ComplianceResult = runAiuc1Compliance(
+          result.threats,
+          aisvsCoverage,
+          nodes as CanvasNode[],
+          edges as CanvasEdge[],
+          profiles,
+        );
+        setAiuc1Result(aiuc1ComplianceResult);
 
         const threatsByNode = new Map<string, ThreatBadge[]>();
         const threatsByEdge = new Map<string, ThreatBadge[]>();
@@ -474,7 +539,7 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
         console.error("Threat analysis error:", err);
       }
     });
-  }, [nodes, edges, methodology, customComponents, setNodes, setEdges]);
+  }, [nodes, edges, methodology, customComponents, setNodes, setEdges, threatStatuses]);
 
   const analysisModeRef = useRef(analysisMode);
   analysisModeRef.current = analysisMode;
@@ -687,7 +752,8 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
       id: genNodeId(),
       type: "trustBoundary",
       position: { x: 100, y: 100 },
-      style: { width: 300, height: 200 },
+      zIndex: -10,
+      style: { width: 300, height: 200, zIndex: -10 },
       data: {
         label: "Trust Boundary",
         category: "trust-boundary",
@@ -720,7 +786,8 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
       id: boundaryId,
       type: "trustBoundary",
       position: { x: minX - 30, y: minY - 50 },
-      style: { width: maxX - minX + 60, height: maxY - minY + 80 },
+      zIndex: -10,
+      style: { width: maxX - minX + 60, height: maxY - minY + 80, zIndex: -10 },
       data: {
         label: "Trust Boundary",
         category: "trust-boundary",
@@ -750,6 +817,71 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
     pushHistory(nodes, edges);
   }, [selectedNodeId, nodes, edges, setNodes, pushHistory]);
 
+  const getSelectedNodeIds = useCallback((): string[] => {
+    const multiSelected = nodes.filter((n) => n.selected).map((n) => n.id);
+    if (multiSelected.length > 0) return multiSelected;
+    if (selectedNodeId) return [selectedNodeId];
+    return [];
+  }, [nodes, selectedNodeId]);
+
+  const sendToFront = useCallback(() => {
+    const ids = new Set(getSelectedNodeIds());
+    if (ids.size === 0) return;
+    const maxZ = Math.max(
+      ...nodes.map((n) => (n.style as Record<string, number>)?.zIndex ?? n.zIndex ?? 0),
+    );
+    setNodes(
+      (nds) =>
+        nds.map((n) =>
+          ids.has(n.id) ? { ...n, zIndex: maxZ + 1, style: { ...n.style, zIndex: maxZ + 1 } } : n,
+        ) as CanvasNode[],
+    );
+    pushHistory(nodes, edges);
+  }, [getSelectedNodeIds, nodes, edges, setNodes, pushHistory]);
+
+  const sendToBack = useCallback(() => {
+    const ids = new Set(getSelectedNodeIds());
+    if (ids.size === 0) return;
+    const minZ = Math.min(
+      ...nodes.map((n) => (n.style as Record<string, number>)?.zIndex ?? n.zIndex ?? 0),
+    );
+    setNodes(
+      (nds) =>
+        nds.map((n) =>
+          ids.has(n.id) ? { ...n, zIndex: minZ - 1, style: { ...n.style, zIndex: minZ - 1 } } : n,
+        ) as CanvasNode[],
+    );
+    pushHistory(nodes, edges);
+  }, [getSelectedNodeIds, nodes, edges, setNodes, pushHistory]);
+
+  const sendForward = useCallback(() => {
+    const ids = new Set(getSelectedNodeIds());
+    if (ids.size === 0) return;
+    setNodes(
+      (nds) =>
+        nds.map((n) => {
+          if (!ids.has(n.id)) return n;
+          const cur = (n.style as Record<string, number>)?.zIndex ?? n.zIndex ?? 0;
+          return { ...n, zIndex: cur + 1, style: { ...n.style, zIndex: cur + 1 } };
+        }) as CanvasNode[],
+    );
+    pushHistory(nodes, edges);
+  }, [getSelectedNodeIds, nodes, edges, setNodes, pushHistory]);
+
+  const sendBackward = useCallback(() => {
+    const ids = new Set(getSelectedNodeIds());
+    if (ids.size === 0) return;
+    setNodes(
+      (nds) =>
+        nds.map((n) => {
+          if (!ids.has(n.id)) return n;
+          const cur = (n.style as Record<string, number>)?.zIndex ?? n.zIndex ?? 0;
+          return { ...n, zIndex: cur - 1, style: { ...n.style, zIndex: cur - 1 } };
+        }) as CanvasNode[],
+    );
+    pushHistory(nodes, edges);
+  }, [getSelectedNodeIds, nodes, edges, setNodes, pushHistory]);
+
   const handleAutoLayout = useCallback(() => {
     const laid = autoLayout(nodes as CanvasNode[], edges as CanvasEdge[]);
     setNodes(laid as CanvasNode[]);
@@ -778,17 +910,21 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
         ? customComponents.find((c) => `custom-${c.id}` === item.id)
         : undefined;
       const itemAny = item as unknown as Record<string, unknown>;
+      const isTrustBoundary = item.category === "trust-boundary";
       const newNode: CanvasNode = {
         id: genNodeId(),
         type: item.nodeType,
         position,
+        ...(isTrustBoundary
+          ? { zIndex: -10, style: { width: 300, height: 200, zIndex: -10 } }
+          : {}),
         data: {
           label: item.label,
           description: item.description,
           category: item.category,
           componentId: item.componentId,
           maestroLayers: item.maestroLayers,
-          trustLevel: customComp?.trustLevel ?? "semi-trusted",
+          trustLevel: customComp?.trustLevel ?? (isTrustBoundary ? "trusted" : "semi-trusted"),
           icon: item.icon,
           color: item.color,
           threats: [],
@@ -899,16 +1035,88 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
     setEditingNodeId(node.id);
   }, []);
 
+  const applySpatialContainment = useCallback(
+    (currentNodes: CanvasNode[], movedIds: Set<string>): CanvasNode[] | null => {
+      const boundaries = currentNodes.filter((n) => n.type === "trustBoundary");
+      if (boundaries.length === 0) return null;
+
+      let changed = false;
+      const updated = currentNodes.map((node) => {
+        if (node.type === "trustBoundary" || !movedIds.has(node.id)) return node;
+
+        const absX = node.parentId
+          ? node.position.x + (currentNodes.find((n) => n.id === node.parentId)?.position.x ?? 0)
+          : node.position.x;
+        const absY = node.parentId
+          ? node.position.y + (currentNodes.find((n) => n.id === node.parentId)?.position.y ?? 0)
+          : node.position.y;
+
+        let bestBoundary: CanvasNode | null = null;
+        for (const b of boundaries) {
+          const bw = (b.style as Record<string, number>)?.width ?? b.measured?.width ?? 300;
+          const bh = (b.style as Record<string, number>)?.height ?? b.measured?.height ?? 200;
+          if (
+            absX >= b.position.x &&
+            absX <= b.position.x + bw &&
+            absY >= b.position.y &&
+            absY <= b.position.y + bh
+          ) {
+            bestBoundary = b;
+          }
+        }
+
+        const currentParentIsBoundary =
+          node.parentId &&
+          currentNodes.find((n) => n.id === node.parentId)?.type === "trustBoundary";
+
+        if (bestBoundary && node.parentId !== bestBoundary.id) {
+          changed = true;
+          return {
+            ...node,
+            parentId: bestBoundary.id,
+            position: {
+              x: absX - bestBoundary.position.x,
+              y: absY - bestBoundary.position.y,
+            },
+          };
+        } else if (!bestBoundary && currentParentIsBoundary) {
+          changed = true;
+          return {
+            ...node,
+            parentId: undefined,
+            position: { x: absX, y: absY },
+          };
+        }
+        return node;
+      }) as CanvasNode[];
+
+      return changed ? updated : null;
+    },
+    [],
+  );
+
   const onNodesChangeWrapped = useCallback(
     (changes: NodeChange<CanvasNode>[]) => {
       onNodesChange(changes);
-      const hasMoves = changes.some(
+      const dragEndChanges = changes.filter(
         (c) => c.type === "position" && (c as { dragging?: boolean }).dragging === false,
       );
+      const hasMoves = dragEndChanges.length > 0;
       const hasRemoves = changes.some((c) => c.type === "remove");
+
+      if (hasMoves) {
+        const movedIds = new Set(dragEndChanges.map((c) => (c as { id: string }).id));
+        setTimeout(() => {
+          setNodes((currentNodes) => {
+            const result = applySpatialContainment(currentNodes as CanvasNode[], movedIds);
+            return (result ?? currentNodes) as CanvasNode[];
+          });
+        }, 0);
+      }
+
       if (hasMoves || hasRemoves) pushHistory(nodes, edges);
     },
-    [onNodesChange, pushHistory, nodes, edges],
+    [onNodesChange, pushHistory, nodes, edges, setNodes, applySpatialContainment],
   );
 
   const selectedNode = useMemo(
@@ -1176,18 +1384,39 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
     toast.success("Markdown report exported");
   }, [analysisResult, nodes, edges, riskSummary, attackPaths, aisvsResult]);
 
-  const handleExportPDF = useCallback(() => {
+  const handleExportPDF = useCallback(async () => {
     if (!analysisResult) {
       toast.error("Run analysis first");
       return;
     }
-    exportPDFReport(nodes as CanvasNode[], edges as CanvasEdge[], analysisResult, {
-      riskSummary,
-      attackPaths,
-      aisvsResult,
-    });
-    toast.success("PDF report exported");
-  }, [analysisResult, nodes, edges, riskSummary, attackPaths, aisvsResult]);
+    toast.info("Generating PDF report...");
+    try {
+      await exportPDFReport(nodes as CanvasNode[], edges as CanvasEdge[], analysisResult, {
+        riskSummary,
+        attackPaths,
+        aisvsResult,
+        complianceViolations,
+        complianceGapReport,
+        attackSurfaceScores,
+        canvasElement: reactFlowWrapper.current?.querySelector(".react-flow") as HTMLElement | null,
+        threatStatuses,
+      });
+      toast.success("PDF report exported");
+    } catch {
+      toast.error("PDF export failed");
+    }
+  }, [
+    analysisResult,
+    nodes,
+    edges,
+    riskSummary,
+    attackPaths,
+    aisvsResult,
+    complianceViolations,
+    complianceGapReport,
+    attackSurfaceScores,
+    threatStatuses,
+  ]);
 
   const handleSaveModel = useCallback((name: string, description: string) => {
     toast.success(`Model "${name}" saved${description ? ` - ${description}` : ""}`);
@@ -1521,6 +1750,10 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
             }
             onFitView={() => fitView({ duration: 300 })}
             onGroupInBoundary={groupInBoundary}
+            onSendToFront={sendToFront}
+            onSendToBack={sendToBack}
+            onSendForward={sendForward}
+            onSendBackward={sendBackward}
           >
             <div className="h-full w-full">
               <ReactFlow
@@ -1595,6 +1828,7 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
         riskSummary={effectiveRiskSummary}
         attackPaths={attackPaths}
         nodes={nodes as CanvasNode[]}
+        edges={edges as CanvasEdge[]}
         onThreatClick={onThreatClick}
         onLocateThreat={(threat) => {
           if (threat.affectedNodeIds.length > 0) {
@@ -1641,6 +1875,9 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
           if (targetNodes.length > 0) fitView({ nodes: targetNodes, duration: 500, padding: 0.3 });
         }}
         whatIfResult={whatIfResult}
+        aiuc1Result={aiuc1Result}
+        threatStatuses={threatStatuses}
+        onUpdateThreatStatus={onUpdateThreatStatus}
       />
 
       {editingEdge?.data && (

@@ -1,6 +1,12 @@
 import type { CanvasNode, CanvasEdge } from "../types";
 import type { NodeRiskProfile } from "./nodeProfile";
 
+function getNodeBoundaryId(node: CanvasNode, nodes: CanvasNode[]): string | undefined {
+  if (!node.parentId) return undefined;
+  const parent = nodes.find((n) => n.id === node.parentId);
+  return parent?.type === "trustBoundary" ? parent.id : undefined;
+}
+
 export interface AttackSurfaceScore {
   nodeId: string;
   label: string;
@@ -15,6 +21,7 @@ export interface AttackSurfaceScore {
     riskTierFactor: number;
     sensitivityFactor: number;
     executionFactor: number;
+    crossBoundaryFlows: number;
   };
   riskLevel: "critical" | "high" | "medium" | "low";
 }
@@ -70,6 +77,16 @@ export function calculateAttackSurface(
       : 0;
     const executionFactor = profile?.isExecutionCapable ? 15 : 0;
 
+    const nodeBoundary = getNodeBoundaryId(node, nodes);
+    const crossBoundaryFlows =
+      connectedEdges.filter((e) => {
+        const otherId = e.source === node.id ? e.target : e.source;
+        const other = nodeMap.get(otherId);
+        if (!other) return false;
+        const otherBoundary = getNodeBoundaryId(other, nodes);
+        return nodeBoundary !== otherBoundary;
+      }).length * 12;
+
     const score =
       connections * 5 +
       trustLevel +
@@ -79,7 +96,8 @@ export function calculateAttackSurface(
       piiExposure +
       riskTierFactor +
       sensitivityFactor +
-      executionFactor;
+      executionFactor +
+      crossBoundaryFlows;
     const riskLevel: AttackSurfaceScore["riskLevel"] =
       score >= 100 ? "critical" : score >= 60 ? "high" : score >= 30 ? "medium" : "low";
 
@@ -97,6 +115,7 @@ export function calculateAttackSurface(
         riskTierFactor,
         sensitivityFactor,
         executionFactor,
+        crossBoundaryFlows,
       },
       riskLevel,
     });

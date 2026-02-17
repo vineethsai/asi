@@ -155,6 +155,8 @@ export interface OwaspAgenticMapping {
   confidence: "high" | "medium" | "low";
 }
 
+export type ThreatStatus = "open" | "mitigated" | "accepted" | "transferred" | "false-positive";
+
 export interface GeneratedThreat {
   id: string;
   threatId?: string;
@@ -173,6 +175,8 @@ export interface GeneratedThreat {
   crossLayerChain?: { fromLayer: MaestroLayer; toLayer: MaestroLayer; description: string }[];
   ciscoMapping?: CiscoTaxonomyMapping[];
   owaspMapping?: OwaspAgenticMapping[];
+  status?: ThreatStatus;
+  statusJustification?: string;
 }
 
 export interface ThreatAnalysisResult {

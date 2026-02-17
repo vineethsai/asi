@@ -7,11 +7,41 @@ export function runTopologyAnalysis(
   profiles?: Map<string, NodeRiskProfile>,
 ): GeneratedThreat[] {
   const threats: GeneratedThreat[] = [];
+  threats.push(...checkEmptyBoundaries(nodes));
   threats.push(...checkUnboundedComponents(nodes));
   threats.push(...checkExcessiveAgency(nodes, edges, profiles));
   threats.push(...checkMissingHITL(nodes, edges, profiles));
   threats.push(...checkSinglePointsOfFailure(nodes, edges));
   threats.push(...checkMissingObservability(nodes));
+  threats.push(...checkExcessiveBoundaryCrossings(nodes, edges));
+  return threats;
+}
+
+function checkEmptyBoundaries(nodes: CanvasNode[]): GeneratedThreat[] {
+  const threats: GeneratedThreat[] = [];
+  const boundaries = nodes.filter((n) => n.type === "trustBoundary");
+  for (const boundary of boundaries) {
+    const childCount = nodes.filter(
+      (n) => n.parentId === boundary.id && n.type !== "trustBoundary",
+    ).length;
+    if (childCount === 0) {
+      threats.push({
+        id: `topo-empty-boundary-${boundary.id}`,
+        name: "Empty Trust Boundary",
+        description: `Trust boundary "${boundary.data?.label ?? "Unnamed"}" contains no components. Empty boundaries provide no security value and may indicate an incomplete model.`,
+        severity: "medium",
+        methodology: "topology",
+        affectedNodeIds: [boundary.id],
+        affectedEdgeIds: [],
+        inherited: false,
+        mitigations: [
+          "Place relevant components inside this trust boundary",
+          "Remove the boundary if it is no longer needed",
+          "Drag components into the boundary to auto-assign containment",
+        ],
+      });
+    }
+  }
   return threats;
 }
 
@@ -219,6 +249,60 @@ function checkMissingObservability(nodes: CanvasNode[]): GeneratedThreat[] {
         "Add monitoring/observability component",
         "Implement comprehensive audit logging",
         "Set up anomaly detection",
+      ],
+    });
+  }
+  return threats;
+}
+
+function getBoundaryId(nodeId: string, nodes: CanvasNode[]): string | undefined {
+  const node = nodes.find((n) => n.id === nodeId);
+  if (!node?.parentId) return undefined;
+  const parent = nodes.find((n) => n.id === node.parentId);
+  return parent?.type === "trustBoundary" ? parent.id : undefined;
+}
+
+function checkExcessiveBoundaryCrossings(
+  nodes: CanvasNode[],
+  edges: CanvasEdge[],
+): GeneratedThreat[] {
+  const threats: GeneratedThreat[] = [];
+  const crossBoundaryCounts = new Map<string, { edges: string[]; boundaries: Set<string> }>();
+
+  for (const edge of edges) {
+    const srcBoundary = getBoundaryId(edge.source, nodes);
+    const tgtBoundary = getBoundaryId(edge.target, nodes);
+    if (srcBoundary === tgtBoundary) continue;
+
+    for (const nodeId of [edge.source, edge.target]) {
+      if (!crossBoundaryCounts.has(nodeId)) {
+        crossBoundaryCounts.set(nodeId, { edges: [], boundaries: new Set() });
+      }
+      const entry = crossBoundaryCounts.get(nodeId)!;
+      entry.edges.push(edge.id!);
+      if (srcBoundary) entry.boundaries.add(srcBoundary);
+      if (tgtBoundary) entry.boundaries.add(tgtBoundary);
+    }
+  }
+
+  for (const [nodeId, info] of crossBoundaryCounts) {
+    if (info.boundaries.size < 3) continue;
+    const node = nodes.find((n) => n.id === nodeId);
+    if (!node?.data || node.type === "trustBoundary") continue;
+    threats.push({
+      id: `topo-excessive-boundary-crossing-${nodeId}`,
+      name: "Excessive Trust Boundary Crossings",
+      description: `"${node.data.label}" has data flows crossing ${info.boundaries.size} different trust boundaries (${info.edges.length} cross-boundary edges). This expands the attack surface significantly.`,
+      severity: "high",
+      methodology: "topology",
+      affectedNodeIds: [nodeId],
+      affectedEdgeIds: info.edges,
+      inherited: false,
+      mitigations: [
+        "Minimize cross-boundary connections",
+        "Add authentication on all cross-boundary flows",
+        "Encrypt all cross-boundary data flows",
+        "Consider adding a gateway or proxy to consolidate cross-boundary traffic",
       ],
     });
   }

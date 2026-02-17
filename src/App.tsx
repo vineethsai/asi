@@ -66,6 +66,7 @@ const AppWithAnalytics = () => {
           element={<Navigate to="/taxonomy?tab=owasp-agentic" replace />}
         />
         <Route path="/aivss" element={<Navigate to="/taxonomy?tab=aivss" replace />} />
+        <Route path="/aiuc-1" element={<Navigate to="/taxonomy?tab=aiuc-1" replace />} />
         <Route path="/implementation" element={<Implementation />} />
         <Route path="/about" element={<About />} />
         <Route path="/test-navigator" element={<TestNavigator />} />

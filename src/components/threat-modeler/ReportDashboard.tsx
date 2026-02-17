@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   PieChart,
   Pie,
@@ -12,9 +13,11 @@ import {
 } from "recharts";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
-import { AlertTriangle, ShieldAlert } from "lucide-react";
+import { AlertTriangle, ShieldAlert, Shield } from "lucide-react";
 import {
   type ThreatAnalysisResult,
+  type CanvasNode,
+  type CanvasEdge,
   MAESTRO_LAYER_LABELS,
   MAESTRO_LAYER_COLORS,
   type MaestroLayer,
@@ -25,6 +28,15 @@ import type { ComplianceViolation } from "./engine/dataFlowCompliance";
 import type { ComplianceGapReport } from "./engine/complianceGap";
 import type { AttackSurfaceScore } from "./engine/attackSurface";
 
+interface BoundarySummary {
+  id: string;
+  label: string;
+  childCount: number;
+  crossBoundaryEdges: number;
+  threatCount: number;
+  health: "good" | "warning" | "critical";
+}
+
 interface ReportDashboardProps {
   result: ThreatAnalysisResult;
   riskSummary: ModelRiskSummary | null;
@@ -32,6 +44,8 @@ interface ReportDashboardProps {
   attackSurfaceScores?: AttackSurfaceScore[];
   complianceViolations?: ComplianceViolation[];
   complianceGapReport?: ComplianceGapReport | null;
+  nodes?: CanvasNode[];
+  edges?: CanvasEdge[];
 }
 
 const SEVERITY_COLORS: Record<string, string> = {
@@ -62,6 +76,8 @@ export default function ReportDashboard({
   attackSurfaceScores,
   complianceViolations,
   complianceGapReport,
+  nodes,
+  edges,
 }: ReportDashboardProps) {
   const severityData = [
     { name: "Critical", value: result.summary.critical, color: SEVERITY_COLORS.critical },
@@ -95,6 +111,36 @@ export default function ReportDashboard({
     aisvsResult && aisvsResult.totalRequirements > 0
       ? Math.round((aisvsResult.identifiedRequirements / aisvsResult.totalRequirements) * 100)
       : null;
+
+  const boundarySummaries: BoundarySummary[] = useMemo(() => {
+    if (!nodes || !edges) return [];
+    const boundaries = nodes.filter((n) => n.type === "trustBoundary");
+    return boundaries.map((b) => {
+      const children = nodes.filter((n) => n.parentId === b.id && n.type !== "trustBoundary");
+      const childIds = new Set(children.map((c) => c.id));
+      const crossEdges = edges.filter((e) => {
+        const srcIn = childIds.has(e.source);
+        const tgtIn = childIds.has(e.target);
+        return (srcIn && !tgtIn) || (!srcIn && tgtIn);
+      });
+      const threatCount = result.threats.filter((t) =>
+        t.affectedNodeIds.some((nid) => childIds.has(nid)),
+      ).length;
+      const criticalThreats = result.threats.filter(
+        (t) => t.severity === "critical" && t.affectedNodeIds.some((nid) => childIds.has(nid)),
+      ).length;
+      const health: BoundarySummary["health"] =
+        criticalThreats > 0 ? "critical" : threatCount > 3 ? "warning" : "good";
+      return {
+        id: b.id,
+        label: b.data?.label ?? "Unnamed",
+        childCount: children.length,
+        crossBoundaryEdges: crossEdges.length,
+        threatCount,
+        health,
+      };
+    });
+  }, [nodes, edges, result.threats]);
 
   return (
     <ScrollArea className="h-full">
@@ -320,6 +366,53 @@ export default function ReportDashboard({
                   <span className="font-bold shrink-0 ml-2">{s.score}</span>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {boundarySummaries.length > 0 && (
+          <div>
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1 flex items-center gap-1">
+              <Shield className="h-3 w-3" />
+              Trust Boundaries ({boundarySummaries.length})
+            </p>
+            <div className="space-y-1">
+              {boundarySummaries.map((b) => {
+                const healthColor =
+                  b.health === "critical"
+                    ? "border-red-500/30 bg-red-500/10"
+                    : b.health === "warning"
+                      ? "border-yellow-500/30 bg-yellow-500/10"
+                      : "border-green-500/30 bg-green-500/10";
+                const healthDot =
+                  b.health === "critical"
+                    ? "bg-red-500"
+                    : b.health === "warning"
+                      ? "bg-yellow-500"
+                      : "bg-green-500";
+                return (
+                  <div key={b.id} className={`p-2 rounded border text-[10px] ${healthColor}`}>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className={`h-1.5 w-1.5 rounded-full ${healthDot}`} />
+                      <span className="font-semibold text-xs">{b.label}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1 text-center">
+                      <div>
+                        <p className="font-bold text-xs">{b.childCount}</p>
+                        <p className="text-[8px] text-muted-foreground">Components</p>
+                      </div>
+                      <div>
+                        <p className="font-bold text-xs">{b.crossBoundaryEdges}</p>
+                        <p className="text-[8px] text-muted-foreground">Cross-boundary</p>
+                      </div>
+                      <div>
+                        <p className="font-bold text-xs">{b.threatCount}</p>
+                        <p className="text-[8px] text-muted-foreground">Threats</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

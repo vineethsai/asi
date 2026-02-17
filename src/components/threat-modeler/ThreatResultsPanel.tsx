@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -17,11 +17,14 @@ import {
   Download,
   Globe,
   Network,
+  GripVertical,
 } from "lucide-react";
 import {
   type ThreatAnalysisResult,
   type GeneratedThreat,
   type CanvasNode,
+  type CanvasEdge,
+  type ThreatStatus,
   MAESTRO_LAYER_LABELS,
   MAESTRO_LAYER_COLORS,
 } from "./types";
@@ -31,6 +34,7 @@ import type { AISVSCoverageResult } from "./engine/aisvsMapping";
 import type { ComplianceViolation } from "./engine/dataFlowCompliance";
 import type { ComplianceGapReport } from "./engine/complianceGap";
 import type { AttackSurfaceScore } from "./engine/attackSurface";
+import type { Aiuc1ComplianceResult } from "./engine/aiuc1Compliance";
 import ReportDashboard from "./ReportDashboard";
 import AttackPathPanel from "./AttackPathPanel";
 import CompliancePanel from "./CompliancePanel";
@@ -40,6 +44,7 @@ interface ThreatResultsPanelProps {
   riskSummary?: ModelRiskSummary | null;
   attackPaths?: AttackPath[];
   nodes?: CanvasNode[];
+  edges?: CanvasEdge[];
   onThreatClick?: (threat: GeneratedThreat) => void;
   onLocateThreat?: (threat: GeneratedThreat) => void;
   showMitigated?: boolean;
@@ -49,6 +54,7 @@ interface ThreatResultsPanelProps {
   complianceViolations?: ComplianceViolation[];
   complianceGapReport?: ComplianceGapReport | null;
   attackSurfaceScores?: AttackSurfaceScore[];
+  aiuc1Result?: Aiuc1ComplianceResult | null;
   onPathClick?: (path: AttackPath) => void;
   whatIfResult?: {
     removedNodeLabel: string;
@@ -58,6 +64,8 @@ interface ThreatResultsPanelProps {
     afterRisk: number;
     eliminatedPaths: number;
   } | null;
+  threatStatuses?: Map<string, { status: ThreatStatus; justification?: string }>;
+  onUpdateThreatStatus?: (threatId: string, status: ThreatStatus, justification?: string) => void;
 }
 
 const SEVERITY_CONFIG = {
@@ -97,7 +105,8 @@ type TabKey =
   | "paths"
   | "compliance"
   | "cisco"
-  | "owasp";
+  | "owasp"
+  | "aiuc1";
 type SortKey = "severity" | "layer" | "name" | "components";
 
 const SEVERITY_OPTIONS = ["critical", "high", "medium", "low"] as const;
@@ -107,6 +116,7 @@ export default function ThreatResultsPanel({
   riskSummary,
   attackPaths,
   nodes,
+  edges,
   onThreatClick,
   onLocateThreat,
   showMitigated,
@@ -116,8 +126,11 @@ export default function ThreatResultsPanel({
   complianceViolations,
   complianceGapReport,
   attackSurfaceScores,
+  aiuc1Result,
   onPathClick,
   whatIfResult,
+  threatStatuses,
+  onUpdateThreatStatus,
 }: ThreatResultsPanelProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("all");
   const [expandedThreats, setExpandedThreats] = useState<Set<string>>(new Set());
@@ -128,6 +141,7 @@ export default function ThreatResultsPanel({
   const [severityFilter, setSeverityFilter] = useState<Set<string>>(new Set());
   const [inheritedFilter, setInheritedFilter] = useState<"all" | "yes" | "no">("all");
   const [mitigationFilter, setMitigationFilter] = useState<"all" | "yes" | "no">("all");
+  const [statusFilter, setStatusFilter] = useState<Set<ThreatStatus>>(new Set());
   const [sortBy, setSortBy] = useState<SortKey>("severity");
 
   const filteredAndSorted = useMemo(() => {
@@ -150,6 +164,13 @@ export default function ThreatResultsPanel({
     if (mitigationFilter === "yes") threats = threats.filter((t) => t.mitigations.length > 0);
     else if (mitigationFilter === "no") threats = threats.filter((t) => t.mitigations.length === 0);
 
+    if (statusFilter.size > 0) {
+      threats = threats.filter((t) => {
+        const status = t.status ?? threatStatuses?.get(t.id)?.status ?? "open";
+        return statusFilter.has(status);
+      });
+    }
+
     const sorted = [...threats];
     if (sortBy === "severity")
       sorted.sort((a, b) => (SEVERITY_ORDER[a.severity] ?? 4) - (SEVERITY_ORDER[b.severity] ?? 4));
@@ -160,18 +181,62 @@ export default function ThreatResultsPanel({
       sorted.sort((a, b) => b.affectedNodeIds.length - a.affectedNodeIds.length);
 
     return sorted;
-  }, [result, activeTab, searchQuery, severityFilter, inheritedFilter, mitigationFilter, sortBy]);
+  }, [
+    result,
+    activeTab,
+    searchQuery,
+    severityFilter,
+    inheritedFilter,
+    mitigationFilter,
+    statusFilter,
+    threatStatuses,
+    sortBy,
+  ]);
 
   const hasActiveFilters =
     searchQuery.trim() ||
     severityFilter.size > 0 ||
     inheritedFilter !== "all" ||
-    mitigationFilter !== "all";
+    mitigationFilter !== "all" ||
+    statusFilter.size > 0;
   const activeFilterCount =
     (searchQuery.trim() ? 1 : 0) +
     (severityFilter.size > 0 ? 1 : 0) +
     (inheritedFilter !== "all" ? 1 : 0) +
-    (mitigationFilter !== "all" ? 1 : 0);
+    (mitigationFilter !== "all" ? 1 : 0) +
+    (statusFilter.size > 0 ? 1 : 0);
+
+  const statusSummary = useMemo(() => {
+    if (!result)
+      return {
+        total: 0,
+        open: 0,
+        mitigated: 0,
+        accepted: 0,
+        transferred: 0,
+        falsePositive: 0,
+        addressed: 0,
+      };
+    const counts = {
+      total: result.threats.length,
+      open: 0,
+      mitigated: 0,
+      accepted: 0,
+      transferred: 0,
+      falsePositive: 0,
+      addressed: 0,
+    };
+    for (const t of result.threats) {
+      const s = t.status ?? threatStatuses?.get(t.id)?.status ?? "open";
+      if (s === "open") counts.open++;
+      else if (s === "mitigated") counts.mitigated++;
+      else if (s === "accepted") counts.accepted++;
+      else if (s === "transferred") counts.transferred++;
+      else if (s === "false-positive") counts.falsePositive++;
+    }
+    counts.addressed = counts.total - counts.open;
+    return counts;
+  }, [result, threatStatuses]);
 
   // Cisco mapping aggregation
   const ciscoAggregation = useMemo(() => {
@@ -291,6 +356,40 @@ export default function ThreatResultsPanel({
     URL.revokeObjectURL(url);
   }, [result, selectedThreats]);
 
+  const [panelWidth, setPanelWidth] = useState(288);
+  const isResizing = useRef(false);
+  const startX = useRef(0);
+  const startWidth = useRef(288);
+
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent) => {
+      isResizing.current = true;
+      startX.current = e.clientX;
+      startWidth.current = panelWidth;
+
+      const handleMove = (ev: MouseEvent) => {
+        if (!isResizing.current) return;
+        const delta = startX.current - ev.clientX;
+        const newWidth = Math.min(Math.max(startWidth.current + delta, 260), 700);
+        setPanelWidth(newWidth);
+      };
+
+      const handleUp = () => {
+        isResizing.current = false;
+        document.removeEventListener("mousemove", handleMove);
+        document.removeEventListener("mouseup", handleUp);
+        document.body.style.userSelect = "";
+        document.body.style.cursor = "";
+      };
+
+      document.body.style.userSelect = "none";
+      document.body.style.cursor = "col-resize";
+      document.addEventListener("mousemove", handleMove);
+      document.addEventListener("mouseup", handleUp);
+    },
+    [panelWidth],
+  );
+
   if (!result) {
     return (
       <div className="w-72 border-l bg-background/95 flex items-center justify-center p-4">
@@ -346,12 +445,24 @@ export default function ThreatResultsPanel({
     ...(owaspAggregation.length > 0
       ? [{ key: "owasp" as TabKey, label: "OWASP", count: owaspAggregation.length, icon: Globe }]
       : []),
+    ...(aiuc1Result && (result.summary.mitigated ?? 0) > 0
+      ? [{ key: "aiuc1" as TabKey, label: "AIUC-1", icon: Shield }]
+      : []),
   ];
 
   const isThreatTab = activeTab === "all" || activeTab === "maestro" || activeTab === "other";
 
   return (
-    <div className="w-72 border-l bg-background/95 flex flex-col h-full">
+    <div
+      className="border-l bg-background/95 flex flex-col h-full relative"
+      style={{ width: panelWidth, minWidth: 260, maxWidth: 700 }}
+    >
+      <div
+        className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize z-10 group hover:bg-primary/20 active:bg-primary/30 transition-colors flex items-center"
+        onMouseDown={handleResizeStart}
+      >
+        <GripVertical className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary/60 -ml-1.5 pointer-events-none" />
+      </div>
       <div className="p-2 border-b space-y-2">
         <h3 className="text-xs font-bold">Threat Analysis</h3>
         <div className="grid grid-cols-4 gap-1 text-center">
@@ -399,12 +510,12 @@ export default function ThreatResultsPanel({
             </button>
           </div>
         )}
-        <div className="flex gap-0.5 bg-accent rounded-md p-0.5 overflow-x-auto">
+        <div className="flex flex-wrap gap-0.5 bg-accent rounded-md p-0.5">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-0.5 flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded transition-all ${activeTab === tab.key ? "bg-background shadow-sm font-semibold" : "hover:bg-background/50"}`}
+              className={`flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded transition-all ${activeTab === tab.key ? "bg-background shadow-sm font-semibold" : "hover:bg-background/50"}`}
             >
               {tab.icon &&
                 (() => {
@@ -467,6 +578,76 @@ export default function ThreatResultsPanel({
         </div>
       )}
 
+      {result &&
+        statusSummary.total > 0 &&
+        (activeTab === "all" || activeTab === "maestro" || activeTab === "other") && (
+          <div className="mx-3 mb-2 p-2 rounded-lg border bg-accent/20 space-y-1">
+            <div className="flex items-center justify-between text-[10px]">
+              <span className="font-semibold">
+                {statusSummary.addressed}/{statusSummary.total} threats addressed
+              </span>
+              <span className="text-muted-foreground">
+                {statusSummary.total > 0
+                  ? Math.round((statusSummary.addressed / statusSummary.total) * 100)
+                  : 0}
+                %
+              </span>
+            </div>
+            <div className="flex h-2 w-full rounded-full overflow-hidden bg-muted">
+              {statusSummary.mitigated > 0 && (
+                <div
+                  className="bg-green-500 h-full"
+                  style={{ width: `${(statusSummary.mitigated / statusSummary.total) * 100}%` }}
+                  title={`Mitigated: ${statusSummary.mitigated}`}
+                />
+              )}
+              {statusSummary.accepted > 0 && (
+                <div
+                  className="bg-blue-500 h-full"
+                  style={{ width: `${(statusSummary.accepted / statusSummary.total) * 100}%` }}
+                  title={`Accepted: ${statusSummary.accepted}`}
+                />
+              )}
+              {statusSummary.transferred > 0 && (
+                <div
+                  className="bg-purple-500 h-full"
+                  style={{ width: `${(statusSummary.transferred / statusSummary.total) * 100}%` }}
+                  title={`Transferred: ${statusSummary.transferred}`}
+                />
+              )}
+              {statusSummary.falsePositive > 0 && (
+                <div
+                  className="bg-gray-400 h-full"
+                  style={{ width: `${(statusSummary.falsePositive / statusSummary.total) * 100}%` }}
+                  title={`False Positive: ${statusSummary.falsePositive}`}
+                />
+              )}
+            </div>
+            <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[9px] text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-red-500 inline-block" /> Open:{" "}
+                {statusSummary.open}
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-green-500 inline-block" /> Mitigated:{" "}
+                {statusSummary.mitigated}
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-500 inline-block" /> Accepted:{" "}
+                {statusSummary.accepted}
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-purple-500 inline-block" />{" "}
+                Transferred: {statusSummary.transferred}
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-gray-400 inline-block" /> False +ve:{" "}
+                {statusSummary.falsePositive}
+              </span>
+            </div>
+          </div>
+        )}
+
       {activeTab === "dashboard" ? (
         <ReportDashboard
           result={result}
@@ -475,6 +656,8 @@ export default function ThreatResultsPanel({
           attackSurfaceScores={attackSurfaceScores}
           complianceViolations={complianceViolations}
           complianceGapReport={complianceGapReport}
+          nodes={nodes}
+          edges={edges}
         />
       ) : activeTab === "paths" ? (
         <AttackPathPanel paths={attackPaths ?? []} nodes={nodes ?? []} onPathClick={onPathClick} />
@@ -484,6 +667,8 @@ export default function ThreatResultsPanel({
         <CiscoMappingTab data={ciscoAggregation} />
       ) : activeTab === "owasp" ? (
         <OwaspMappingTab data={owaspAggregation} />
+      ) : activeTab === "aiuc1" && aiuc1Result ? (
+        <Aiuc1ComplianceTab result={aiuc1Result} />
       ) : (
         <>
           {/* Search & filter bar */}
@@ -580,6 +765,33 @@ export default function ThreatResultsPanel({
                           </button>
                         ))}
                       </div>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-semibold text-muted-foreground mb-0.5">Status</p>
+                    <div className="flex flex-wrap gap-0.5">
+                      {(
+                        [
+                          "open",
+                          "mitigated",
+                          "accepted",
+                          "transferred",
+                          "false-positive",
+                        ] as ThreatStatus[]
+                      ).map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => {
+                            const next = new Set(statusFilter);
+                            if (next.has(s)) next.delete(s);
+                            else next.add(s);
+                            setStatusFilter(next);
+                          }}
+                          className={`text-[9px] px-1.5 py-0.5 rounded transition-all ${statusFilter.has(s) ? "bg-primary text-primary-foreground font-semibold" : "bg-muted text-muted-foreground hover:bg-accent"}`}
+                        >
+                          {s}
+                        </button>
+                      ))}
                     </div>
                   </div>
                   <div>
@@ -712,6 +924,24 @@ export default function ThreatResultsPanel({
                                 {mitigationCount} mitigation{mitigationCount > 1 ? "s" : ""}
                               </span>
                             )}
+                            {(() => {
+                              const ts =
+                                threat.status ?? threatStatuses?.get(threat.id)?.status ?? "open";
+                              if (ts === "open") return null;
+                              const statusStyles: Record<string, string> = {
+                                mitigated: "bg-green-500/20 text-green-600",
+                                accepted: "bg-blue-500/20 text-blue-600",
+                                transferred: "bg-purple-500/20 text-purple-600",
+                                "false-positive": "bg-gray-400/20 text-gray-500",
+                              };
+                              return (
+                                <span
+                                  className={`text-[7px] px-1 py-0 rounded font-medium ${statusStyles[ts] ?? ""}`}
+                                >
+                                  {ts}
+                                </span>
+                              );
+                            })()}
                           </div>
                           <p className="text-[11px] font-semibold mt-0.5 leading-tight">
                             {threat.name}
@@ -828,6 +1058,28 @@ export default function ThreatResultsPanel({
                                     {m.asiId}
                                   </span>
                                 ))}
+                            </div>
+                          </div>
+                        )}
+                        {onUpdateThreatStatus && (
+                          <div className="pt-1.5 border-t border-current/5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[9px] font-semibold shrink-0">Status:</span>
+                              <select
+                                value={
+                                  threat.status ?? threatStatuses?.get(threat.id)?.status ?? "open"
+                                }
+                                onChange={(e) =>
+                                  onUpdateThreatStatus(threat.id, e.target.value as ThreatStatus)
+                                }
+                                className="text-[10px] h-5 px-1 rounded border bg-background text-foreground cursor-pointer"
+                              >
+                                <option value="open">Open</option>
+                                <option value="mitigated">Mitigated</option>
+                                <option value="accepted">Accepted</option>
+                                <option value="transferred">Transferred</option>
+                                <option value="false-positive">False Positive</option>
+                              </select>
                             </div>
                           </div>
                         )}
@@ -948,6 +1200,188 @@ function CiscoMappingTab({
             </div>
           );
         })}
+      </div>
+    </ScrollArea>
+  );
+}
+
+// ─── AIUC-1 Compliance Tab ──────────────────────────────────────
+function Aiuc1ComplianceTab({ result }: { result: Aiuc1ComplianceResult }) {
+  const [expandedPrinciple, setExpandedPrinciple] = useState<string | null>(null);
+
+  const verdictColors: Record<string, { bg: string; text: string; border: string }> = {
+    "likely-compliant": {
+      bg: "bg-green-500/10",
+      text: "text-green-600 dark:text-green-400",
+      border: "border-green-500/40",
+    },
+    "partially-compliant": {
+      bg: "bg-yellow-500/10",
+      text: "text-yellow-600 dark:text-yellow-400",
+      border: "border-yellow-500/40",
+    },
+    "significant-gaps": {
+      bg: "bg-red-500/10",
+      text: "text-red-600 dark:text-red-400",
+      border: "border-red-500/40",
+    },
+  };
+
+  const vc = verdictColors[result.verdict] ?? verdictColors["significant-gaps"];
+
+  const principleNames: Record<string, string> = {
+    A: "Data & Privacy",
+    B: "Security",
+    C: "Safety",
+    D: "Reliability",
+    E: "Accountability",
+    F: "Society",
+  };
+  const principleColors: Record<string, string> = {
+    A: "#3b82f6",
+    B: "#ef4444",
+    C: "#f59e0b",
+    D: "#22c55e",
+    E: "#8b5cf6",
+    F: "#06b6d4",
+  };
+
+  const mandatoryGaps = result.requirements.filter(
+    (r) => r.application === "Mandatory" && r.status === "gap",
+  );
+
+  return (
+    <ScrollArea className="h-full">
+      <div className="p-3 space-y-3">
+        <div className={`rounded-lg p-3 ${vc.bg} border ${vc.border}`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className={`text-lg font-bold ${vc.text}`}>{result.verdictLabel}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {result.summary.mandatoryMet} of {result.summary.mandatory} mandatory requirements
+                met
+                {result.summary.mandatoryPartial > 0 &&
+                  `, ${result.summary.mandatoryPartial} partial`}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className={`text-2xl font-bold ${vc.text}`}>{result.overallScore}%</p>
+              <p className="text-[10px] text-muted-foreground">overall score</p>
+            </div>
+          </div>
+          <Progress value={result.overallScore} className="mt-2 h-2" />
+        </div>
+
+        <div className="space-y-1.5">
+          {Object.entries(result.principleScores).map(([pid, score]) => {
+            const isExpanded = expandedPrinciple === pid;
+            const reqs = result.requirements.filter((r) => r.principleId === pid);
+            const color = principleColors[pid] ?? "#6b7280";
+
+            return (
+              <div key={pid} className="border rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setExpandedPrinciple(isExpanded ? null : pid)}
+                  className="w-full p-2 flex items-center gap-2 hover:bg-muted/50 transition-colors"
+                >
+                  <div className="w-1.5 h-8 rounded-full" style={{ backgroundColor: color }} />
+                  <div className="flex-1 text-left">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold">
+                        {pid}. {principleNames[pid]}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {score.met}/{score.total} met
+                      </span>
+                    </div>
+                    <Progress value={score.score} className="mt-1 h-1" />
+                  </div>
+                  <span
+                    className={`text-xs font-mono font-bold ${score.gap === 0 ? "text-green-500" : score.score >= 50 ? "text-yellow-500" : "text-red-500"}`}
+                  >
+                    {score.score}%
+                  </span>
+                  {isExpanded ? (
+                    <ChevronDown className="h-3 w-3" />
+                  ) : (
+                    <ChevronRight className="h-3 w-3" />
+                  )}
+                </button>
+
+                {isExpanded && (
+                  <div className="border-t px-2 pb-2 space-y-1">
+                    {reqs.map((req) => (
+                      <div
+                        key={req.requirementId}
+                        className="flex items-center gap-2 py-1 text-[11px]"
+                      >
+                        <div
+                          className={`w-2 h-2 rounded-full shrink-0 ${
+                            req.status === "met"
+                              ? "bg-green-500"
+                              : req.status === "partial"
+                                ? "bg-yellow-500"
+                                : "bg-red-500/40"
+                          }`}
+                        />
+                        <span className="font-mono text-muted-foreground w-8 shrink-0">
+                          {req.requirementId}
+                        </span>
+                        <span className="flex-1 truncate">{req.requirementTitle}</span>
+                        <span
+                          className={`text-[9px] px-1 rounded ${
+                            req.application === "Mandatory"
+                              ? "bg-primary/10 text-primary"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {req.application === "Mandatory" ? "Req" : "Opt"}
+                        </span>
+                        {req.matchedVia !== "none" && (
+                          <span className="text-[9px] text-muted-foreground">{req.matchedVia}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {mandatoryGaps.length > 0 && (
+          <div className="border border-red-500/30 rounded-lg p-2 space-y-1.5">
+            <p className="text-xs font-semibold text-red-600 dark:text-red-400">
+              Mandatory Gaps ({mandatoryGaps.length})
+            </p>
+            {mandatoryGaps.slice(0, 10).map((req) => (
+              <div key={req.requirementId} className="text-[11px] space-y-0.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono font-medium">{req.requirementId}</span>
+                  <span className="truncate">{req.requirementTitle}</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground pl-10">{req.recommendation}</p>
+              </div>
+            ))}
+            {mandatoryGaps.length > 10 && (
+              <p className="text-[10px] text-muted-foreground">
+                ...and {mandatoryGaps.length - 10} more
+              </p>
+            )}
+          </div>
+        )}
+
+        <p className="text-[10px] text-muted-foreground text-center">
+          AIUC-1 compliance is estimated from threat analysis, AISVS coverage, and model topology.{" "}
+          <a
+            href="https://www.aiuc-1.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            Learn more
+          </a>
+        </p>
       </div>
     </ScrollArea>
   );

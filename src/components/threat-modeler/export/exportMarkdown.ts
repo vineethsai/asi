@@ -211,6 +211,9 @@ export function generateMarkdownReport(
     md += `### ${threat.severity.toUpperCase()}: ${threat.name}\n\n`;
     md += `${threat.description}\n\n`;
     md += `- **Methodology:** ${threat.methodology}\n`;
+    md += `- **Status:** ${(threat.status ?? "open").replace("-", " ")}\n`;
+    if (threat.statusJustification)
+      md += `- **Status Justification:** ${threat.statusJustification}\n`;
     if (threat.maestroLayer !== undefined)
       md += `- **MAESTRO Layer:** ${MAESTRO_LAYER_LABELS[threat.maestroLayer]}\n`;
     if (threat.inherited) md += `- **Inherited:** Yes\n`;

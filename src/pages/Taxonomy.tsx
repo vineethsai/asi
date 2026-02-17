@@ -5,11 +5,16 @@ import Footer from "@/components/layout/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Layers, Target, Calculator, Zap, Network } from "lucide-react";
+import { Layers, Target, Calculator, Zap, Network, Shield } from "lucide-react";
 
 import { ciscoTaxonomyData, getTaxonomyStats } from "@/components/components/ciscoTaxonomyData";
 import { agenticTop10Data } from "@/components/components/owaspAgenticTop10Data";
 import { coreRiskScores } from "@/components/components/aivssCalcData";
+import {
+  getAiuc1Stats,
+  getAiuc1AsiMappingCount,
+  getAiuc1AivssMappingCount,
+} from "@/components/components/aiuc1Data";
 import { threatsData } from "@/components/components/securityData";
 
 const CiscoTaxonomyContent = React.lazy(() =>
@@ -23,6 +28,11 @@ const OwaspAgenticTop10Content = React.lazy(() =>
 const AIVSSCalculatorContent = React.lazy(() =>
   import("./AIVSSCalculator").then((m) => ({
     default: m.AIVSSCalculatorContent,
+  })),
+);
+const AIUC1ContentLazy = React.lazy(() =>
+  import("./AIUC1Content").then((m) => ({
+    default: m.AIUC1Content,
   })),
 );
 
@@ -48,6 +58,7 @@ interface FrameworkEdge {
 function useFrameworkData() {
   return useMemo(() => {
     const ciscoStats = getTaxonomyStats();
+    const aiuc1Stats = getAiuc1Stats();
     const threatCount = Object.keys(threatsData).length;
 
     let ciscoToAgentic = 0;
@@ -67,13 +78,16 @@ function useFrameworkData() {
 
     const agenticToAivss = coreRiskScores.length;
 
+    const aiuc1ToAgentic = getAiuc1AsiMappingCount();
+    const aiuc1ToAivss = getAiuc1AivssMappingCount();
+
     const cx = 350,
       cy = 230,
       r = 175;
     const angleOffset = -Math.PI / 2;
-    const pos = (i: number) => ({
-      x: cx + r * Math.cos(angleOffset + (i * 2 * Math.PI) / 4),
-      y: cy + r * Math.sin(angleOffset + (i * 2 * Math.PI) / 4),
+    const pos = (i: number, total = 5) => ({
+      x: cx + r * Math.cos(angleOffset + (i * 2 * Math.PI) / total),
+      y: cy + r * Math.sin(angleOffset + (i * 2 * Math.PI) / total),
     });
 
     const nodes: FrameworkNode[] = [
@@ -117,6 +131,16 @@ function useFrameworkData() {
         description: `${threatCount} identified agent threats`,
         ...pos(3),
       },
+      {
+        id: "aiuc1",
+        name: "AIUC-1 Standard",
+        shortName: "AIUC-1",
+        color: "#10b981",
+        darkColor: "#34d399",
+        count: aiuc1Stats.requirements,
+        description: `${aiuc1Stats.requirements} requirements, ${aiuc1Stats.principles} principles`,
+        ...pos(4),
+      },
     ];
 
     const edges: FrameworkEdge[] = [
@@ -143,6 +167,18 @@ function useFrameworkData() {
         target: "aivss",
         count: agenticToAivss,
         label: "AIVSS scored risks",
+      },
+      {
+        source: "aiuc1",
+        target: "agentic",
+        count: aiuc1ToAgentic,
+        label: "AIUC-1→ASI mappings",
+      },
+      {
+        source: "aiuc1",
+        target: "aivss",
+        count: aiuc1ToAivss,
+        label: "AIUC-1→AIVSS mappings",
       },
     ].filter((e) => e.count > 0);
 
@@ -204,6 +240,7 @@ function FrameworkVisualization({ onSelectTab }: { onSelectTab: (tab: string) =>
     agentic: "owasp-agentic",
     aivss: "aivss",
     threats: "overview",
+    aiuc1: "aiuc-1",
   };
 
   return (
@@ -1025,6 +1062,11 @@ export default function Taxonomy() {
                 <span className="hidden sm:inline">AIVSS Calculator</span>
                 <span className="sm:hidden">AIVSS</span>
               </TabsTrigger>
+              <TabsTrigger value="aiuc-1" className="gap-1.5">
+                <Shield className="h-4 w-4" />
+                <span className="hidden sm:inline">AIUC-1</span>
+                <span className="sm:hidden">AIUC-1</span>
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -1057,6 +1099,12 @@ export default function Taxonomy() {
           <TabsContent value="aivss" className="mt-0">
             <Suspense fallback={<TabLoader />}>
               <AIVSSCalculatorContent />
+            </Suspense>
+          </TabsContent>
+
+          <TabsContent value="aiuc-1" className="mt-0">
+            <Suspense fallback={<TabLoader />}>
+              <AIUC1ContentLazy />
             </Suspense>
           </TabsContent>
         </Tabs>

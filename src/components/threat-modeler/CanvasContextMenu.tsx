@@ -8,7 +8,19 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { Copy, Trash2, Edit2, Shield, Maximize2, PlusCircle, CheckSquare } from "lucide-react";
+import {
+  Copy,
+  Trash2,
+  Edit2,
+  Shield,
+  Maximize2,
+  PlusCircle,
+  CheckSquare,
+  ArrowUpToLine,
+  ArrowDownToLine,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react";
 import type { TrustLevel } from "./types";
 
 interface CanvasContextMenuProps {
@@ -21,6 +33,10 @@ interface CanvasContextMenuProps {
   onSelectAll: () => void;
   onFitView: () => void;
   onGroupInBoundary: () => void;
+  onSendToFront: () => void;
+  onSendToBack: () => void;
+  onSendForward: () => void;
+  onSendBackward: () => void;
   hasSelection: boolean;
   isNode: boolean;
   isEdge: boolean;
@@ -36,6 +52,10 @@ export default function CanvasContextMenu({
   onSelectAll,
   onFitView,
   onGroupInBoundary,
+  onSendToFront,
+  onSendToBack,
+  onSendForward,
+  onSendBackward,
   hasSelection,
   isNode,
   isEdge,
@@ -77,6 +97,25 @@ export default function CanvasContextMenu({
             <ContextMenuItem onClick={onGroupInBoundary} className="text-xs gap-2">
               <PlusCircle className="h-3.5 w-3.5" /> Group in Trust Boundary
             </ContextMenuItem>
+            <ContextMenuSub>
+              <ContextMenuSubTrigger className="text-xs gap-2">
+                <ArrowUpToLine className="h-3.5 w-3.5" /> Layer Order
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent>
+                <ContextMenuItem onClick={onSendToFront} className="text-xs gap-2">
+                  <ArrowUpToLine className="h-3.5 w-3.5" /> Bring to Front
+                </ContextMenuItem>
+                <ContextMenuItem onClick={onSendForward} className="text-xs gap-2">
+                  <ArrowUp className="h-3.5 w-3.5" /> Bring Forward
+                </ContextMenuItem>
+                <ContextMenuItem onClick={onSendBackward} className="text-xs gap-2">
+                  <ArrowDown className="h-3.5 w-3.5" /> Send Backward
+                </ContextMenuItem>
+                <ContextMenuItem onClick={onSendToBack} className="text-xs gap-2">
+                  <ArrowDownToLine className="h-3.5 w-3.5" /> Send to Back
+                </ContextMenuItem>
+              </ContextMenuSubContent>
+            </ContextMenuSub>
             <ContextMenuSeparator />
           </>
         )}

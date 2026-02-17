@@ -34,6 +34,14 @@ export function exportSARIF(result: ThreatAnalysisResult, filename?: string): vo
     locations: t.affectedNodeIds.map((nid) => ({
       physicalLocation: { artifactLocation: { uri: `threat-model://components/${nid}` } },
     })),
+    ...(t.status
+      ? {
+          properties: {
+            threatStatus: t.status,
+            ...(t.statusJustification ? { statusJustification: t.statusJustification } : {}),
+          },
+        }
+      : {}),
   }));
 
   const sarif = {
