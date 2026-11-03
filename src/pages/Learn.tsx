@@ -106,7 +106,7 @@ function Overview() {
   return (
     <PageLayout
       title="Learning path"
-      description={`Learn agentic AI security in ${LEARNING_STEPS.length} steps — components, threats, controls, AISVS, NIST and threat modeling — each with readings and a short generated quiz.`}
+      description={`Learn agentic AI security in ${LEARNING_STEPS.length} steps, from components, threats and controls to AISVS, NIST AI RMF and threat modeling, each with readings and a short quiz.`}
       canonicalPath="/learn"
       className="space-y-10"
     >
@@ -231,7 +231,7 @@ function StepPage({ step }: { step: LearningStep }) {
   return (
     <PageLayout
       title={`${step.title} · Learning path`}
-      description={step.summary}
+      description={`${step.summary} Step ${step.number} of ${LEARNING_STEPS.length} in the agentic AI security learning path.`}
       canonicalPath={learningStepPath(step.id)}
       className="space-y-8"
     >

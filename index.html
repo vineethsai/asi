@@ -44,12 +44,13 @@
       crossorigin
     />
 
-    <title>Agentic Security Hub — OWASP agentic AI threats, controls and standards</title>
-    <!-- Tags marked data-react-helmet are defaults that react-helmet replaces per route. -->
+    <title>OWASP Agentic AI Security: AI Agent Threats, AISVS &amp; Threat Modeling · Agentic Security Hub</title>
+    <!-- Tags marked data-react-helmet are defaults that react-helmet replaces per route.
+         scripts/prerender.mjs swaps them for each route's own tags in the built HTML. -->
     <meta
       data-react-helmet="true"
       name="description"
-      content="Interactive guide to securing agentic AI applications: OWASP agentic threats and mitigations, AISVS verification requirements, NIST AI RMF mapping, framework taxonomy and a threat modeler."
+      content="OWASP-aligned guide to agentic AI security: AI agent threats and controls, OWASP AISVS requirements, NIST AI RMF mapping and a free in-browser threat modeler."
     />
     <meta
       data-react-helmet="true"
@@ -57,7 +58,7 @@
       content="AI agents security, agentic AI security, OWASP, AISVS, NIST AI RMF, AI security controls, AI agent threats, threat modeling, LLM security"
     />
     <meta name="author" content="OWASP Securing Agentic Applications" />
-    <meta data-react-helmet="true" name="robots" content="index, follow" />
+    <meta data-react-helmet="true" name="robots" content="index, follow, max-image-preview:large" />
     <link data-react-helmet="true" rel="canonical" href="https://agenticsecurity.info/" />
 
     <meta data-react-helmet="true" property="og:site_name" content="Agentic Security Hub" />
@@ -94,18 +95,6 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
-
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "Organization",
-        "name": "Agentic Security Hub",
-        "url": "https://agenticsecurity.info/",
-        "logo": "https://agenticsecurity.info/android-chrome-512x512.png",
-        "description": "Interactive guide to securing agentic AI applications with OWASP best practices and NIST AI RMF mapping",
-        "sameAs": ["https://owasp.org/www-project-securing-agentic-applications/"]
-      }
-    </script>
 
     <!-- Google tag (gtag.js). Page views are sent by src/hooks/useAnalytics.ts, one per navigation. -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-FB1F73HMB5"></script>

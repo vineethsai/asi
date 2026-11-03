@@ -1,15 +1,6 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
+# Agentic Security Hub — https://agenticsecurity.info
+# Every page is static HTML (scripts/prerender.mjs). /progress is per-browser state and
+# carries <meta name="robots" content="noindex">; it stays crawlable so that tag is seen.
 User-agent: *
 Allow: /
 

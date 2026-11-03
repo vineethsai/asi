@@ -221,7 +221,7 @@ const Architectures = () => {
   return (
     <PageLayout
       title="Agent Architectures"
-      description="Guide to agentic architecture patterns and their security implications: secure design patterns, architectural best practices and the threats each pattern exposes."
+      description={`${ARCHITECTURES.length} reference architectures for agentic AI, from single sequential agents to hierarchical and swarm designs, with the components, threats and controls of each.`}
       canonicalPath="/architectures"
       keywords="agent architectures, AI security patterns, agentic architectures, secure AI development, AI agent design, agent security, AI security architecture, LLM architectures, artificial intelligence patterns, secure agent development, AI system design"
     >

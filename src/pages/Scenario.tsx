@@ -68,7 +68,7 @@ export default function Scenario() {
   return (
     <PageLayout
       title={`${scenario.title} · Attack walkthrough`}
-      description={scenario.summary}
+      description={`${scenario.summary} A step-by-step agentic AI attack walkthrough and the controls that stop it.`}
       canonicalPath={scenarioPath(scenario.id)}
       ogType="article"
       className="space-y-8"

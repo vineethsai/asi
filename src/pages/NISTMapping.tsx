@@ -30,6 +30,7 @@ import { AISVS_CHAPTER_CODES, AISVS_VERSION, aisvsData } from "@/data/aisvs";
 import {
   NIST_AI_RMF_HOME,
   NIST_CATEGORIES,
+  NIST_RMF_STATUS,
   NIST_GAI_RISKS,
   NIST_SUBCATEGORIES,
   gaiSource,
@@ -352,7 +353,7 @@ export const NISTMapping = () => {
   return (
     <PageLayout
       title="NIST AI RMF Mapping"
-      description={`The NIST AI Risk Management Framework (AI RMF 1.0) Core mapped to OWASP AISVS ${AISVS_VERSION}: a function → category → subcategory → AISVS chapter graph, the detailed mapping with rationale, a compliance matrix and NIST AI 600-1 generative-AI risk tags.`}
+      description={`The NIST AI RMF 1.0 Core mapped to OWASP AISVS ${AISVS_VERSION}: every function, category and subcategory linked to AISVS chapters, with rationale and GenAI risk tags.`}
       canonicalPath="/nist-mapping"
       keywords="NIST AI RMF mapping, NIST AI 600-1, Generative AI Profile, OWASP AISVS mapping, AI risk management, AI governance, AI security verification, agentic AI compliance"
     >
@@ -601,8 +602,23 @@ export const NISTMapping = () => {
             About this mapping
           </h2>
           <p>
-            This page follows the AI RMF 1.0 Core (NIST AI 100-1, January 2023). NIST is updating
-            the AI RMF; check the{" "}
+            This page follows the AI RMF 1.0 Core (NIST AI 100-1, January 2023), still the current
+            version when last checked ({NIST_RMF_STATUS.checkedAt}). {NIST_RMF_STATUS.revision}{" "}
+            {NIST_RMF_STATUS.drafts.map((d) => (
+              <span key={d.id}>
+                The{" "}
+                <a
+                  href={d.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline-offset-2 hover:underline"
+                >
+                  {d.name}
+                </a>{" "}
+                ({d.id}) is still a draft ({d.status}), so it is not used here.{" "}
+              </span>
+            ))}
+            Check the{" "}
             <a
               href={NIST_AI_RMF_HOME}
               target="_blank"

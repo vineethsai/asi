@@ -177,7 +177,7 @@ export default function ThreatModelerPage() {
       </header>
       <PageLayout
         title="Threat Modeler"
-        description="Model an agentic AI system on a canvas and get MAESTRO and OWASP Agentic threats, attack paths, AISVS coverage and mitigations, all in your browser."
+        description="Free browser-based threat modeling tool for agentic AI: draw your system and get OWASP agentic threats, MAESTRO layers, attack paths, AISVS coverage and fixes."
         canonicalPath="/threat-modeler"
         wide
         noFooter

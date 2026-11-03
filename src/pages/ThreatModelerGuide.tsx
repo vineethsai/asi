@@ -160,7 +160,7 @@ export default function ThreatModelerGuide() {
   return (
     <PageLayout
       title="Threat Modeler Guide"
-      description="How to model an agentic AI system in the Threat Modeler: components, agentic semantics, data flows, MAESTRO layers, how the analysis scores threats, every rule, templates, saving, sharing and shortcuts."
+      description="How to threat model an agentic AI system in the Threat Modeler: components, data flows, trust boundaries, MAESTRO layers, every rule, templates and sharing."
       canonicalPath="/threat-modeler-guide"
     >
       <PageHeader

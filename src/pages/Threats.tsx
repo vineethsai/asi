@@ -122,7 +122,7 @@ export const Threats = () => {
   return (
     <PageLayout
       title="AI Agent Threats"
-      description="Analysis of the threats to agentic AI systems — memory poisoning, tool misuse, privilege compromise and more — with their attack vectors, affected components and mitigations."
+      description={`The ${THREAT_STATS.threats} OWASP agentic AI threats, from memory poisoning and tool misuse to privilege compromise, with attack vectors, affected components and controls.`}
       canonicalPath="/threats"
       keywords="AI agent threats, AI security risks, agent security threats, agentic threats, prompt injection, memory poisoning, AI risks, LLM security threats, AI agent vulnerabilities"
       jsonLd={{

@@ -85,7 +85,7 @@ const Components = () => {
   return (
     <PageLayout
       title="Agent Components"
-      description={`Guide to the ${KC_ORDER.length} key components of agentic AI systems — language models, orchestration, reasoning and planning, memory, tool integration and the operational environment — with the threats that affect each.`}
+      description={`The ${KC_ORDER.length} key components of agentic AI systems, from LLMs and orchestration to memory, tools and the operational environment, and the AI agent threats facing each.`}
       canonicalPath="/components"
       keywords="AI agent components, AI security architecture, agent architectures, agentic systems components, LLM security, AI orchestration security, memory modules security, tool integration security"
       jsonLd={{

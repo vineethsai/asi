@@ -262,7 +262,7 @@ export const ThreatDetail = () => {
   return (
     <PageLayout
       title={`${threat.name} (${threat.code})`}
-      description={threat.description}
+      description={`${threat.description} Attack vectors, affected components and mitigations for this agentic AI threat.`}
       canonicalPath={`/threats/${threat.id}`}
       ogType="article"
       section="threats"

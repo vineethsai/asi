@@ -319,7 +319,9 @@ function fromArchitecture(arch: Architecture, index: number): Scenario | null {
   return finish(
     {
       id: `${arch.id.replace(/_/g, "-")}-${slugify(rt.title)}`,
-      title: rt.title,
+      // Architecture-derived walkthroughs name the pattern: the same threat can
+      // appear under several architectures and titles must stay unique.
+      title: `${rt.title} in ${shortArch(arch)}`,
       summary: rt.description,
       source: "architecture",
       asiId: asi?.id,

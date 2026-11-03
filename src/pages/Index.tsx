@@ -11,7 +11,7 @@ import { useReveal } from "@/hooks/useReveal";
 import { stagger } from "@/lib/motion";
 
 const DESCRIPTION =
-  "Interactive guide to securing agentic AI applications: OWASP agentic threats and mitigations, AISVS verification requirements, NIST AI RMF mapping, a framework taxonomy and a threat modeler.";
+  "OWASP-aligned guide to agentic AI security: AI agent threats and controls, OWASP AISVS requirements, NIST AI RMF mapping and a free in-browser threat modeler.";
 
 /** Featured threat + progress, two columns on desktop (6.1 item 6). */
 function TodaySection() {
@@ -38,7 +38,7 @@ const Index = () => {
 
   return (
     <PageLayout
-      title="Agentic Security Hub — OWASP guide to securing AI agents"
+      title="OWASP Agentic AI Security: AI Agent Threats, AISVS & Threat Modeling"
       description={DESCRIPTION}
       canonicalPath="/"
       keywords="AI agents security, agentic AI security, OWASP, AISVS, NIST AI RMF mapping, AI security controls, AI agent threats, threat modeling, LLM security"

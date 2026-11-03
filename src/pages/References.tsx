@@ -120,7 +120,7 @@ function ReferencesPage() {
   return (
     <PageLayout
       title="References & Resources"
-      description={`${REFERENCES.length} research papers, standards, tools and write-ups cited across the AI agent threat catalogue, security controls, OWASP AISVS and the OWASP Top 10 for Agentic Applications — de-duplicated and linked back to where each is cited.`}
+      description={`${REFERENCES.length} papers, standards, tools and write-ups cited across the agentic AI threat catalog, controls, OWASP AISVS and the Agentic Top 10, linked to every citation.`}
       canonicalPath="/references"
       keywords="AI security references, AI agents resources, OWASP AISVS references, AI security research, AI threat references, security controls documentation, AI security standards"
       jsonLd={{

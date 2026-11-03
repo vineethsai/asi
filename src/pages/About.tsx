@@ -35,6 +35,7 @@ const SOURCE_LABELS: Record<DataSourceKey, string> = {
   threats: "Threat catalog",
   controls: "Controls",
   top10: "Agentic Top 10",
+  llmTop10: "LLM Top 10",
   cisco: "Cisco AI taxonomy",
   atlas: "MITRE ATLAS",
   aiuc1: "AIUC-1",
@@ -166,7 +167,7 @@ export default function About() {
   return (
     <PageLayout
       title="About"
-      description="Learn about the OWASP Securing Agentic Applications project, our methodology, framework, and how to contribute to improving AI agent security."
+      description="About the Agentic Security Hub: an open, OWASP-aligned companion for securing AI agents, with its sources, methodology, data versions and how to contribute."
       canonicalPath="/about"
       className="space-y-12"
     >

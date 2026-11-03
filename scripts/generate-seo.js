@@ -2,7 +2,9 @@
 /**
  * Build-time SEO artefacts (IMPROVEMENT_PLAN.md P1-12), run from `postbuild`:
  *
- *   docs/sitemap.xml     every static route + every threat / control / architecture / component page
+ *   docs/sitemap.xml     every indexable route of the site model (scripts/seo-model.mjs): static pages,
+ *                        threats, controls, components, architectures, attack walkthroughs and learning
+ *                        steps, with <lastmod> from the data's lastUpdated / retrievedAt
  *   docs/og/*.png        1200x630 Open Graph cards (satori -> SVG -> @resvg/resvg-js -> PNG)
  *   docs/og/index.json   list of generated slugs
  *   docs/og/.manifest.json  content-hash cache; unchanged cards are skipped on the next run
@@ -16,10 +18,10 @@
  * "/" -> home, "/threats" -> threats, "/threats/t7" -> threats-t7, "/components/kc1.1" -> components-kc1.1.
  * `default.png` is the fallback card for pages that have no card of their own.
  *
- * Set SOURCE_DATE_EPOCH to pin the sitemap <lastmod> (default: today, UTC).
+ * Set SOURCE_DATE_EPOCH to pin the build date (default: today, UTC); <lastmod> is never later.
  *
- * Reads the route list from src/config/navigation.ts (NAV_ITEMS) plus the static, non-redirect routes
- * declared in src/App.tsx, so a page added to either shows up here without touching this script.
+ * The route list is the site model (scripts/seo-model.mjs), which also feeds scripts/prerender.mjs; it
+ * fails when src/config/navigation.ts or src/App.tsx declares a page the model does not know.
  * Fonts come from the `geist` package (static TTFs; satori cannot read WOFF2 or variable fonts).
  */
 
@@ -28,10 +30,14 @@ import fs from "fs";
 import path from "path";
 import zlib from "zlib";
 import { pathToFileURL } from "url";
-import ts from "typescript";
-import { loadTsModule, projectRoot } from "./check-data-integrity.js";
+import {
+  MODULES,
+  buildDateFromEnv,
+  buildSiteModel,
+  loadSiteModules,
+  projectRoot,
+} from "./seo-model.mjs";
 
-const SITE_ORIGIN = "https://agenticsecurity.info";
 const SITE_NAME = "Agentic Security Hub";
 const SITE_HOST = "agenticsecurity.info";
 const OG_WIDTH = 1200;
@@ -66,186 +72,18 @@ function parseArgs(argv) {
   return opts;
 }
 
-// ── Routes ─────────────────────────────────────────────────────────────────
+// ── Sitemap ────────────────────────────────────────────────────────────────
+// Routes, canonical URLs, lastmod, changefreq and priority come from the site model
+// (scripts/seo-model.mjs), the same list scripts/prerender.mjs renders: every URL listed here has
+// a static HTML file, and its <loc> is exactly the page's canonical URL. noindex routes (/progress)
+// and client-side redirects (/threats/today, /cisco-taxonomy, …) are not listed.
 
 const NAV_GROUP_LABELS = { learn: "Learn", verify: "Verify", tools: "Tools", project: "Project" };
-
-/** NAV_ITEMS from src/config/navigation.ts, read from the AST (the module imports lucide-react). */
-function readNavItems() {
-  const file = path.join(projectRoot, "src/config/navigation.ts");
-  const source = ts.createSourceFile(
-    file,
-    fs.readFileSync(file, "utf8"),
-    ts.ScriptTarget.ES2022,
-    true,
-  );
-  const items = [];
-  const stringValue = (node) =>
-    node && (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node))
-      ? node.text
-      : undefined;
-
-  const visit = (node) => {
-    if (
-      ts.isVariableDeclaration(node) &&
-      ts.isIdentifier(node.name) &&
-      node.name.text === "NAV_ITEMS" &&
-      node.initializer &&
-      ts.isArrayLiteralExpression(node.initializer)
-    ) {
-      for (const element of node.initializer.elements) {
-        if (!ts.isObjectLiteralExpression(element)) continue;
-        const item = {};
-        for (const prop of element.properties) {
-          if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue;
-          const value = stringValue(prop.initializer);
-          if (value !== undefined) item[prop.name.text] = value;
-        }
-        if (item.path) items.push(item);
-      }
-      return;
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(source);
-
-  if (items.length === 0) throw new Error("Could not read NAV_ITEMS from src/config/navigation.ts");
-  return items;
-}
-
-/** Static, non-redirect page routes declared in src/App.tsx (no params, no catch-all). */
-function readAppRoutes() {
-  const text = fs.readFileSync(path.join(projectRoot, "src/App.tsx"), "utf8");
-  const paths = [];
-  for (const match of text.matchAll(/<Route\s+path="(\/[^"]*)"\s+element=\{\s*<(\w+)/g)) {
-    const [, routePath, element] = match;
-    if (element === "Navigate" || /[:*]/.test(routePath)) continue;
-    paths.push(routePath);
-  }
-  return paths;
-}
-
-function titleFromPath(routePath) {
-  return routePath
-    .replace(/^\//, "")
-    .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
 
 /** "/" -> "home", "/threats/t7" -> "threats-t7" (same rule as ogSlug in src/components/layout/seo.ts). */
 function ogSlug(canonicalPath) {
   const clean = canonicalPath.split(/[?#]/)[0].replace(/^\/+|\/+$/g, "");
   return clean === "" ? "home" : clean.replace(/\//g, "-");
-}
-
-function collectStaticRoutes() {
-  const routes = new Map();
-  for (const item of readNavItems()) {
-    const routePath = item.path.split("?")[0];
-    if (routes.has(routePath)) continue; // palette-only shortcuts (?tab=…) share their page's route
-    routes.set(routePath, {
-      path: routePath,
-      title: item.label,
-      description: item.description,
-      group: item.group,
-    });
-  }
-  for (const routePath of readAppRoutes()) {
-    if (!routes.has(routePath)) {
-      routes.set(routePath, {
-        path: routePath,
-        title: titleFromPath(routePath),
-        description: `${titleFromPath(routePath)} on the ${SITE_NAME}.`,
-        group: undefined,
-      });
-    }
-  }
-  if (!routes.has("/")) {
-    routes.set("/", { path: "/", title: SITE_NAME, description: "", group: "learn" });
-  }
-  return [...routes.values()];
-}
-
-// ── Entities (detail pages) ────────────────────────────────────────────────
-
-/** Same thresholds as riskBand() in src/lib/severity.ts. */
-function loadRiskBand() {
-  try {
-    const { riskBand } = loadTsModule("src/lib/severity.ts");
-    if (typeof riskBand === "function") return riskBand;
-  } catch {
-    // fall through to the local copy
-  }
-  return (score) => {
-    const s = Number(score);
-    if (!Number.isFinite(s)) return "low";
-    if (s >= 8) return "critical";
-    if (s >= 6) return "high";
-    if (s >= 4) return "medium";
-    return "low";
-  };
-}
-
-function loadEntities() {
-  const security = loadTsModule("src/components/components/securityData.ts");
-  const architectures = loadTsModule("src/components/components/architecturesData.ts");
-  const componentMap = loadTsModule("src/components/components/componentDataMap.ts");
-
-  const threats = Object.entries(security.threatsData ?? {}).map(([id, t]) => ({
-    kind: "threat",
-    id,
-    path: `/threats/${id}`,
-    code: String(t.code ?? id.toUpperCase()),
-    name: String(t.name ?? id),
-    shortName: t.shortName ? String(t.shortName) : undefined,
-    description: String(t.description ?? ""),
-    riskScore: typeof t.riskScore === "number" ? t.riskScore : undefined,
-  }));
-  const controls = Object.entries(security.mitigationsData ?? {}).map(([id, m]) => ({
-    kind: "control",
-    id,
-    path: `/controls/${id}`,
-    code: id.toUpperCase(),
-    name: String(m.name ?? id),
-    description: String(m.description ?? ""),
-  }));
-  const architectureList = Object.entries(architectures.architecturesData ?? {}).map(([id, a]) => ({
-    kind: "architecture",
-    id,
-    path: `/architectures/${id}`,
-    code: "",
-    name: String(a.name ?? id),
-    description: String(a.description ?? ""),
-  }));
-  const components = Object.entries(componentMap.componentDataMap ?? {}).map(([id, c]) => ({
-    kind: /^kc\d+$/i.test(id) ? "kc" : "component",
-    id,
-    path: `/components/${id}`,
-    code: id.toUpperCase(),
-    name: String(c.title ?? id),
-    description: String(c.description ?? ""),
-  }));
-  return { threats, controls, architectures: architectureList, components };
-}
-
-// ── Sitemap ────────────────────────────────────────────────────────────────
-
-const PRIMARY_PATHS = new Set([
-  "/threats",
-  "/controls",
-  "/architectures",
-  "/components",
-  "/aisvs",
-  "/nist-mapping",
-  "/taxonomy",
-  "/threat-modeler",
-]);
-
-function lastmodDate() {
-  const epoch = Number(process.env.SOURCE_DATE_EPOCH);
-  const date = Number.isFinite(epoch) && epoch > 0 ? new Date(epoch * 1000) : new Date();
-  return date.toISOString().slice(0, 10);
 }
 
 function xmlEscape(value) {
@@ -256,36 +94,12 @@ function xmlEscape(value) {
     .replace(/"/g, "&quot;");
 }
 
-function buildSitemap(staticRoutes, entities) {
-  const lastmod = lastmodDate();
-  const urls = [];
-  const seen = new Set();
-  const add = (routePath, changefreq, priority) => {
-    if (seen.has(routePath)) return;
-    seen.add(routePath);
-    urls.push({
-      loc: `${SITE_ORIGIN}${routePath === "/" ? "/" : routePath}`,
-      changefreq,
-      priority,
-    });
-  };
-
-  for (const route of staticRoutes) {
-    if (route.path === "/") add("/", "weekly", "1.0");
-    else if (PRIMARY_PATHS.has(route.path)) add(route.path, "monthly", "0.9");
-    else add(route.path, "monthly", "0.6");
-  }
-  for (const entity of [...entities.threats, ...entities.controls]) {
-    add(entity.path, "monthly", "0.7");
-  }
-  for (const entity of [...entities.architectures, ...entities.components]) {
-    add(entity.path, "monthly", entity.kind === "kc" ? "0.7" : "0.6");
-  }
-
+export function buildSitemap(model) {
+  const urls = model.routes.filter((r) => r.indexable);
   const body = urls
     .map(
-      (u) =>
-        `  <url>\n    <loc>${xmlEscape(u.loc)}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>${u.changefreq}</changefreq>\n    <priority>${u.priority}</priority>\n  </url>`,
+      (r) =>
+        `  <url>\n    <loc>${xmlEscape(r.canonicalUrl)}</loc>\n    <lastmod>${r.lastmod}</lastmod>\n    <changefreq>${r.changefreq}</changefreq>\n    <priority>${r.priority}</priority>\n  </url>`,
     )
     .join("\n");
   return {
@@ -339,31 +153,41 @@ function summarise(value) {
   return match ? match[1] : text;
 }
 
-function pageDescription(route, counts) {
-  if (route.path === "/") {
-    return `${counts.threats} threats, ${counts.controls} controls and ${counts.architectures} architectures for agentic AI, mapped to OWASP AISVS and NIST AI RMF.`;
-  }
-  return route.description;
-}
+const ENTITY_KINDS = new Set([
+  "threat",
+  "control",
+  "architecture",
+  "component",
+  "scenario",
+  "learn-step",
+]);
 
-function buildCardSpecs(staticRoutes, entities, riskBand) {
+/** One OG card per route of the site model (+ default.png). Static cards use the nav label. */
+function buildCardSpecs(model) {
+  const { mods } = model;
+  const riskBand = mods.severity.riskBand;
+  const componentMap = mods.componentMap?.componentDataMap ?? {};
   const counts = {
-    threats: entities.threats.length,
-    controls: entities.controls.length,
-    architectures: entities.architectures.length,
+    threats: mods.threatIndex.THREAT_LIST.length,
+    controls: mods.threatIndex.MITIGATION_LIST.length,
+    architectures: Object.keys(mods.architectures.architecturesData).length,
   };
+  const homeDescription = `${counts.threats} threats, ${counts.controls} controls and ${counts.architectures} architectures for agentic AI, mapped to OWASP AISVS and NIST AI RMF.`;
   const specs = [];
 
-  for (const route of staticRoutes) {
+  for (const route of model.routes) {
+    if (ENTITY_KINDS.has(route.kind)) continue;
     const isHome = route.path === "/";
     specs.push({
       slug: ogSlug(route.path),
       path: route.path,
       eyebrow: isHome
         ? "AGENTIC AI SECURITY"
-        : (NAV_GROUP_LABELS[route.group] ?? "Agentic Security").toUpperCase(),
-      title: isHome ? SITE_NAME : route.title,
-      description: summarise(pageDescription(route, counts)),
+        : (NAV_GROUP_LABELS[route.nav?.group] ?? "Agentic Security").toUpperCase(),
+      title: isHome ? SITE_NAME : (route.nav?.label ?? route.title),
+      description: summarise(
+        isHome ? homeDescription : (route.nav?.description ?? route.description),
+      ),
       accent: SECTION_ACCENT.page,
       accent2: BRAND_VIOLET,
     });
@@ -374,57 +198,80 @@ function buildCardSpecs(staticRoutes, entities, riskBand) {
     path: "/",
     eyebrow: "AGENTIC AI SECURITY",
     title: SITE_NAME,
-    description: summarise(pageDescription({ path: "/" }, counts)),
+    description: summarise(homeDescription),
     accent: SECTION_ACCENT.page,
     accent2: BRAND_VIOLET,
   });
 
-  for (const t of entities.threats) {
-    const band = riskBand(t.riskScore);
-    const title = t.name.length > 50 && t.shortName ? t.shortName : t.name;
-    specs.push({
-      slug: ogSlug(t.path),
-      path: t.path,
-      eyebrow: `THREAT · ${t.code}`,
-      title: cleanText(title),
-      description: summarise(t.description),
-      accent: BAND[band].color,
-      accent2: BAND[band].color,
-      risk: t.riskScore === undefined ? undefined : { band, score: t.riskScore },
-    });
-  }
-  for (const c of entities.controls) {
-    specs.push({
-      slug: ogSlug(c.path),
-      path: c.path,
-      eyebrow: `CONTROL · ${c.code}`,
-      title: cleanText(c.name),
-      description: summarise(c.description),
-      accent: SECTION_ACCENT.control,
-      accent2: BRAND_BLUE,
-    });
-  }
-  for (const a of entities.architectures) {
-    specs.push({
-      slug: ogSlug(a.path),
-      path: a.path,
-      eyebrow: "ARCHITECTURE",
-      title: cleanText(a.name),
-      description: summarise(a.description),
-      accent: SECTION_ACCENT.architecture,
-      accent2: BRAND_BLUE,
-    });
-  }
-  for (const c of entities.components) {
-    specs.push({
-      slug: ogSlug(c.path),
-      path: c.path,
-      eyebrow: `${c.kind === "kc" ? "KEY COMPONENT" : "COMPONENT"} · ${c.code}`,
-      title: cleanText(c.name),
-      description: summarise(c.description),
-      accent: SECTION_ACCENT.component,
-      accent2: BRAND_BLUE,
-    });
+  for (const route of model.routes) {
+    const e = route.entity;
+    if (route.kind === "threat") {
+      const band = riskBand(e.riskScore);
+      const title = e.name.length > 50 && e.shortName ? e.shortName : e.name;
+      specs.push({
+        slug: ogSlug(route.path),
+        path: route.path,
+        eyebrow: `THREAT · ${e.code}`,
+        title: cleanText(title),
+        description: summarise(e.description),
+        accent: BAND[band].color,
+        accent2: BAND[band].color,
+        risk: typeof e.riskScore === "number" ? { band, score: e.riskScore } : undefined,
+      });
+    } else if (route.kind === "control") {
+      specs.push({
+        slug: ogSlug(route.path),
+        path: route.path,
+        eyebrow: `CONTROL · ${e.id.toUpperCase()}`,
+        title: cleanText(e.name),
+        description: summarise(e.description),
+        accent: SECTION_ACCENT.control,
+        accent2: BRAND_BLUE,
+      });
+    } else if (route.kind === "architecture") {
+      specs.push({
+        slug: ogSlug(route.path),
+        path: route.path,
+        eyebrow: "ARCHITECTURE",
+        title: cleanText(e.name),
+        description: summarise(e.description),
+        accent: SECTION_ACCENT.architecture,
+        accent2: BRAND_BLUE,
+      });
+    } else if (route.kind === "component") {
+      const isKc = e.depth === 0;
+      const data = componentMap[e.id];
+      specs.push({
+        slug: ogSlug(route.path),
+        path: route.path,
+        eyebrow: `${isKc ? "KEY COMPONENT" : "COMPONENT"} · ${e.code}`,
+        title: cleanText(data?.title ?? e.title),
+        description: summarise(data?.description ?? e.description),
+        accent: SECTION_ACCENT.component,
+        accent2: BRAND_BLUE,
+      });
+    } else if (route.kind === "scenario") {
+      const band = BAND[e.severity] ? e.severity : "high";
+      specs.push({
+        slug: ogSlug(route.path),
+        path: route.path,
+        eyebrow: `ATTACK WALKTHROUGH${e.asiId ? ` · ${e.asiId}` : ""}`,
+        title: cleanText(e.title),
+        description: summarise(e.summary),
+        accent: BAND[band].color,
+        accent2: BRAND_VIOLET,
+      });
+    } else if (route.kind === "learn-step") {
+      specs.push({
+        slug: ogSlug(route.path),
+        path: route.path,
+        eyebrow: `LEARNING PATH · STEP ${e.number}`,
+        title: cleanText(e.title),
+        description: summarise(e.summary),
+        accent: SECTION_ACCENT.page,
+        accent2: BRAND_VIOLET,
+      });
+    }
   }
 
   const duplicate = specs.map((s) => s.slug).find((slug, i, all) => all.indexOf(slug) !== i);
@@ -911,18 +758,22 @@ export async function main(argv = process.argv.slice(2)) {
   const started = Date.now();
   const opts = parseArgs(argv);
 
-  const staticRoutes = collectStaticRoutes();
-  const entities = loadEntities();
+  const mods = await loadSiteModules({
+    modules: { ...MODULES, componentMap: "/src/components/components/componentDataMap.ts" },
+  });
+  const model = buildSiteModel(mods, { buildDate: buildDateFromEnv() });
 
   fs.mkdirSync(opts.out, { recursive: true });
-  const sitemap = buildSitemap(staticRoutes, entities);
+  const sitemap = buildSitemap(model);
   fs.writeFileSync(path.join(opts.out, "sitemap.xml"), sitemap.xml);
+  const kinds = {};
+  for (const r of model.routes.filter((x) => x.indexable)) kinds[r.kind] = (kinds[r.kind] ?? 0) + 1;
   console.log(
-    `sitemap.xml: ${sitemap.count} URLs (${staticRoutes.length} pages, ${entities.threats.length} threats, ${entities.controls.length} controls, ${entities.architectures.length} architectures, ${entities.components.length} components) -> ${displayPath(path.join(opts.out, "sitemap.xml"))}`,
+    `sitemap.xml: ${sitemap.count} URLs (${kinds.threat ?? 0} threats, ${kinds.control ?? 0} controls, ${kinds.component ?? 0} components, ${kinds.architecture ?? 0} architectures, ${kinds.scenario ?? 0} scenarios, ${kinds["learn-step"] ?? 0} learning steps) -> ${displayPath(path.join(opts.out, "sitemap.xml"))}`,
   );
 
   if (opts.og) {
-    const specs = buildCardSpecs(staticRoutes, entities, loadRiskBand());
+    const specs = buildCardSpecs(model);
     const result = await generateOgImages(specs, opts.out, opts);
     console.log(
       `og/: ${result.total} cards (${result.rendered} rendered, ${result.cached} from cache, ${result.skipped} unchanged) -> ${displayPath(result.ogDir)}`,
