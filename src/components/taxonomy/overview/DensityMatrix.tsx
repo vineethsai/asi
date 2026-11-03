@@ -25,7 +25,7 @@ export function DensityMatrix({ onSelectPair, selectedPair }: DensityMatrixProps
       ariaLabel="Matrix of mapping counts between frameworks"
       interactive
     >
-      <div className="overflow-x-auto">
+      <div className="relative max-w-full overflow-x-auto">
         <table className="w-full min-w-[34rem] border-separate border-spacing-1 text-sm">
           <caption className="sr-only">
             Number of mapping statements between frameworks; empty cells have none.

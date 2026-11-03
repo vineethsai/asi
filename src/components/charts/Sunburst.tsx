@@ -542,7 +542,7 @@ export function Sunburst({
       className={className}
     >
       {asList ? (
-        <div className="max-h-[480px] overflow-auto text-sm">
+        <div className="relative max-h-[480px] max-w-full overflow-auto text-sm">
           <p className="font-medium">{data.name}</p>
           <NestedList node={data} valueLabel={valueLabel} formatValue={formatValue} />
         </div>
@@ -580,7 +580,7 @@ export function Sunburst({
               </button>
             )}
           </nav>
-          <div ref={boxRef} className="relative w-full">
+          <div ref={boxRef} className="relative w-full max-w-full">
             <svg
               ref={svgRef}
               width={W}

@@ -174,7 +174,7 @@ export const ReferenceCard = memo(function ReferenceCard({
         </span>
         <ul className="flex flex-wrap gap-1.5" aria-labelledby={`${citeId}-cited`}>
           {chips.map((c) => (
-            <li key={`${c.kind}:${c.id}`} className="max-w-full">
+            <li key={`${c.kind}:${c.id}`} className="min-w-0 max-w-full">
               <CitationChip citation={c} />
             </li>
           ))}

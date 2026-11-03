@@ -376,7 +376,10 @@ export function CiscoTaxonomyContent({ entry, focusKey, onEntryChange }: Taxonom
                         id={entryDomId(tech.code)}
                         className="scroll-mt-24 rounded-md border bg-muted/30"
                       >
-                        <AccordionTrigger className="px-4 py-3 text-left hover:no-underline">
+                        <AccordionTrigger
+                          headingLevel={4}
+                          className="px-4 py-3 text-left hover:no-underline"
+                        >
                           <span className="flex flex-wrap items-center gap-2">
                             <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-xs">
                               {tech.code}

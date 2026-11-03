@@ -381,7 +381,7 @@ const FeatureComparisonMatrix = () => {
           />
           View as table
         </summary>
-        <div className="overflow-x-auto border-t">
+        <div className="relative max-w-full overflow-x-auto border-t">
           <table className="min-w-[56rem] divide-y divide-border text-sm">
             <caption className="sr-only">
               Feature scores (1–5) with notes and ideal use cases per architecture pattern

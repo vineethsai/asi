@@ -529,7 +529,10 @@ export function Bipartite({
         </p>
       }
     >
-      <div ref={boxRef} className="w-full overflow-hidden rounded-md border bg-background/40">
+      <div
+        ref={boxRef}
+        className="relative w-full max-w-full overflow-hidden rounded-md border bg-background/40"
+      >
         <svg
           ref={svgRef}
           width={W}

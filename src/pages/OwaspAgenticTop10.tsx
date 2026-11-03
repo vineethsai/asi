@@ -193,7 +193,10 @@ function EntryBody({ entry }: { entry: AgenticTop10Entry }) {
               value={`${entry.code}-sc-${i}`}
               className="last:border-b-0"
             >
-              <AccordionTrigger className="py-3 text-left text-sm hover:no-underline">
+              <AccordionTrigger
+                headingLevel={5}
+                className="py-3 text-left text-sm hover:no-underline"
+              >
                 {sc.title}
               </AccordionTrigger>
               <AccordionContent className="text-muted-foreground">

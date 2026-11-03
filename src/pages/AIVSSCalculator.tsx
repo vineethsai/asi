@@ -481,7 +481,7 @@ export function AIVSSCalculatorContent({ entry, focusKey, onEntryChange }: Taxon
           codes follow v{AIVSS_MODEL.version} Appendix B; filled chips mark the entry that lists the
           risk as primary.
         </p>
-        <div className="overflow-x-auto">
+        <div className="relative max-w-full overflow-x-auto">
           <table className="w-full text-sm">
             <caption className="sr-only">
               {AIVSS_MODEL.shortLabel} worked examples, sorted by score

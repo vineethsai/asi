@@ -527,7 +527,10 @@ export const NISTMapping = () => {
                                 id={entryDomId(cat.code, "cat")}
                                 className="scroll-mt-24"
                               >
-                                <AccordionTrigger className="text-left hover:no-underline">
+                                <AccordionTrigger
+                                  headingLevel={4}
+                                  className="text-left hover:no-underline"
+                                >
                                   <span className="flex min-w-0 items-start gap-3">
                                     <span className="mt-0.5 shrink-0 rounded border px-1.5 py-0.5 font-mono text-xs">
                                       {cat.code}

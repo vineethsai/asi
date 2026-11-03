@@ -61,11 +61,12 @@ export function SegmentedControl<T extends string>({
           aria-label={o.ariaLabel}
           title={o.title}
           className={cn(
-            "inline-flex min-w-0 items-center justify-center whitespace-nowrap rounded-md font-medium text-muted-foreground transition-colors",
+            "inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium text-muted-foreground transition-colors",
             "hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             "data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-sm",
             size === "sm" ? "h-7 px-2.5 text-xs" : "h-9 px-3 text-sm",
-            fullWidth && "flex-1",
+            // Fixed segments never shrink below their label; a constrained root scrolls instead.
+            fullWidth ? "min-w-0 flex-1" : "shrink-0",
           )}
         >
           {o.label}

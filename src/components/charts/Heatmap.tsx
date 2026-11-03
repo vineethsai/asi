@@ -283,7 +283,7 @@ export function Heatmap({
       className={className}
     >
       <div
-        className="relative overflow-auto rounded-md border"
+        className="relative max-w-full overflow-auto rounded-md border"
         style={{ maxHeight: typeof maxHeight === "number" ? `${maxHeight}px` : maxHeight }}
       >
         <table

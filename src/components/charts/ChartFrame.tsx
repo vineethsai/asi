@@ -57,35 +57,44 @@ export interface ChartFrameProps {
   children?: ReactNode;
 }
 
+/**
+ * Visually hidden data table. The `.sr-only` clip lives on a wrapping <div>, not on the <table>:
+ * a table box ignores `width: 1px` (its used width is at least its content width, and the
+ * cells are `white-space: nowrap`) and `overflow` does not apply to table boxes, so an sr-only
+ * table stays as wide as its text and widens the document on narrow screens. A block wrapper
+ * clips it to 1x1px.
+ */
 export function ChartDataTable({ table, id }: { table: ChartTable; id?: string }) {
   return (
-    <table className="sr-only" id={id}>
-      {table.caption && <caption>{table.caption}</caption>}
-      <thead>
-        <tr>
-          {table.columns.map((c, i) => (
-            <th key={i} scope="col">
-              {c}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {table.rows.map((r, ri) => (
-          <tr key={ri}>
-            {r.map((cell, ci) =>
-              ci === 0 ? (
-                <th key={ci} scope="row">
-                  {cell ?? ""}
-                </th>
-              ) : (
-                <td key={ci}>{cell ?? ""}</td>
-              ),
-            )}
+    <div className="sr-only">
+      <table id={id}>
+        {table.caption && <caption>{table.caption}</caption>}
+        <thead>
+          <tr>
+            {table.columns.map((c, i) => (
+              <th key={i} scope="col">
+                {c}
+              </th>
+            ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {table.rows.map((r, ri) => (
+            <tr key={ri}>
+              {r.map((cell, ci) =>
+                ci === 0 ? (
+                  <th key={ci} scope="row">
+                    {cell ?? ""}
+                  </th>
+                ) : (
+                  <td key={ci}>{cell ?? ""}</td>
+                ),
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

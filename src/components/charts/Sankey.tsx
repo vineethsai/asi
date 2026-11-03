@@ -571,7 +571,7 @@ export function Sankey({
         ]),
       }}
     >
-      <div ref={boxRef} className="w-full overflow-x-auto">
+      <div ref={boxRef} className="relative w-full max-w-full overflow-x-auto">
         {layout ? (
           <svg
             ref={svgRef}

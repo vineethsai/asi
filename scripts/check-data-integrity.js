@@ -403,6 +403,7 @@ function checkComponentThreatLinks(frameworkData, threatsData) {
   }
 }
 
+/** Legacy guard: hand-written `aisvsMapping: [...]` arrays (pre-1.01 chapter meanings). */
 function parseNistAisvsMappings(nistSource) {
   const results = [];
   const pattern = /aisvsMapping:\s*\[((?:.|\n)*?)\]/g;
@@ -541,6 +542,8 @@ const EXPECTED = {
   cisco: { version: "2.0.0", objectives: 19, techniques: 44, subTechniques: 130 },
   /** AIUC-1 Q4-2026: 55 requirement ids, 5 retired (C011, C012, D002, E007, E014). */
   aiuc1: { ids: 55, active: 50 },
+  /** NIST AI RMF 1.0 Core: 4 functions, 19 categories, 72 subcategories. */
+  nist: { functions: ["GOVERN", "MAP", "MEASURE", "MANAGE"], categories: 19 },
   nistSubcategories: 72,
 };
 
@@ -907,7 +910,11 @@ async function run() {
   const atlasModule = loadTsModule("src/data/atlasCrosswalk.ts");
   const sourcesModule = loadTsModule("src/data/sources.ts");
   const ciscoRaw = loadJson("src/components/components/cisco_taxonomy.json");
-  const nistSource = readFile("src/pages/NISTMapping.tsx");
+  const nistModule = loadTsModule("src/data/nist.ts");
+  const nistLegacySources = ["src/pages/NISTMapping.tsx", "src/data/nist.ts"].map((file) => ({
+    file,
+    source: readFile(file),
+  }));
 
   const threatsData = requireObject("threatsData", securityModule.threatsData);
   const mitigationsData = requireObject("mitigationsData", securityModule.mitigationsData);
@@ -1462,22 +1469,90 @@ async function run() {
       );
     }
   }
-  const pageSubcategories = unique(
-    [...nistSource.matchAll(/code:\s*"((?:GOVERN|MAP|MEASURE|MANAGE)\.\d+\.\d+)"/g)].map(
-      (m) => m[1],
-    ),
+
+  // The NIST data lives in src/data/nist.ts (nistAIRMF → categories → subcategories), which joins
+  // NIST_AISVS_REMAP onto the Core; the page only renders it.
+  const nistFunctions = requireArray("nistAIRMF", nistModule.nistAIRMF);
+  const nistCategories = requireArray("NIST_CATEGORIES", nistModule.NIST_CATEGORIES);
+  const nistSubs = requireArray("NIST_SUBCATEGORIES", nistModule.NIST_SUBCATEGORIES);
+  ensure(
+    JSON.stringify(nistFunctions.map((fn) => fn.code)) === JSON.stringify(EXPECTED.nist.functions),
+    `nistAIRMF functions are ${nistFunctions.map((fn) => fn.code).join(", ")}; expected ${EXPECTED.nist.functions.join(", ")}`,
   );
-  for (const code of pageSubcategories) {
-    warnIf(
-      !remap[code],
-      `src/pages/NISTMapping.tsx subcategory ${code} has no entry in NIST_AISVS_REMAP`,
+  ensure(
+    nistCategories.length === EXPECTED.nist.categories,
+    `NIST_CATEGORIES has ${nistCategories.length} categories; expected ${EXPECTED.nist.categories}`,
+  );
+  ensure(
+    nistSubs.length === EXPECTED.nistSubcategories,
+    `NIST_SUBCATEGORIES has ${nistSubs.length} subcategories; expected ${EXPECTED.nistSubcategories}`,
+  );
+  const treeSubs = nistFunctions.flatMap((fn) =>
+    safeArray(fn.categories).flatMap((cat) => safeArray(cat.subcategories)),
+  );
+  ensure(
+    treeSubs.length === nistSubs.length,
+    `nistAIRMF tree has ${treeSubs.length} subcategories but NIST_SUBCATEGORIES has ${nistSubs.length}`,
+  );
+  const nistDupes = listDuplicates(nistSubs.map((sub) => sub.code));
+  ensure(
+    nistDupes.length === 0,
+    `Duplicate NIST subcategory codes: ${formatDuplicates(nistDupes)}`,
+  );
+  const gaiRiskIds = new Set(safeArray(nistModule.NIST_GAI_RISKS).map((risk) => risk.id));
+  for (const fn of nistFunctions) {
+    for (const cat of safeArray(fn.categories)) {
+      const catOwner = `NIST category ${cat.code}`;
+      ensureIdFormat(catOwner, cat.code, /^(GOVERN|MAP|MEASURE|MANAGE)\.\d+$/, "code");
+      ensure(cat.functionCode === fn.code, `${catOwner} functionCode is ${cat.functionCode}`);
+      ensure(cat.code.startsWith(`${fn.code}.`), `${catOwner} is filed under ${fn.code}`);
+      ensure(safeArray(cat.subcategories).length > 0, `${catOwner} has no subcategories`);
+      for (const sub of safeArray(cat.subcategories)) {
+        const owner = `NIST subcategory ${sub.code}`;
+        ensureIdFormat(owner, sub.code, /^(GOVERN|MAP|MEASURE|MANAGE)\.\d+\.\d+$/, "code");
+        ensure(sub.id === String(sub.code).toLowerCase(), `${owner} id mismatch`);
+        ensure(sub.categoryCode === cat.code, `${owner} categoryCode is ${sub.categoryCode}`);
+        ensure(sub.code.startsWith(`${cat.code}.`), `${owner} is filed under ${cat.code}`);
+        ensure(sub.functionCode === fn.code, `${owner} functionCode is ${sub.functionCode}`);
+        ensure(String(sub.name || "").trim().length > 0, `${owner} has no name`);
+        ensure(String(sub.description || "").trim().length > 0, `${owner} has no NIST text`);
+        // Remap coverage: every subcategory on the page has a NIST_AISVS_REMAP entry …
+        const entry = remap[sub.code];
+        ensure(
+          Boolean(entry),
+          `${owner} has no entry in NIST_AISVS_REMAP (src/data/nistAisvsRemap.ts)`,
+        );
+        if (entry) {
+          ensure(
+            JSON.stringify(safeArray(sub.aisvs)) === JSON.stringify(safeArray(entry.aisvs)),
+            `${owner} chapters ${safeArray(sub.aisvs).join(",")} differ from NIST_AISVS_REMAP (${safeArray(entry.aisvs).join(",")})`,
+          );
+          ensure(
+            sub.organizational === (safeArray(entry.aisvs).length === 0),
+            `${owner} organizational flag disagrees with NIST_AISVS_REMAP`,
+          );
+        }
+        for (const risk of safeArray(sub.gaiRisks)) {
+          ensure(gaiRiskIds.has(risk), `${owner} has unknown NIST AI 600-1 risk ${risk}`);
+        }
+      }
+    }
+  }
+  // … and every remap entry is a real AI RMF subcategory.
+  const nistSubSet = new Set(nistSubs.map((sub) => sub.code));
+  for (const code of Object.keys(remap)) {
+    ensure(
+      nistSubSet.has(code),
+      `NIST_AISVS_REMAP ${code} is not a subcategory in src/data/nist.ts`,
     );
   }
-  const nistMappings = parseNistAisvsMappings(nistSource);
-  warnIf(
-    nistMappings.length > 0,
-    `src/pages/NISTMapping.tsx still has ${nistMappings.length} hand-written aisvsMapping arrays (pre-1.01 chapter meanings); consume NIST_AISVS_REMAP instead`,
-  );
+  for (const { file, source } of nistLegacySources) {
+    const legacy = parseNistAisvsMappings(source);
+    warnIf(
+      legacy.length > 0,
+      `${file} has ${legacy.length} hand-written aisvsMapping arrays (pre-1.01 chapter meanings); consume NIST_AISVS_REMAP instead`,
+    );
+  }
 
   // ── MITRE ATLAS crosswalk ────────────────────────────────────────────────
   const atlasRows = safeArray(atlasModule.atlasCrosswalk);
@@ -1594,7 +1669,9 @@ async function run() {
     `AIUC-1 ${aiuc1Module.AIUC1_VERSION}: ${aiuc1Stats.active} active of ${aiuc1All.length} ids`,
   );
   console.log(`AIVSS worked examples recomputed: ${safeArray(aivssModule.coreRiskScores).length}`);
-  console.log(`NIST AI RMF subcategories mapped: ${remapEntries.length}`);
+  console.log(
+    `NIST AI RMF ${nistFunctions.length} functions / ${nistCategories.length} categories / ${nistSubs.length} subcategories; ${remapEntries.length} mapped to AISVS`,
+  );
   console.log(`Stale AISVS code references in src/: ${staleAisvsRefs}`);
   console.log(
     `Icon keys resolved: ${iconStats.checked} against ${iconStats.registrySize} registry keys; dated fields checked: ${datedFields}`,

@@ -13,6 +13,8 @@ export interface NistSubcategoryCardProps {
   gaiSelected?: string;
   onSelect: (code: string) => void;
   onGaiFilter?: (id: string) => void;
+  /** Level of the card's title: the detailed mapping nests it under function h3 › category h4. */
+  headingLevel?: 3 | 4 | 5 | 6;
 }
 
 export function NistSubcategoryCard({
@@ -22,7 +24,9 @@ export function NistSubcategoryCard({
   gaiSelected,
   onSelect,
   onGaiFilter,
+  headingLevel = 5,
 }: NistSubcategoryCardProps) {
+  const Title = `h${headingLevel}` as "h3" | "h4" | "h5" | "h6";
   return (
     <article
       id={entryDomId(sub.code, "sub")}
@@ -34,10 +38,10 @@ export function NistSubcategoryCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
-          <h4 id={`${entryDomId(sub.code, "sub")}-title`} className="text-sm font-semibold">
+          <Title id={`${entryDomId(sub.code, "sub")}-title`} className="text-sm font-semibold">
             <span className="font-mono">{sub.code}</span>{" "}
             <EditorialName name={sub.name} className="font-semibold" />
-          </h4>
+          </Title>
           <p className="text-sm text-muted-foreground">{sub.description}</p>
         </div>
         <button

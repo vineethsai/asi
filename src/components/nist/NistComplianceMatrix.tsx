@@ -205,7 +205,7 @@ export function NistComplianceMatrix({
       empty={rows.length === 0}
       emptyTitle="No subcategories match the filters"
     >
-      <div className="max-h-[70vh] overflow-auto rounded-md border">
+      <div className="relative max-h-[70vh] max-w-full overflow-auto rounded-md border">
         <table className="w-full border-separate border-spacing-0 text-sm">
           <caption className="sr-only">
             NIST AI RMF {granularity === "category" ? "categories" : "subcategories"} (rows) mapped

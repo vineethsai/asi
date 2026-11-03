@@ -262,7 +262,7 @@ export default function Taxonomy() {
       />
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <div className="-mx-4 mb-6 overflow-x-auto px-4">
+        <div className="relative -mx-4 mb-6 overflow-x-auto px-4">
           <TabsList className="inline-flex w-auto min-w-full rounded-xl p-1 sm:min-w-0">
             {TAB_ORDER.map((id) => {
               const meta = TAB_META[id];

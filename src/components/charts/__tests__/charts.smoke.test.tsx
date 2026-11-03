@@ -35,7 +35,10 @@ describe("ChartFrame", () => {
     expect(screen.getByRole("heading", { name: "Coverage" })).toBeInTheDocument();
     expect(img("Bar chart of coverage")).toBeInTheDocument();
     const table = screen.getByRole("table");
-    expect(table).toHaveClass("sr-only");
+    // The clip sits on a block wrapper: a <table> ignores width:1px/overflow and would widen the page.
+    expect(table).not.toHaveClass("sr-only");
+    expect(table.parentElement).toHaveClass("sr-only");
+    expect(table.parentElement?.tagName).toBe("DIV");
     expect(within(table).getByText("A")).toBeInTheDocument();
   });
 

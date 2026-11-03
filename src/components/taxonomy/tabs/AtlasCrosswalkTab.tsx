@@ -157,7 +157,7 @@ export function AtlasCrosswalkContent({ entry, focusKey, onEntryChange }: Taxono
           value={kind}
           onValueChange={(v) => setKind(v)}
           options={kindOptions}
-          className="self-start overflow-x-auto"
+          className="relative max-w-full self-start overflow-x-auto"
         />
       </div>
 
@@ -177,7 +177,7 @@ export function AtlasCrosswalkContent({ entry, focusKey, onEntryChange }: Taxono
           }}
         />
       ) : (
-        <div className="md:overflow-x-auto md:rounded-lg md:border">
+        <div className="relative md:overflow-x-auto md:rounded-lg md:border">
           <table className="w-full text-sm">
             <caption className="sr-only">
               MITRE ATLAS {ATLAS_RELEASE} techniques with the Cisco techniques, OWASP ASI entries
