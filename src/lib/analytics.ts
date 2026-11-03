@@ -12,16 +12,6 @@ declare global {
 
 export const GA_TRACKING_ID = "G-FB1F73HMB5";
 
-// Track page views
-export const trackPageView = (url: string, title?: string) => {
-  if (typeof window !== "undefined" && window.gtag) {
-    window.gtag("config", GA_TRACKING_ID, {
-      page_location: url,
-      page_title: title,
-    });
-  }
-};
-
 // Track custom events
 export const trackEvent = (action: string, category: string, label?: string, value?: number) => {
   if (typeof window !== "undefined" && window.gtag) {

@@ -5,7 +5,7 @@
   "description": "Interactive guide for securing AI agentic applications using OWASP best practices",
   "license": "Apache-2.0",
   "type": "module",
-  "homepage": "https://vineethsai.github.io/asi/",
+  "homepage": "https://agenticsecurity.info/",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -16,7 +16,7 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\"",
     "preview": "vite preview",
-    "validate": "npm run typecheck && npm run lint && npm run format:check && npm run check:data && npm run test && npm run build",
+    "validate": "npm run typecheck && npm run lint && npm run format:check && npm run check:data && npm run check:rules && npm run test && npm run build",
     "postbuild": "cp docs/index.html docs/404.html && node scripts/generate-seo.js",
     "check:data": "node scripts/check-data-integrity.js",
     "prepare": "husky",

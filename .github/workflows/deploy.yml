@@ -45,6 +45,12 @@ jobs:
       - name: Run data integrity checks
         run: npm run check:data
 
+      - name: Check threat-modeler rule catalog
+        run: npm run check:rules
+
+      - name: Run unit tests
+        run: npm run test
+
       - name: Build project
         run: npm run build
 

@@ -7,7 +7,9 @@
  * that still use identifiers which no longer exist in the current data.
  *
  *   npm run check:data                    # offline checks
- *   npm run check:data -- --check-links   # also HEAD/GET every reference URL
+ *   npm run check:data -- --check-links   # also HEAD/GET every reference URL (404/410 are errors;
+ *                                         # timeouts, blocks and 5xx are warnings). Run weekly by
+ *                                         # .github/workflows/weekly-links.yml
  *
  * `loadTsModule` is exported for scripts/print-counts.mjs.
  */
@@ -290,20 +292,32 @@ function validateReferences(owner, references, options = {}) {
   }
 }
 
-/** Error on markdown bold (`**`) in any `description` field under `value`. */
-function checkNoMarkdownInDescriptions(owner, value, trail = "") {
+/** Readable label for an array item in a trail: its id / code when it has one, else its index. */
+function itemLabel(item, index) {
+  const id = item && typeof item === "object" ? (item.id ?? item.code) : undefined;
+  return typeof id === "string" || typeof id === "number" ? String(id) : String(index);
+}
+
+/**
+ * Error on markdown bold (`**`) in any `description` field under `value` (long-form markdown belongs in
+ * `implementationDetail` only). `file` is the data module the value came from, so the message says where to fix it.
+ */
+function checkNoMarkdownInDescriptions(owner, value, trail = "", file = "") {
   if (Array.isArray(value)) {
     value.forEach((item, index) =>
-      checkNoMarkdownInDescriptions(owner, item, `${trail}[${index}]`),
+      checkNoMarkdownInDescriptions(owner, item, `${trail}[${itemLabel(item, index)}]`, file),
     );
     return;
   }
   if (!value || typeof value !== "object") return;
   for (const [key, child] of Object.entries(value)) {
     if (key === "description" && typeof child === "string") {
-      ensure(!child.includes("**"), `${owner}${trail}.description contains markdown "**"`);
+      ensure(
+        !child.includes("**"),
+        `${file ? `${file}: ` : ""}${owner}${trail}.description contains markdown "**"`,
+      );
     } else if (child && typeof child === "object") {
-      checkNoMarkdownInDescriptions(owner, child, `${trail}.${key}`);
+      checkNoMarkdownInDescriptions(owner, child, `${trail}.${key}`, file);
     }
   }
 }
@@ -386,9 +400,25 @@ function listSourceFiles(dir, out = []) {
   return out;
 }
 
-async function checkLinkReachability(urls) {
+/** Hosts whose deep links are client-routed and always answer scripts with HTTP 404 (verified in a browser). */
+const SPA_404_HOSTS = new Set(["atlas.mitre.org"]);
+
+/**
+ * HEAD (then GET) every reference URL, sequentially. 404/410 are errors (the page is gone: fix or remove the
+ * citation); timeouts, 403/429 and 5xx stay warnings because they are often bot blocks or transient.
+ * `ownersByUrl` maps a URL to the entries that cite it, so the report says what to fix.
+ */
+async function checkLinkReachability(urls, ownersByUrl = new Map()) {
   const uniqueUrls = unique(urls);
   let checked = 0;
+  let broken = 0;
+  let unverified = 0;
+
+  const citedBy = (url) => {
+    const owners = unique(ownersByUrl.get(url) ?? []);
+    if (owners.length === 0) return "";
+    return ` (cited by ${owners.slice(0, 3).join(", ")}${owners.length > 3 ? `, +${owners.length - 3} more` : ""})`;
+  };
 
   const checkSingle = async (url) => {
     const timeoutMs = 10000;
@@ -405,15 +435,25 @@ async function checkLinkReachability(urls) {
 
     try {
       let response = await fetchWithTimeout(url, { method: "HEAD" });
-      if (!response.ok && [400, 401, 403, 405, 500, 501].includes(response.status)) {
+      if (!response.ok && [400, 401, 403, 404, 405, 500, 501].includes(response.status)) {
         response = await fetchWithTimeout(url, { method: "GET" });
       }
 
-      if (!response.ok) {
-        addWarning(`Link check failed (${response.status}) for ${url}`);
+      if ([404, 410].includes(response.status) && SPA_404_HOSTS.has(new URL(url).hostname)) {
+        unverified += 1;
+        addWarning(
+          `Link check failed (${response.status}) for ${url}${citedBy(url)} (single-page app that answers scripts with 404; open it in a browser)`,
+        );
+      } else if ([404, 410].includes(response.status)) {
+        broken += 1;
+        addError(`Broken link (${response.status}) ${url}${citedBy(url)}`);
+      } else if (!response.ok) {
+        unverified += 1;
+        addWarning(`Link check failed (${response.status}) for ${url}${citedBy(url)}`);
       }
     } catch (error) {
-      addWarning(`Link check could not verify ${url}: ${error.message}`);
+      unverified += 1;
+      addWarning(`Link check could not verify ${url}: ${error.message}${citedBy(url)}`);
     } finally {
       checked += 1;
       if (checked % 50 === 0) {
@@ -426,6 +466,9 @@ async function checkLinkReachability(urls) {
     // Sequential to avoid accidental rate-limiting and noisy failures.
     await checkSingle(url);
   }
+  addNote(
+    `Link check: ${uniqueUrls.length} unique URLs, ${broken} broken (404/410), ${unverified} unverified (timeouts, blocks, 5xx)`,
+  );
 }
 
 // ── Expected values from the primary sources (see src/data/sources.ts) ──────
@@ -440,6 +483,12 @@ const EXPECTED = {
 };
 
 const THREAT_MODULE = "src/components/components/securityData.ts";
+const FRAMEWORK_MODULE = "src/components/components/frameworkData.ts";
+const ARCHITECTURE_MODULE = "src/components/components/architecturesData.ts";
+const COMPONENT_MAP_MODULE = "src/components/components/componentDataMap.ts";
+const TOP10_MODULE = "src/components/components/owaspAgenticTop10Data.ts";
+const KC_MODULE = "src/data/kc.ts";
+const ICON_MODULE = "src/lib/icons.ts";
 
 function checkAisvs(aisvsGenerated, aisvsModule) {
   const generated = requireObject("aisvs (generated)", aisvsGenerated);
@@ -633,17 +682,165 @@ function checkSources(sources) {
   }
 }
 
+// ── Icons, KC names and date freshness (IMPROVEMENT_PLAN.md P1-15) ───────────
+
+/** Registry keys parsed from src/lib/icons.ts (the module imports lucide-react, so it is not loaded). */
+function loadIconRegistryKeys() {
+  const source = readFile(ICON_MODULE);
+  const start = source.indexOf("export const ICON_REGISTRY");
+  const end = source.indexOf("} as const", start);
+  if (start === -1 || end === -1) throw new Error(`ICON_REGISTRY not found in ${ICON_MODULE}`);
+  const keys = new Set(
+    [...source.slice(start, end).matchAll(/^\s+"?([a-z0-9-]+)"?:\s+[A-Z]\w+,/gm)].map((m) => m[1]),
+  );
+  if (keys.size < 50) {
+    throw new Error(
+      `Parsed only ${keys.size} keys from ICON_REGISTRY in ${ICON_MODULE}; the regex in check-data-integrity.js no longer matches its layout`,
+    );
+  }
+  return keys;
+}
+
+/** Same normalisation as normalizeIconKey() in src/lib/icons.ts. */
+function normalizeIconKey(key) {
+  return key
+    .trim()
+    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+    .replace(/[\s_]+/g, "-")
+    .toLowerCase();
+}
+
+/**
+ * Visit every `field` string under `value` (objects and arrays, cycle-safe). `visit(value, trail)` gets a
+ * readable trail such as `threatsData.t7.icon`.
+ */
+function collectStringFields(value, fields, visit, trail = "", seen = new WeakSet()) {
+  if (!value || typeof value !== "object" || seen.has(value)) return;
+  seen.add(value);
+  if (Array.isArray(value)) {
+    value.forEach((item, index) =>
+      collectStringFields(item, fields, visit, `${trail}[${itemLabel(item, index)}]`, seen),
+    );
+    return;
+  }
+  for (const [key, child] of Object.entries(value)) {
+    const childTrail = trail ? `${trail}.${key}` : key;
+    if (fields.includes(key) && typeof child === "string") visit(child, childTrail, key);
+    else if (child && typeof child === "object") {
+      collectStringFields(child, fields, visit, childTrail, seen);
+    }
+  }
+}
+
+/** Every data module whose exports are scanned for `icon` keys and dates: [file, exports]. */
+function dataModulesForScan(modules) {
+  return Object.entries(modules).map(([file, exports]) => [file, exports]);
+}
+
+/** P1-15: every `icon` key in the data modules resolves in ICON_REGISTRY (src/lib/icons.ts). */
+function checkIconKeys(modules) {
+  const registry = loadIconRegistryKeys();
+  let checked = 0;
+  const unknown = new Map();
+  for (const [file, exports] of dataModulesForScan(modules)) {
+    collectStringFields(exports, ["icon"], (key, trail) => {
+      checked += 1;
+      if (registry.has(key) || registry.has(normalizeIconKey(key))) return;
+      if (!unknown.has(key)) unknown.set(key, []);
+      unknown.get(key).push(`${file}: ${trail}`);
+    });
+  }
+  for (const [key, where] of unknown) {
+    addError(
+      `Icon key "${key}" is not in ICON_REGISTRY (${ICON_MODULE}); used at ${where.slice(0, 3).join(", ")}${
+        where.length > 3 ? ` (+${where.length - 3} more)` : ""
+      }`,
+    );
+  }
+  return { checked, registrySize: registry.size };
+}
+
+/** P1-15: KC1–KC6 names in src/data/kc.ts equal the official titles in frameworkData.ts. */
+function checkKcNames(kcModule, frameworkData, componentDataMap) {
+  const stripSuffix = (name) =>
+    String(name ?? "")
+      .replace(/\s*\(KC\d\)\s*$/i, "")
+      .trim();
+  const kc = safeObject(kcModule.KC);
+  const kcIds = Object.keys(kc);
+  ensure(
+    kcIds.length === 6,
+    `${KC_MODULE} defines ${kcIds.length} key components; expected KC1-KC6`,
+  );
+
+  const topLevel = new Map(safeArray(frameworkData).map((node) => [String(node.id), node]));
+  for (const [id, entry] of Object.entries(kc)) {
+    const owner = `${KC_MODULE} ${entry.code ?? id}`;
+    const node = topLevel.get(String(entry.frameworkDataId ?? id));
+    if (!node) {
+      addError(`${owner} has no matching top-level node in ${FRAMEWORK_MODULE}`);
+      continue;
+    }
+    const official = stripSuffix(node.title);
+    ensure(
+      stripSuffix(entry.name) === official,
+      `${owner} name "${entry.name}" differs from the official title "${node.title}" in ${FRAMEWORK_MODULE}`,
+    );
+    const mapped = componentDataMap?.[id];
+    if (mapped) {
+      ensure(
+        stripSuffix(mapped.title) === official,
+        `${COMPONENT_MAP_MODULE} ${id} title "${mapped.title}" differs from the official title "${node.title}"`,
+      );
+    }
+  }
+  for (const [id, node] of topLevel) {
+    if (/^kc\d$/i.test(id)) {
+      ensure(
+        Boolean(kc[id.toLowerCase()]),
+        `${FRAMEWORK_MODULE} ${id} ("${node.title}") has no entry in ${KC_MODULE}`,
+      );
+    }
+  }
+}
+
+/**
+ * P1-15: `lastUpdated` / `retrievedAt` anywhere in the data modules must be YYYY-MM-DD and younger than
+ * LAST_UPDATED_MAX_MONTHS (warnings). Threat / control / architecture `lastUpdated` and SOURCES (12 months)
+ * are already checked where they are validated, so those exports are skipped here.
+ */
+function checkDateFreshness(modules, skip) {
+  let checked = 0;
+  for (const [file, exports] of dataModulesForScan(modules)) {
+    const scanned = Object.fromEntries(Object.entries(exports).filter(([name]) => !skip.has(name)));
+    collectStringFields(scanned, ["lastUpdated", "retrievedAt"], (value, trail, field) => {
+      checked += 1;
+      const where = `${file}: ${trail}`;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        addWarning(`${where} is not a YYYY-MM-DD date: ${value}`);
+        return;
+      }
+      warnIf(
+        monthsSince(value) > LAST_UPDATED_MAX_MONTHS,
+        `${where} (${value}) is more than ${LAST_UPDATED_MAX_MONTHS} months old`,
+      );
+    });
+  }
+  return checked;
+}
+
 async function run() {
   const securityModule = loadTsModule(THREAT_MODULE);
-  const frameworkModule = loadTsModule("src/components/components/frameworkData.ts");
-  const architectureModule = loadTsModule("src/components/components/architecturesData.ts");
-  const componentMapModule = loadTsModule("src/components/components/componentDataMap.ts");
-  const top10Module = loadTsModule("src/components/components/owaspAgenticTop10Data.ts");
+  const frameworkModule = loadTsModule(FRAMEWORK_MODULE);
+  const architectureModule = loadTsModule(ARCHITECTURE_MODULE);
+  const componentMapModule = loadTsModule(COMPONENT_MAP_MODULE);
+  const top10Module = loadTsModule(TOP10_MODULE);
   const ciscoModule = loadTsModule("src/components/components/ciscoTaxonomyData.ts");
   const aivssModule = loadTsModule("src/components/components/aivssCalcData.ts");
   const aiuc1Module = loadTsModule("src/components/components/aiuc1Data.ts");
   const aisvsGeneratedModule = loadTsModule("src/data/aisvs.generated.ts");
   const aisvsModule = loadTsModule("src/data/aisvs.ts");
+  const kcModule = loadTsModule(KC_MODULE);
   const nistRemapModule = loadTsModule("src/data/nistAisvsRemap.ts");
   const atlasModule = loadTsModule("src/data/atlasCrosswalk.ts");
   const sourcesModule = loadTsModule("src/data/sources.ts");
@@ -757,7 +954,7 @@ async function run() {
 
     ensureIsoDate(owner, threat.lastUpdated);
     validateReferences(owner, threat.references);
-    checkNoMarkdownInDescriptions(owner, threat);
+    checkNoMarkdownInDescriptions(owner, threat, "", THREAT_MODULE);
   }
 
   // ── Mitigations / controls ───────────────────────────────────────────────
@@ -840,7 +1037,7 @@ async function run() {
 
     ensureIsoDate(owner, mitigation.lastUpdated);
     validateReferences(owner, mitigation.references);
-    checkNoMarkdownInDescriptions(owner, mitigation);
+    checkNoMarkdownInDescriptions(owner, mitigation, "", THREAT_MODULE);
   }
 
   for (const [mitigationKey, mitigation] of mitigationEntries) {
@@ -931,7 +1128,7 @@ async function run() {
 
     ensureIsoDate(owner, architecture.lastUpdated);
     validateReferences(owner, architecture.references);
-    checkNoMarkdownInDescriptions(owner, architecture);
+    checkNoMarkdownInDescriptions(owner, architecture, "", ARCHITECTURE_MODULE);
   }
 
   for (const nodeRef of nodeThreatRefs) {
@@ -942,8 +1139,13 @@ async function run() {
       );
     }
   }
-  checkNoMarkdownInDescriptions("frameworkData", frameworkData);
-  checkNoMarkdownInDescriptions("componentDataMap", componentMapModule.componentDataMap);
+  checkNoMarkdownInDescriptions("frameworkData", frameworkData, "", FRAMEWORK_MODULE);
+  checkNoMarkdownInDescriptions(
+    "componentDataMap",
+    componentMapModule.componentDataMap,
+    "",
+    COMPONENT_MAP_MODULE,
+  );
 
   // ── Cisco AI Security and Safety Taxonomy ────────────────────────────────
   const ciscoObjectives = Object.entries(safeObject(ciscoRaw))
@@ -1034,7 +1236,7 @@ async function run() {
     }
 
     validateReferences(owner, entry.references);
-    checkNoMarkdownInDescriptions(owner, entry);
+    checkNoMarkdownInDescriptions(owner, entry, "", TOP10_MODULE);
   }
 
   const top10CodeDuplicates = listDuplicates(agenticTop10Data.map((entry) => String(entry.code)));
@@ -1233,6 +1435,35 @@ async function run() {
   }
   checkSources(sources);
 
+  // ── Icons, KC names, date freshness (P1-15) ──────────────────────────────
+  const iconStats = checkIconKeys({
+    [THREAT_MODULE]: securityModule,
+    [FRAMEWORK_MODULE]: frameworkModule,
+    [ARCHITECTURE_MODULE]: architectureModule,
+    [TOP10_MODULE]: top10Module,
+    "src/components/components/aiuc1Data.ts": aiuc1Module,
+    "src/data/aisvs.ts": aisvsModule,
+    [KC_MODULE]: kcModule,
+  });
+  checkKcNames(kcModule, frameworkData, componentMapModule.componentDataMap);
+  checkNoMarkdownInDescriptions("KC", kcModule.KC, "", KC_MODULE);
+  const datedFields = checkDateFreshness(
+    {
+      [THREAT_MODULE]: securityModule,
+      [FRAMEWORK_MODULE]: frameworkModule,
+      [ARCHITECTURE_MODULE]: architectureModule,
+      [COMPONENT_MAP_MODULE]: componentMapModule,
+      [TOP10_MODULE]: top10Module,
+      "src/components/components/ciscoTaxonomyData.ts": ciscoModule,
+      "src/components/components/aivssCalcData.ts": aivssModule,
+      "src/components/components/aiuc1Data.ts": aiuc1Module,
+      "src/data/aisvs.generated.ts": aisvsGeneratedModule,
+      "src/data/nistAisvsRemap.ts": nistRemapModule,
+      "src/data/atlasCrosswalk.ts": atlasModule,
+    },
+    new Set(["threatsData", "mitigationsData", "architecturesData"]),
+  );
+
   if (bareDomainUpstream.length > 0) {
     addNote(
       `${bareDomainUpstream.length} bare-domain reference URL(s) are copied verbatim from AISVS ${EXPECTED.aisvs.version} chapter references (upstream; not changed here)`,
@@ -1247,7 +1478,15 @@ async function run() {
   }
 
   if (shouldCheckLinks) {
-    await checkLinkReachability(collectedReferenceUrls.map((entry) => entry.url));
+    const ownersByUrl = new Map();
+    for (const { owner, url } of collectedReferenceUrls) {
+      if (!ownersByUrl.has(url)) ownersByUrl.set(url, []);
+      ownersByUrl.get(url).push(owner);
+    }
+    await checkLinkReachability(
+      collectedReferenceUrls.map((entry) => entry.url),
+      ownersByUrl,
+    );
   } else {
     addNote("Live URL reachability was skipped (run with --check-links to enable network checks).");
   }
@@ -1272,6 +1511,9 @@ async function run() {
   console.log(`AIVSS worked examples recomputed: ${safeArray(aivssModule.coreRiskScores).length}`);
   console.log(`NIST AI RMF subcategories mapped: ${remapEntries.length}`);
   console.log(`Stale AISVS code references in src/: ${staleAisvsRefs}`);
+  console.log(
+    `Icon keys resolved: ${iconStats.checked} against ${iconStats.registrySize} registry keys; dated fields checked: ${datedFields}`,
+  );
   console.log(
     `Reference URLs (unique): ${unique(collectedReferenceUrls.map((entry) => entry.url)).length}`,
   );

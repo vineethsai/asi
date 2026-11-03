@@ -1,0 +1,82 @@
+name: Weekly link check
+
+# Network reachability of every reference URL in the data modules (IMPROVEMENT_PLAN.md A10).
+# Deliberately not part of the push/PR pipelines: it is slow and depends on third-party sites.
+# 404/410 fail the job; timeouts, bot blocks (403/429) and 5xx are reported as warnings.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: weekly-links
+  cancel-in-progress: false
+
+jobs:
+  check-links:
+    name: Check reference links
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    continue-on-error: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check reference links
+        shell: bash
+        run: |
+          set +e
+          npm run check:data -- --check-links 2>&1 | tee link-check.log
+          status=${PIPESTATUS[0]}
+
+          {
+            echo "## Weekly link check"
+            echo
+            grep -E '^- Link check: ' link-check.log || echo "- Link check did not complete (see the job log)."
+            echo
+            broken=$(grep -cE '^- Broken link' link-check.log)
+            unverified=$(grep -cE '^- Link check (failed|could not verify)' link-check.log)
+            if [ "$broken" -gt 0 ]; then
+              echo "### Broken links (fix or remove the citation)"
+              echo '```'
+              grep -E '^- Broken link' link-check.log | sed 's/^- //'
+              echo '```'
+            fi
+            if [ "$unverified" -gt 0 ]; then
+              echo "### Could not be verified (blocks, timeouts, 5xx; re-check by hand)"
+              echo '```'
+              grep -E '^- Link check (failed|could not verify)' link-check.log | sed 's/^- //'
+              echo '```'
+            fi
+            if [ "$broken" -eq 0 ] && [ "$unverified" -eq 0 ] && [ "$status" -eq 0 ]; then
+              echo "All reference links are reachable."
+            fi
+            if [ "$status" -ne 0 ] && [ "$broken" -eq 0 ]; then
+              echo "The data-integrity script failed for a reason other than a broken link; see the job log."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          exit "$status"
+
+      - name: Upload link-check log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: link-check-log
+          path: link-check.log
+          if-no-files-found: ignore
+          retention-days: 30
