@@ -11,6 +11,11 @@
  *   onSegmentClick?: (row, segment) => void; onRowClick?: (row) => void
  *   valueFormat?: (row, sum) => string   — default "sum / total (pct %)" or "sum"
  *   sort?: "none" | "desc"     — default "none"
+ *   scale?: "shared" | "row"   — "shared" (default): one scale for all rows (`max`); "row": each
+ *                                row's track is its own `total` (rows without `total` use `max`)
+ *   row.filled?: number        — value the filled part represents (default: segment sum), e.g.
+ *                                distinct requirements when segments overlap; segments split it
+ *                                in proportion to their values
  *   labelWidth?: number        — px for the row label column on ≥ sm (default 180)
  *
  * Usage:
@@ -42,6 +47,8 @@ export interface CoverageRow {
   sublabel?: string;
   href?: string;
   total?: number;
+  /** Filled extent (defaults to the segment sum); segments share it proportionally. */
+  filled?: number;
   segments: CoverageSegment[];
 }
 
@@ -57,6 +64,7 @@ export interface CoverageBarsProps {
   onRowClick?: (row: CoverageRow) => void;
   valueFormat?: (row: CoverageRow, sum: number) => string;
   sort?: "none" | "desc";
+  scale?: "shared" | "row";
   labelWidth?: number;
   className?: string;
 }
@@ -76,6 +84,7 @@ export function CoverageBars({
   onRowClick,
   valueFormat,
   sort = "none",
+  scale: scaleMode = "shared",
   labelWidth = 180,
   className,
 }: CoverageBarsProps) {
@@ -125,6 +134,8 @@ export function CoverageBars({
       <ul className="space-y-2.5">
         {sorted.map((row, ri) => {
           const sum = sumOf(row);
+          const filled = row.filled ?? sum;
+          const denom = scaleMode === "row" && row.total ? row.total : scale;
           const labelEl = (
             <>
               <span className="block truncate text-sm font-medium text-foreground">
@@ -158,7 +169,7 @@ export function CoverageBars({
                 <div
                   className="absolute inset-y-0 left-0 flex gap-px"
                   style={{
-                    width: grown ? `${Math.min(100, (sum / scale) * 100)}%` : "0%",
+                    width: grown ? `${Math.min(100, (filled / denom) * 100)}%` : "0%",
                     transition: `width ${CHART_MOTION.barMs}ms ${CHART_MOTION.cssEase} ${stagger(ri, reduced)}ms`,
                   }}
                 >

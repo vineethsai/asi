@@ -1,215 +1,104 @@
-import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Search } from "lucide-react";
 import PageLayout from "@/components/layout/PageLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import PageHeader from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { mitigationsData, Mitigation, threatsData } from "@/components/components/securityData";
-import { Search, Layers, Hammer, Settings, ArrowRight, Shield, CheckCircle2 } from "lucide-react";
+import { EmptyState } from "@/components/content/EmptyState";
+import { SOURCES } from "@/data/sources";
+import { useProgress } from "@/hooks/useProgress";
+import { LifecycleView } from "@/components/lifecycle/LifecycleView";
+import { CONTROL_LIST } from "@/components/controls/controlIndex";
+import { PHASE_ORDER, phaseTaskIds } from "@/components/controls/phaseTasks";
+import { controlCode } from "@/components/threats/threatIndex";
 
-const phases = [
-  {
-    id: "design",
-    label: "Design",
-    icon: <Layers className="h-5 w-5" />,
-    description: "Security decisions made during system design and architecture planning.",
-  },
-  {
-    id: "build",
-    label: "Build",
-    icon: <Hammer className="h-5 w-5" />,
-    description: "Security controls implemented during development and integration.",
-  },
-  {
-    id: "operations",
-    label: "Operations",
-    icon: <Settings className="h-5 w-5" />,
-    description: "Ongoing security monitoring, maintenance, and incident response.",
-  },
-];
+const ALL_TASKS = CONTROL_LIST.map((m) => ({
+  id: m.id,
+  tasks: PHASE_ORDER.flatMap((p) => phaseTaskIds(m, p)),
+}));
+const TASK_TOTAL = ALL_TASKS.reduce((n, c) => n + c.tasks.length, 0);
 
 export default function Implementation() {
-  const [search, setSearch] = useState("");
-  const [activePhase, setActivePhase] = useState("design");
-
-  const mitigations = useMemo(
-    () => Object.values(mitigationsData as Record<string, Mitigation>),
-    [],
+  const [params, setParams] = useSearchParams();
+  const q = params.get("q") ?? "";
+  const progress = useProgress((s) => s.controls);
+  const done = useMemo(
+    () => ALL_TASKS.reduce((n, c) => n + c.tasks.filter((t) => progress[c.id]?.has(t)).length, 0),
+    [progress],
   );
 
-  const filteredMitigations = useMemo(() => {
-    const phase = activePhase;
-    return mitigations.filter((m) => {
-      const matchesPhase =
-        (phase === "design" && m.designPhase) ||
-        (phase === "build" && m.buildPhase) ||
-        (phase === "operations" && m.operationPhase);
-      if (!matchesPhase) return false;
-      if (!search) return true;
-      const q = search.toLowerCase();
-      return (
-        m.name.toLowerCase().includes(q) ||
-        m.description.toLowerCase().includes(q) ||
-        (m.tags && m.tags.some((t) => t.toLowerCase().includes(q)))
-      );
-    });
-  }, [mitigations, activePhase, search]);
+  const controls = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    if (!needle) return CONTROL_LIST;
+    return CONTROL_LIST.filter((m) =>
+      [controlCode(m.id), m.name, m.description, ...(m.tags ?? [])].some((s) =>
+        s.toLowerCase().includes(needle),
+      ),
+    );
+  }, [q]);
 
-  const stats = useMemo(
-    () => ({
-      design: mitigations.filter((m) => m.designPhase).length,
-      build: mitigations.filter((m) => m.buildPhase).length,
-      operations: mitigations.filter((m) => m.operationPhase).length,
-      total: mitigations.length,
-    }),
-    [mitigations],
-  );
-
-  const getThreatNames = (threatIds: string[]) => {
-    return threatIds
-      .map((id) => threatsData[id]?.name)
-      .filter(Boolean)
-      .slice(0, 3);
+  const setQuery = (value: string) => {
+    const next = new URLSearchParams(params);
+    if (value) next.set("q", value);
+    else next.delete("q");
+    setParams(next, { replace: true });
   };
 
   return (
     <PageLayout
-      title="Implementation Guide"
-      description="Step-by-step security implementation guide for AI agentic systems. Organized by lifecycle phase: Design, Build, and Operations with detailed controls and code examples."
+      title="Lifecycle view"
+      description="Every agentic AI security control laid out across the design, build and operations phases, with checklists that track your implementation progress."
       canonicalPath="/implementation"
-      className="space-y-8"
+      keywords="AI security implementation, secure AI development lifecycle, agent security controls, design build operations, AI security checklist"
     >
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight">Implementation Guide</h1>
-        <p className="mt-1 text-muted-foreground">
-          Practical security controls organized by development lifecycle phase. Each control
-          includes implementation details, tooling recommendations, and threat mappings.
-        </p>
-      </div>
-
-      <div className="flex flex-wrap gap-6 text-sm text-muted-foreground mb-6">
-        {phases.map((phase) => (
-          <span key={phase.id}>
-            <strong className="text-foreground">{stats[phase.id as keyof typeof stats]}</strong>{" "}
-            {phase.label} Controls
-          </span>
-        ))}
-        <span>
-          <strong className="text-foreground">{stats.total}</strong> Total
-        </span>
-      </div>
-
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Search controls..."
-          className="pl-10"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+      <PageHeader
+        eyebrow="Implementation"
+        title="Lifecycle view"
+        description="The controls in the order you apply them: decide in design, implement in build, sustain in operations. Pick a control in a phase to work through its tasks."
+        source={SOURCES.controls}
+        stats={[
+          { label: "controls", value: CONTROL_LIST.length },
+          {
+            label: "phase tasks",
+            value: TASK_TOTAL,
+            hint: "Checklist items across all controls and phases.",
+          },
+          {
+            label: "done",
+            value: TASK_TOTAL ? `${Math.round((done / TASK_TOTAL) * 100)}%` : "0%",
+            hint: `${done} of ${TASK_TOTAL} tasks checked in this browser.`,
+          },
+        ]}
+        filters={
+          <div className="relative w-full sm:w-72">
+            <label htmlFor="lifecycle-search" className="sr-only">
+              Filter controls
+            </label>
+            <Search
+              aria-hidden
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              id="lifecycle-search"
+              type="search"
+              placeholder="Filter controls…"
+              value={q}
+              onChange={(e) => setQuery(e.target.value)}
+              className="h-9 pl-9"
+            />
+          </div>
+        }
+      />
+      {controls.length ? (
+        <LifecycleView controls={controls} />
+      ) : (
+        <EmptyState
+          icon="filter"
+          title="No controls match"
+          description="Try a different search term."
+          action={{ label: "Clear search", onClick: () => setQuery("") }}
         />
-      </div>
-
-      {/* Phase Tabs */}
-      <Tabs value={activePhase} onValueChange={setActivePhase}>
-        <TabsList className="grid w-full grid-cols-3">
-          {phases.map((phase) => (
-            <TabsTrigger key={phase.id} value={phase.id} className="flex items-center gap-2">
-              {phase.icon}
-              {phase.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-
-        {phases.map((phase) => (
-          <TabsContent key={phase.id} value={phase.id} className="space-y-4 mt-6">
-            <p className="text-muted-foreground">{phase.description}</p>
-            <div className="text-sm text-muted-foreground">
-              Showing {filteredMitigations.length} control
-              {filteredMitigations.length !== 1 ? "s" : ""}
-            </div>
-
-            <div className="grid gap-4">
-              {filteredMitigations.map((m) => (
-                <Card key={m.id} className="hover:bg-muted/50 transition-colors">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <Shield className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
-                        {m.name}
-                      </CardTitle>
-                      {m.status && (
-                        <Badge variant={m.status === "active" ? "default" : "secondary"}>
-                          {m.status}
-                        </Badge>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <p className="text-sm text-muted-foreground">{m.description}</p>
-
-                    {m.implementationDetail[phase.id as keyof typeof m.implementationDetail] && (
-                      <div className="rounded-lg p-4">
-                        <h4 className="text-sm font-semibold mb-1 flex items-center gap-2">
-                          <CheckCircle2
-                            className="h-4 w-4 text-muted-foreground"
-                            aria-hidden="true"
-                          />
-                          {phase.label} Guidance
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {m.implementationDetail[phase.id as keyof typeof m.implementationDetail]}
-                        </p>
-                      </div>
-                    )}
-
-                    {m.implementationDetail.toolsAndFrameworks && (
-                      <div className="text-sm">
-                        <span className="font-medium">Tools: </span>
-                        <span className="text-muted-foreground">
-                          {m.implementationDetail.toolsAndFrameworks}
-                        </span>
-                      </div>
-                    )}
-
-                    {m.threatIds.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {getThreatNames(m.threatIds).map((name) => (
-                          <Badge key={name} variant="outline" className="text-xs">
-                            {name}
-                          </Badge>
-                        ))}
-                        {m.threatIds.length > 3 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{m.threatIds.length - 3} more
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="flex justify-end">
-                      <Link to={`/controls/${m.id}`}>
-                        <Button variant="ghost" size="sm" className="text-primary">
-                          View Full Details <ArrowRight className="h-4 w-4 ml-1" />
-                        </Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-
-              {filteredMitigations.length === 0 && (
-                <div className="text-center py-12 text-muted-foreground">
-                  No controls found matching your search for this phase.
-                </div>
-              )}
-            </div>
-          </TabsContent>
-        ))}
-      </Tabs>
+      )}
     </PageLayout>
   );
 }

@@ -17,6 +17,10 @@
  *   colorFor?: (datum, depth) => string   — default: datum.color → inherited → KC palette by index
  *   onNavigate?: (datum) => void     — leaf activation (and "Open" link in the breadcrumb)
  *   showListToggle?: boolean (default true)
+ *   formatValue?: (datum, value) => string   — text for a node's value in labels, the centre,
+ *       the list view and the tooltip (default `${value} ${valueLabel}`); use it when arc size is
+ *       not the number to print (e.g. sizes split from a parent)
+ *   renderTooltip?: (datum, value) => ReactNode — replaces the tooltip body (e.g. threat chips)
  *
  * Usage:
  *   <Sunburst ariaLabel="Components by KC, sized by threat count" valueLabel="threats"
@@ -61,6 +65,8 @@ export interface SunburstProps {
   colorFor?: (datum: HierarchyDatum, depth: number) => string;
   onNavigate?: (datum: HierarchyDatum) => void;
   showListToggle?: boolean;
+  formatValue?: (datum: HierarchyDatum, value: number) => string;
+  renderTooltip?: (datum: HierarchyDatum, value: number) => ReactNode;
   className?: string;
 }
 
@@ -72,7 +78,15 @@ type RectEl = SVGGElement & { __current?: Coords };
 const DEFAULT_COLORS = KC_ORDER.map((id) => KC[id].color);
 const TAU = 2 * Math.PI;
 
-function NestedList({ node, valueLabel }: { node: HierarchyDatum; valueLabel: string }) {
+function NestedList({
+  node,
+  valueLabel,
+  formatValue,
+}: {
+  node: HierarchyDatum;
+  valueLabel: string;
+  formatValue?: (datum: HierarchyDatum, value: number) => string;
+}) {
   if (!node.children?.length) return null;
   return (
     <ul className="ml-4 list-disc space-y-0.5">
@@ -85,13 +99,17 @@ function NestedList({ node, valueLabel }: { node: HierarchyDatum; valueLabel: st
           ) : (
             c.name
           )}
-          {c.value !== undefined && (
-            <span className="text-muted-foreground">
-              {" "}
-              — {c.value} {valueLabel}
-            </span>
+          {formatValue ? (
+            <span className="text-muted-foreground"> — {formatValue(c, c.value ?? 0)}</span>
+          ) : (
+            c.value !== undefined && (
+              <span className="text-muted-foreground">
+                {" "}
+                — {c.value} {valueLabel}
+              </span>
+            )
           )}
-          <NestedList node={c} valueLabel={valueLabel} />
+          <NestedList node={c} valueLabel={valueLabel} formatValue={formatValue} />
         </li>
       ))}
     </ul>
@@ -115,6 +133,8 @@ export function Sunburst({
   colorFor,
   onNavigate,
   showListToggle = true,
+  formatValue,
+  renderTooltip,
   className,
 }: SunburstProps) {
   const reduced = usePrefersReducedMotion();
@@ -158,6 +178,11 @@ export function Sunburst({
       return DEFAULT_COLORS[(top ? (topIndex.get(top.data.id) ?? 0) : 0) % DEFAULT_COLORS.length];
     };
   }, [root, colorFor]);
+
+  const fmt = (d: HierarchyDatum, v: number) =>
+    formatValue ? formatValue(d, v) : `${v} ${valueLabel}`;
+  const fmtRef = useRef(fmt);
+  fmtRef.current = fmt;
 
   const W = Math.max(240, Math.min(width || size, 1200));
   const sunSize = Math.min(size, W);
@@ -262,7 +287,7 @@ export function Sunburst({
         const kids = d.children?.length
           ? `, ${d.children.length} sub-items, press Enter to zoom`
           : "";
-        return `${d.data.name}: ${d.value ?? 0} ${valueLabel}${kids}`;
+        return `${d.data.name}: ${fmtRef.current(d.data, d.value ?? 0)}${kids}`;
       })
       .style("fill", (d) => colorOf(d))
       .style("fill-opacity", (d) => (d.depth - focus.depth > 1 ? 0.62 : 0.9))
@@ -400,7 +425,7 @@ export function Sunburst({
         (exit) => exit.remove(),
       );
     cells
-      .attr("aria-label", (d) => `${d.data.name}: ${d.value ?? 0} ${valueLabel}`)
+      .attr("aria-label", (d) => `${d.data.name}: ${fmtRef.current(d.data, d.value ?? 0)}`)
       .on("click", (_e, d) => activateRef.current(realOf(d)))
       .on("keydown", (e: KeyboardEvent, d) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -519,7 +544,7 @@ export function Sunburst({
       {asList ? (
         <div className="max-h-[480px] overflow-auto text-sm">
           <p className="font-medium">{data.name}</p>
-          <NestedList node={data} valueLabel={valueLabel} />
+          <NestedList node={data} valueLabel={valueLabel} formatValue={formatValue} />
         </div>
       ) : (
         <>
@@ -613,7 +638,7 @@ export function Sunburst({
                         pointerEvents: "none",
                       }}
                     >
-                      {focus.value ?? 0} {valueLabel}
+                      {fmt(focus.data, focus.value ?? 0)}
                     </text>
                   </g>
                 )}
@@ -623,23 +648,30 @@ export function Sunburst({
           </div>
           <div className="sr-only">
             <p>{data.name}</p>
-            <NestedList node={data} valueLabel={valueLabel} />
+            <NestedList node={data} valueLabel={valueLabel} formatValue={formatValue} />
           </div>
         </>
       )}
       <ChartTooltip {...tip} id={tipId} onDismiss={hide}>
-        {tip.content && (
+        {tip.content && renderTooltip ? (
+          <div className="space-y-1">
+            {renderTooltip(tip.content.data, tip.content.value ?? 0)}
+            <p className="text-muted-foreground">
+              {tip.content.children?.length ? "Click to zoom" : onNavigate ? "Click to open" : ""}
+            </p>
+          </div>
+        ) : tip.content ? (
           <div className="space-y-0.5">
             <p className="font-medium">{tip.content.data.name}</p>
             <p className="text-muted-foreground">
-              {tip.content.value ?? 0} {valueLabel}
+              {fmt(tip.content.data, tip.content.value ?? 0)}
               {tip.content.children?.length ? ` · ${tip.content.children.length} sub-items` : ""}
             </p>
             <p className="text-muted-foreground">
               {tip.content.children?.length ? "Click to zoom" : onNavigate ? "Click to open" : ""}
             </p>
           </div>
-        )}
+        ) : null}
       </ChartTooltip>
     </ChartFrame>
   );

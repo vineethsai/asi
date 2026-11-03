@@ -20,6 +20,8 @@
  *   showValues?: boolean (default true); cellSize?: number (default 34)
  *   verticalHeaders?: boolean (default: columns > 10); maxHeight?: number | string
  *   rowHeaderLabel?: string; renderTooltip?: (row, column, cell) => ReactNode
+ *   showTotals?: boolean (default false) — row totals (last column) and column totals (footer
+ *       row): the number of mapped cells; totalLabel?: string (default "Total")
  *   ariaLabel: string; title?; description?; legend?; toolbar?
  *
  * Usage:
@@ -90,6 +92,8 @@ export interface HeatmapProps {
   verticalHeaders?: boolean;
   maxHeight?: number | string;
   rowHeaderLabel?: string;
+  showTotals?: boolean;
+  totalLabel?: string;
   renderTooltip?: (
     row: HeatmapRow,
     column: HeatmapColumn,
@@ -124,6 +128,8 @@ export function Heatmap({
   verticalHeaders,
   maxHeight,
   rowHeaderLabel = "",
+  showTotals = false,
+  totalLabel = "Total",
   renderTooltip,
   className,
 }: HeatmapProps) {
@@ -236,6 +242,20 @@ export function Heatmap({
     }
   };
 
+  const isMapped = (c?: HeatmapCell) => !!c && (c.value !== undefined || !!c.band);
+  const rowTotal = (row: HeatmapRow) =>
+    columns.reduce((n, col) => n + (isMapped(getCell(row.id, col.id)) ? 1 : 0), 0);
+  const colTotal = (vc: VisibleCol) =>
+    rows.reduce(
+      (n, row) =>
+        n +
+        ((vc.kind === "col" ? [vc.col] : vc.members).some((m) => isMapped(getCell(row.id, m.id)))
+          ? 1
+          : 0),
+      0,
+    );
+  const totalCls = "border-b bg-muted/40 px-2 text-center font-mono font-semibold tabular-nums";
+
   const vertical = verticalHeaders ?? columns.length > 10;
   const hasGroups = !!groups?.length;
   const colLabel = (vc: VisibleCol) =>
@@ -270,8 +290,8 @@ export function Heatmap({
           ref={tableRef}
           role="grid"
           aria-label={ariaLabel}
-          aria-rowcount={rows.length + (hasGroups ? 2 : 1)}
-          aria-colcount={visible.length + 1}
+          aria-rowcount={rows.length + (hasGroups ? 2 : 1) + (showTotals ? 1 : 0)}
+          aria-colcount={visible.length + 1 + (showTotals ? 1 : 0)}
           className="border-separate border-spacing-0 text-xs"
         >
           <thead>
@@ -321,6 +341,15 @@ export function Heatmap({
                     />
                   ),
                 )}
+                {showTotals && (
+                  <th
+                    scope="col"
+                    rowSpan={2}
+                    className="sticky top-0 z-20 border-b bg-card px-2 align-bottom font-medium text-muted-foreground"
+                  >
+                    {totalLabel}
+                  </th>
+                )}
               </tr>
             )}
             <tr>
@@ -360,6 +389,14 @@ export function Heatmap({
                   </th>
                 );
               })}
+              {showTotals && !hasGroups && (
+                <th
+                  scope="col"
+                  className="sticky top-0 z-20 border-b bg-card px-2 align-bottom font-medium text-muted-foreground"
+                >
+                  {totalLabel}
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -457,9 +494,48 @@ export function Heatmap({
                     </td>
                   );
                 })}
+                {showTotals && (
+                  <td
+                    role="gridcell"
+                    aria-label={`${row.label}: ${rowTotal(row)} mapped`}
+                    className={totalCls}
+                  >
+                    {rowTotal(row)}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
+          {showTotals && (
+            <tfoot>
+              <tr>
+                <th
+                  scope="row"
+                  className="sticky left-0 z-10 border-r bg-card px-3 py-1 text-left font-medium text-muted-foreground"
+                >
+                  {totalLabel}
+                </th>
+                {visible.map((vc) => (
+                  <td
+                    key={vc.kind === "col" ? vc.col.id : `agg-${vc.group.id}`}
+                    role="gridcell"
+                    aria-label={`${colLabel(vc)}: ${colTotal(vc)} mapped`}
+                    className={cn(totalCls, "border-r")}
+                    style={{ height: cellSize }}
+                  >
+                    {colTotal(vc)}
+                  </td>
+                ))}
+                <td
+                  role="gridcell"
+                  aria-label={`${rows.reduce((n, r) => n + rowTotal(r), 0)} mapped in all`}
+                  className={totalCls}
+                >
+                  {rows.reduce((n, r) => n + rowTotal(r), 0)}
+                </td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
       <ChartTooltip {...tip} id={tipId} onDismiss={hide}>
