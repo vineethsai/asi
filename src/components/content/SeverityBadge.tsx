@@ -44,7 +44,7 @@ export interface SeverityBadgeProps extends Omit<HTMLAttributes<HTMLSpanElement>
 }
 
 const SIZES = {
-  xs: "h-5 gap-1 px-1.5 text-[10px]",
+  xs: "h-5 gap-1 px-1.5 text-[11px]",
   sm: "h-6 gap-1.5 px-2 text-xs",
   md: "h-7 gap-1.5 px-2.5 text-sm",
 } as const;
