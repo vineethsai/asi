@@ -1,4 +1,9 @@
-import { useCallback, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from "react";
+import {
+  useCallback,
+  useEffect,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type RefObject,
+} from "react";
 import { toast } from "sonner";
 import { isTypingTarget } from "@/components/layout/commandPaletteContext";
 import { readLibrary, saveModel } from "../persistence";
@@ -37,6 +42,45 @@ export function useModelerKeyboard(
   canvasRef: RefObject<HTMLElement | null>,
   actions: CanvasActions,
 ) {
+  // Fallback for the moments focus sits on <body> (after a context-menu delete, a
+  // closed dialog, or a click on the page background): modeler-level shortcuts
+  // (undo / redo / save / analyze / help) still work. Canvas-only shortcuts such
+  // as Delete, Space and arrows never fire from here (P3-38).
+  useEffect(() => {
+    const onWindowKeyDown = (e: KeyboardEvent) => {
+      const active = document.activeElement;
+      if (active && active !== document.body && active !== document.documentElement) return;
+      if (e.isComposing || tm().ui.dialog) return;
+      const id = matchShortcut(e, "modeler");
+      if (!id) return;
+      const s = tm();
+      switch (id) {
+        case "save":
+          e.preventDefault();
+          saveCurrentModel();
+          return;
+        case "undo":
+          e.preventDefault();
+          s.undo();
+          return;
+        case "redo":
+          e.preventDefault();
+          s.redo();
+          return;
+        case "analyze":
+          e.preventDefault();
+          void s.analyze();
+          return;
+        case "help":
+          e.preventDefault();
+          s.openDialog("shortcuts");
+          return;
+      }
+    };
+    window.addEventListener("keydown", onWindowKeyDown);
+    return () => window.removeEventListener("keydown", onWindowKeyDown);
+  }, []);
+
   return useCallback(
     (e: ReactKeyboardEvent<HTMLElement>) => {
       if (e.nativeEvent.isComposing) return;
@@ -82,6 +126,10 @@ export function useModelerKeyboard(
         case "delete":
           if (ro) return;
           handled();
+          // Keep focus inside the canvas: the focused node is about to be removed,
+          // and the browser would otherwise drop focus to <body>, where the next
+          // Undo keystroke could not reach this handler.
+          canvasRef.current?.focus({ preventScroll: true });
           actions.deleteSelection();
           return;
         case "selectAll":
