@@ -86,7 +86,7 @@ export function Radar({
 }: RadarProps) {
   const theme = useChartTheme();
   const reduced = usePrefersReducedMotion();
-  const { ref, width } = useResizeObserver<HTMLDivElement>({ initialWidth: 360 });
+  const { ref, width } = useResizeObserver<HTMLDivElement>({ initialWidth: 280 });
   const [innerMode, setInnerMode] = useState(
     defaultMode ?? (series.length > 1 ? "overlay" : "individual"),
   );
@@ -221,7 +221,7 @@ export function Radar({
         ]),
       }}
     >
-      <div ref={ref} className="w-full">
+      <div ref={ref} className="w-full min-w-0 max-w-full overflow-hidden">
         {current === "overlay" || series.length <= 1 ? (
           <div className="flex justify-center">{chart(series, safeWidth, height, "overlay")}</div>
         ) : (
