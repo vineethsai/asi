@@ -1,1 +1,0 @@
-import{j as t,N as e}from"./react-wmot85l4.js";import{a as r}from"./featured-DIjx9ALh.js";import"./securityData-MRODfjXJ.js";import"./aisvs.generated-ZL_r_Zp3.js";function p(){return t.jsx(e,{to:r(new Date),replace:!0})}export{p as default};

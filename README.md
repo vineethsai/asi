@@ -75,7 +75,7 @@ The app will be available at `http://localhost:8080`.
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Start the Vite development server |
-| `npm run build` | Production build (outputs to `docs/`) |
+| `npm run build` | Production build (outputs to `docs/`, which is not committed; GitHub Actions builds and publishes it) |
 | `npm run preview` | Preview the production build locally |
 | `npm run lint` | Run ESLint |
 | `npm run lint:fix` | Run ESLint with auto-fix |
@@ -114,7 +114,7 @@ scripts/
   check-data-integrity.js   Cross-dataset validation
   import-aisvs.mjs          AISVS importer (official repo → src/data/aisvs.generated.ts)
   print-counts.mjs          Dataset counts for this README
-docs/                       Production build output (GitHub Pages)
+docs/                       Production build output (ignored; published by GitHub Actions)
 public/                     Static assets (favicons, fonts, manifest)
 ```
 

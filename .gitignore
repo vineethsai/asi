@@ -29,3 +29,6 @@ dist-ssr
 
 # Bun lockfile (project uses npm)
 bun.lockb
+
+# Build output: built and published by .github/workflows/deploy.yml (GitHub Pages source = GitHub Actions)
+docs/
