@@ -21,6 +21,17 @@ export const MAESTRO_LAYER_LABELS: Record<MaestroLayer, string> = {
   [MaestroLayer.AgentEcosystem]: "L7: Agent Ecosystem",
 };
 
+/** Full CSA MAESTRO layer names (A4): use in prose, the Guide and tooltips. */
+export const MAESTRO_LAYER_NAMES: Record<MaestroLayer, string> = {
+  [MaestroLayer.FoundationModels]: "Foundation Models",
+  [MaestroLayer.DataOperations]: "Data Operations",
+  [MaestroLayer.AgentFrameworks]: "Agent Frameworks",
+  [MaestroLayer.DeploymentInfrastructure]: "Deployment & Infrastructure",
+  [MaestroLayer.EvaluationObservability]: "Evaluation & Observability",
+  [MaestroLayer.SecurityCompliance]: "Security & Compliance",
+  [MaestroLayer.AgentEcosystem]: "Agent Ecosystem",
+};
+
 export const MAESTRO_LAYER_COLORS: Record<MaestroLayer, string> = {
   [MaestroLayer.FoundationModels]: "#3b82f6",
   [MaestroLayer.DataOperations]: "#a855f7",

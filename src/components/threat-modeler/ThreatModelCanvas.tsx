@@ -1,1905 +1,326 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
-  ReactFlow,
-  ReactFlowProvider,
-  Background,
-  Controls,
-  MiniMap,
-  addEdge,
-  useNodesState,
-  useEdgesState,
-  useReactFlow,
-  type OnConnect,
-  type Connection,
-  type NodeTypes,
-  type EdgeTypes,
-  type ReactFlowInstance,
-  type NodeChange,
-  BackgroundVariant,
-} from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
-import Dagre from "@dagrejs/dagre";
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type PointerEvent,
+} from "react";
+import { ReactFlowProvider } from "@xyflow/react";
 import { toast } from "sonner";
-
-import {
-  type CanvasNode,
-  type CanvasEdge,
-  type CanvasNodeData,
-  type CanvasEdgeData,
-  type PaletteItem,
-  type MethodologyMode,
-  type AnalysisMode,
-  type ThreatAnalysisResult,
-  type CustomComponentDefinition,
-  type GeneratedThreat,
-  type ThreatBadge,
-  type DataFlowMetadata,
-  type TrustLevel,
-  type ThreatStatus,
-  DEFAULT_EDGE_METADATA,
-  MaestroLayer,
-} from "./types";
-
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import AgentComponentNode from "./nodes/AgentComponentNode";
-import ActorNode from "./nodes/ActorNode";
-import DataStoreNode from "./nodes/DataStoreNode";
-import TrustBoundaryNode from "./nodes/TrustBoundaryNode";
-import CustomComponentNode from "./nodes/CustomComponentNode";
-import DataFlowEdge from "./edges/DataFlowEdge";
-
-import ComponentPalette from "./ComponentPalette";
-import CanvasToolbar from "./CanvasToolbar";
-import ThreatResultsPanel from "./ThreatResultsPanel";
-import NodePropertiesPanel from "./NodePropertiesPanel";
-import EdgeMetadataEditor from "./EdgeMetadataEditor";
-import CustomComponentDialog from "./CustomComponentDialog";
+import { ListChecks, PanelBottomOpen, Puzzle, SlidersHorizontal } from "lucide-react";
+import { cn } from "@/lib/utils";
 import CanvasContextMenu from "./CanvasContextMenu";
-import ModelManager, { getUserTemplates, type UserTemplate } from "./ModelManager";
-import OnboardingOverlay from "./OnboardingOverlay";
-import AibomImportDialog from "./AibomImportDialog";
-import NodeEditorDialog from "./NodeEditorDialog";
-import KeyboardShortcutsPanel from "./KeyboardShortcutsPanel";
+import CanvasToolbar from "./CanvasToolbar";
+import ComponentPalette from "./ComponentPalette";
+import AnalysisSweep from "./canvas/AnalysisSweep";
+import { ModeBanner, ModeHint } from "./canvas/CanvasBanners";
+import CanvasLegend from "./canvas/CanvasLegend";
+import EmptyCanvasCard from "./canvas/EmptyCanvasCard";
+import FlowCanvas from "./canvas/FlowCanvas";
+import PathPlaybackBar from "./canvas/PathPlaybackBar";
+import DialogHost from "./dialogs/DialogHost";
+import { useCanvasActions } from "./hooks/useCanvasActions";
+import { useLiveAnalysis } from "./hooks/useLiveAnalysis";
+import { useIsDesktop, useMediaQuery } from "./hooks/useMediaQuery";
+import { useModelerKeyboard } from "./hooks/useModelerKeyboard";
+import { readPrefs } from "./persistence";
+import PropertyPanel from "./properties/PropertyPanel";
+import ResultsPanel from "./results/ResultsPanel";
+import { tm, useTM } from "./store";
+import { BottomSheet } from "./ui/BottomSheet";
 
-import {
-  analyzeThreatModel,
-  rescoreAnalysis,
-  summariseForNextRun,
-  type AnalysisResult,
-} from "./engine/analyze";
-import { runAnalysis } from "./engine/runAnalysis";
-import { isValidConnection as isValidFlow, modelFingerprint, nextEdgeId } from "./engine/graph";
-import type { ModelRiskSummary } from "./engine/riskScoring";
-import type { AttackPath } from "./engine/attackPaths";
-import { filterMitigatedThreats } from "./engine/mitigationCatalog";
-import type { AISVSCoverageResult } from "./engine/aisvsMapping";
-import type { ComplianceViolation } from "./engine/dataFlowCompliance";
-import type { ComplianceGapReport } from "./engine/complianceGap";
-import type { AttackSurfaceScore } from "./engine/attackSurface";
-import type { Aiuc1ComplianceResult } from "./engine/aiuc1Compliance";
-import { exportCanvasPNG, exportCanvasSVG } from "./export/exportPNG";
-import { exportThreatsCSV } from "./export/exportCSV";
-import { exportSARIF } from "./export/exportSARIF";
-import { downloadMarkdownReport } from "./export/exportMarkdown";
-import { exportPDFReport } from "./export/exportPDF";
-import { buildReportModel } from "./export/reportModel";
-import { ARCHITECTURE_TEMPLATES, instantiateTemplate, resolveTemplateId } from "./templates";
+const RESULTS_MIN = 300;
+const RESULTS_MAX = 720;
+const clampWidth = (w: number) => Math.round(Math.max(RESULTS_MIN, Math.min(RESULTS_MAX, w)));
 
-const nodeTypes: NodeTypes = {
-  agentComponent: AgentComponentNode,
-  actor: ActorNode,
-  dataStore: DataStoreNode,
-  trustBoundary: TrustBoundaryNode,
-  customComponent: CustomComponentNode,
-};
-const edgeTypes: EdgeTypes = { dataFlow: DataFlowEdge };
-
-let nodeIdCounter = 0;
-function genNodeId() {
-  return `node-${Date.now()}-${nodeIdCounter++}`;
+/**
+ * Threat Modeler container (P3-21): store-driven three-pane layout. Palette ·
+ * canvas · properties/results on `lg+`; canvas with bottom sheets below.
+ * All state lives in the zustand store (`./store`); this file only lays out.
+ */
+export default function ThreatModelCanvas() {
+  return (
+    <ReactFlowProvider>
+      <ModelerShell />
+    </ReactFlowProvider>
+  );
 }
 
-interface HistoryEntry {
-  nodes: CanvasNode[];
-  edges: CanvasEdge[];
-}
-
-const AUTO_SAVE_KEY = "threat-modeler-autosave";
-const ONBOARDING_KEY = "threat-modeler-onboarding-seen";
-
-function autoLayout(nodes: CanvasNode[], edges: CanvasEdge[]): CanvasNode[] {
-  const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: "TB", nodesep: 60, ranksep: 80 });
-  nodes.forEach((n) => {
-    if (n.type !== "trustBoundary") g.setNode(n.id, { width: 180, height: 100 });
-  });
-  edges.forEach((e) => {
-    if (g.hasNode(e.source) && g.hasNode(e.target)) g.setEdge(e.source, e.target);
-  });
-  Dagre.layout(g);
-  return nodes.map((n) => {
-    if (n.type === "trustBoundary") return n;
-    const pos = g.node(n.id);
-    return pos ? { ...n, position: { x: pos.x - 90, y: pos.y - 50 } } : n;
-  });
-}
-
-function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string }) {
-  const [nodes, setNodes, onNodesChange] = useNodesState<CanvasNode>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<CanvasEdge>([]);
-  const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance<
-    CanvasNode,
-    CanvasEdge
-  > | null>(null);
-  const { fitView } = useReactFlow();
-
-  const [methodology, setMethodology] = useState<MethodologyMode>("maestro");
-  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("manual");
-  const [analysisResult, setAnalysisResult] = useState<ThreatAnalysisResult | null>(null);
-  const [riskSummary, setRiskSummary] = useState<ModelRiskSummary | null>(null);
-  const [attackPaths, setAttackPaths] = useState<AttackPath[]>([]);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-
-  const [threatStatuses, setThreatStatuses] = useState<
-    Map<string, { status: ThreatStatus; justification?: string }>
-  >(() => {
-    try {
-      const stored = localStorage.getItem("threat-modeler-threat-statuses");
-      if (stored) {
-        const entries = JSON.parse(stored) as [
-          string,
-          { status: ThreatStatus; justification?: string },
-        ][];
-        return new Map(entries);
-      }
-    } catch {
-      /* empty */
-    }
-    return new Map();
-  });
-
-  const persistThreatStatuses = useCallback(
-    (statuses: Map<string, { status: ThreatStatus; justification?: string }>) => {
-      setThreatStatuses(statuses);
-      try {
-        localStorage.setItem(
-          "threat-modeler-threat-statuses",
-          JSON.stringify(Array.from(statuses.entries())),
-        );
-      } catch {
-        /* quota exceeded - silently fail */
-      }
-    },
-    [],
-  );
-
-  const onUpdateThreatStatus = useCallback(
-    (threatId: string, status: ThreatStatus, justification?: string) => {
-      const next = new Map(threatStatuses);
-      next.set(threatId, { status, justification });
-      persistThreatStatuses(next);
-    },
-    [threatStatuses, persistThreatStatuses],
-  );
-
-  const [customComponents, setCustomComponents] = useState<CustomComponentDefinition[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem("threat-modeler-custom-components") ?? "[]");
-    } catch {
-      return [];
-    }
-  });
-
-  const [showCustomDialog, setShowCustomDialog] = useState(false);
-  const [editingEdgeId, setEditingEdgeId] = useState<string | null>(null);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
-  const [heatMapActive, setHeatMapActive] = useState(false);
-  const [whatIfActive, setWhatIfActive] = useState(false);
-  const [_whatIfNodeId, setWhatIfNodeId] = useState<string | null>(null);
-  const [snapToGrid, setSnapToGrid] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem(ONBOARDING_KEY));
-  const [modelManagerOpen, setModelManagerOpen] = useState(false);
-  const [modelManagerMode, setModelManagerMode] = useState<"save" | "load">("save");
-  const [saveIndicator, setSaveIndicator] = useState("");
-  const [showMitigated, setShowMitigated] = useState(false);
-  const [fullAnalysisResult, setFullAnalysisResult] = useState<ThreatAnalysisResult | null>(null);
-  const [showAibomImport, setShowAibomImport] = useState(false);
-  const [aisvsResult, setAisvsResult] = useState<AISVSCoverageResult | null>(null);
-  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
-  const [complianceViolations, setComplianceViolations] = useState<ComplianceViolation[]>([]);
-  const [complianceGapReport, setComplianceGapReport] = useState<ComplianceGapReport | null>(null);
-  const [attackSurfaceScores, setAttackSurfaceScores] = useState<AttackSurfaceScore[]>([]);
-  const [aiuc1Result, setAiuc1Result] = useState<Aiuc1ComplianceResult | null>(null);
-  const [whatIfResult, setWhatIfResult] = useState<{
-    removedNodeLabel: string;
-    beforeCount: number;
-    afterCount: number;
-    beforeRisk: number;
-    afterRisk: number;
-    eliminatedPaths: number;
-  } | null>(null);
-
-  const [history, setHistory] = useState<HistoryEntry[]>([{ nodes: [], edges: [] }]);
-  const [historyIndex, setHistoryIndex] = useState(0);
-  const [showShortcuts, setShowShortcuts] = useState(false);
-  const clipboardRef = useRef<CanvasNode | null>(null);
-  const historyDebounceRef = useRef<ReturnType<typeof setTimeout>>();
-
-  // ─── Auto-save ──────────────────────────────────────────────
-  // Use a ref to hold the latest state so the interval and
-  // beforeunload handler always see current data without
-  // recreating the interval on every change.
-  const autoSaveDataRef = useRef({ nodes, edges, methodology, customComponents });
-  useEffect(() => {
-    autoSaveDataRef.current = { nodes, edges, methodology, customComponents };
-  }, [nodes, edges, methodology, customComponents]);
-
-  const doAutoSave = useCallback(() => {
-    const { nodes: n, edges: e, methodology: m, customComponents: cc } = autoSaveDataRef.current;
-    if (n.length === 0) return;
-    const payload = JSON.stringify({
-      nodes: n,
-      edges: e,
-      methodology: m,
-      customComponents: cc,
-      timestamp: Date.now(),
-    });
-    localStorage.setItem(AUTO_SAVE_KEY, payload);
-    setSaveIndicator("Auto-saved");
-    setTimeout(() => setSaveIndicator(""), 2000);
-  }, []);
-
-  // Fixed interval — created once, never recreated
-  useEffect(() => {
-    const interval = setInterval(doAutoSave, 30000);
-    return () => clearInterval(interval);
-  }, [doAutoSave]);
-
-  // Debounced save on every meaningful change (5 s after last edit)
-  const autoSaveDebounceRef = useRef<ReturnType<typeof setTimeout>>();
-  useEffect(() => {
-    if (nodes.length === 0) return;
-    clearTimeout(autoSaveDebounceRef.current);
-    autoSaveDebounceRef.current = setTimeout(doAutoSave, 5000);
-    return () => clearTimeout(autoSaveDebounceRef.current);
-  }, [nodes, edges, doAutoSave]);
-
-  // Save on tab close / navigation away
-  useEffect(() => {
-    const handler = () => doAutoSave();
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [doAutoSave]);
-
-  // Restore auto-save on mount (skip if initial template will be loaded)
-  useEffect(() => {
-    if (initialTemplate) return;
-    const saved = localStorage.getItem(AUTO_SAVE_KEY);
-    if (saved && nodes.length === 0) {
-      try {
-        const data = JSON.parse(saved);
-        if (data.nodes?.length > 0) {
-          setNodes(data.nodes);
-          setEdges(data.edges ?? []);
-          if (data.methodology) setMethodology(data.methodology);
-          if (data.customComponents?.length > 0) setCustomComponents(data.customComponents);
-          toast.info("Restored previous session");
-        }
-      } catch {
-        /* ignore corrupt data */
-      }
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Load template from URL parameter on mount
-  useEffect(() => {
-    if (!initialTemplate) return;
-    const templateId = resolveTemplateId(initialTemplate);
-    const template = ARCHITECTURE_TEMPLATES.find((t) => t.id === templateId);
-    if (!template) {
-      toast.error(`Unknown template "${initialTemplate}"`);
-      return;
-    }
-    const { nodes: newNodes, edges: newEdges } = instantiateTemplate(template);
-    setNodes(newNodes);
-    setEdges(newEdges);
-    pushHistory(newNodes, newEdges);
-    setTimeout(() => fitView({ duration: 300 }), 100);
-    toast.success(`Loaded "${template.name}" architecture`);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    localStorage.setItem("threat-modeler-custom-components", JSON.stringify(customComponents));
-  }, [customComponents]);
-
-  const MAX_HISTORY = 50;
-
-  const pushHistory = useCallback(
-    (newNodes: CanvasNode[], newEdges: CanvasEdge[]) => {
-      if (historyDebounceRef.current) clearTimeout(historyDebounceRef.current);
-      historyDebounceRef.current = setTimeout(() => {
-        setHistory((prev) => {
-          const trimmed = prev.slice(0, historyIndex + 1);
-          const next = [
-            ...trimmed,
-            {
-              nodes: JSON.parse(JSON.stringify(newNodes)),
-              edges: JSON.parse(JSON.stringify(newEdges)),
-            },
-          ];
-          if (next.length > MAX_HISTORY) {
-            const overflow = next.length - MAX_HISTORY;
-            setHistoryIndex((i) => Math.max(0, i - overflow + 1));
-            return next.slice(overflow);
-          }
-          setHistoryIndex(next.length - 1);
-          return next;
-        });
-      }, 300);
-    },
-    [historyIndex],
-  );
-
-  const undo = useCallback(() => {
-    if (historyIndex <= 0) return;
-    const prev = history[historyIndex - 1];
-    setNodes(prev.nodes);
-    setEdges(prev.edges);
-    setHistoryIndex((i) => i - 1);
-  }, [history, historyIndex, setNodes, setEdges]);
-
-  const redo = useCallback(() => {
-    if (historyIndex >= history.length - 1) return;
-    const next = history[historyIndex + 1];
-    setNodes(next.nodes);
-    setEdges(next.edges);
-    setHistoryIndex((i) => i + 1);
-  }, [history, historyIndex, setNodes, setEdges]);
-
-  const onConnect: OnConnect = useCallback(
-    (connection: Connection) => {
-      const newEdge: CanvasEdge = {
-        ...connection,
-        id: nextEdgeId(edges),
-        type: "dataFlow",
-        data: { ...DEFAULT_EDGE_METADATA, threats: [] } as CanvasEdgeData,
-      } as CanvasEdge;
-      setEdges((eds) => addEdge(newEdge, eds) as CanvasEdge[]);
-      setEditingEdgeId(newEdge.id);
-      pushHistory(nodes, [...edges, newEdge]);
-      toast.success("Connection created - edit metadata");
-    },
-    [setEdges, nodes, edges, pushHistory],
-  );
-
-  const lastRunRef = useRef<AnalysisResult | null>(null);
-  const analysisSeqRef = useRef(0);
-  const doAnalysis = useCallback(() => {
-    setIsAnalyzing(true);
-    const seqNo = ++analysisSeqRef.current;
-    requestAnimationFrame(async () => {
-      try {
-        const result = await runAnalysis({
-          nodes: nodes as CanvasNode[],
-          edges: edges as CanvasEdge[],
-          customComponents,
-          threatStatuses: Object.fromEntries(threatStatuses),
-          previous: lastRunRef.current ? summariseForNextRun(lastRunRef.current) : null,
-        });
-        if (seqNo !== analysisSeqRef.current) return; // a newer run superseded this one
-        lastRunRef.current = result;
-        setFullAnalysisResult(result);
-        setAnalysisResult(result);
-        setRiskSummary(result.riskSummary);
-        setAttackPaths(result.attackPaths);
-        setAisvsResult(result.aisvsResult);
-        const dfcViolations = result.complianceViolations;
-        setComplianceViolations(dfcViolations);
-        setComplianceGapReport(result.complianceGapReport);
-        setAttackSurfaceScores(result.attackSurfaceScores);
-        setAiuc1Result(result.aiuc1Result);
-
-        const threatsByNode = new Map<string, ThreatBadge[]>();
-        const threatsByEdge = new Map<string, ThreatBadge[]>();
-        for (const threat of result.threats) {
-          const badge: ThreatBadge = {
-            threatId: threat.id,
-            name: threat.name,
-            severity:
-              threat.severity === "critical"
-                ? "high"
-                : (threat.severity as "high" | "medium" | "low"),
-            inherited: threat.inherited,
-            source: threat.sourceNodeId,
-          };
-          for (const nId of threat.affectedNodeIds) {
-            if (!threatsByNode.has(nId)) threatsByNode.set(nId, []);
-            threatsByNode.get(nId)!.push(badge);
-          }
-          for (const eId of threat.affectedEdgeIds) {
-            if (!threatsByEdge.has(eId)) threatsByEdge.set(eId, []);
-            threatsByEdge.get(eId)!.push(badge);
-          }
-        }
-        setNodes(
-          (nds) =>
-            nds.map((n) => ({
-              ...n,
-              data: { ...n.data, threats: threatsByNode.get(n.id) ?? [] },
-            })) as CanvasNode[],
-        );
-        setEdges(
-          (eds) =>
-            eds.map((e) => ({
-              ...e,
-              data: { ...e.data, threats: threatsByEdge.get(e.id!) ?? [] },
-            })) as CanvasEdge[],
-        );
-        setIsAnalyzing(false);
-        if (analysisModeRef.current !== "live") {
-          const violationMsg =
-            dfcViolations.length > 0 ? `, ${dfcViolations.length} compliance violations` : "";
-          toast.success(`Analysis complete - ${result.summary.total} threats found${violationMsg}`);
-        }
-      } catch (err) {
-        setIsAnalyzing(false);
-        const message = err instanceof Error ? err.message : "Unknown error";
-        toast.error(`Analysis failed: ${message}`);
-        console.error("Threat analysis error:", err);
-      }
-    });
-  }, [nodes, edges, customComponents, setNodes, setEdges, threatStatuses]);
-
-  const analysisModeRef = useRef(analysisMode);
-  analysisModeRef.current = analysisMode;
-
-  const doAnalysisRef = useRef(doAnalysis);
-  doAnalysisRef.current = doAnalysis;
-
-  // Structural fingerprint: only changes when model topology/metadata changes,
-  // NOT when threat badges, mitigations, or positions update.
-  const modelStructureKey = useMemo(
-    () =>
-      nodes.length === 0
-        ? ""
-        : `${modelFingerprint(nodes as CanvasNode[], edges as CanvasEdge[])}::${methodology}`,
-    [nodes, edges, methodology],
-  );
-
-  useEffect(() => {
-    if (analysisMode !== "live") return;
-    // Guard: don't run on empty canvas
-    if (modelStructureKey === "") return;
-    const timeout = setTimeout(() => doAnalysisRef.current(), 800);
-    return () => clearTimeout(timeout);
-  }, [analysisMode, modelStructureKey]);
-
-  const deleteSelected = useCallback(() => {
-    const selectedNodes = nodes.filter((n) => n.selected);
-    const selectedEdges = edges.filter((e) => e.selected);
-    if (selectedNodes.length === 0 && selectedEdges.length === 0) {
-      if (selectedNodeId) {
-        setNodes((nds) => nds.filter((n) => n.id !== selectedNodeId) as CanvasNode[]);
-        setSelectedNodeId(null);
-      }
-      if (selectedEdgeId) {
-        setEdges((eds) => eds.filter((e) => e.id !== selectedEdgeId) as CanvasEdge[]);
-        setSelectedEdgeId(null);
-      }
-    } else {
-      const nodeIds = new Set(selectedNodes.map((n) => n.id));
-      setNodes((nds) => nds.filter((n) => !nodeIds.has(n.id)) as CanvasNode[]);
-      const edgeIds = new Set(selectedEdges.map((e) => e.id));
-      setEdges(
-        (eds) =>
-          eds.filter(
-            (e) => !edgeIds.has(e.id!) && !nodeIds.has(e.source) && !nodeIds.has(e.target),
-          ) as CanvasEdge[],
-      );
-    }
-    pushHistory(nodes, edges);
-  }, [nodes, edges, selectedNodeId, selectedEdgeId, setNodes, setEdges, pushHistory]);
-
-  const duplicateSelected = useCallback(() => {
-    if (!selectedNodeId) return;
-    const original = nodes.find((n) => n.id === selectedNodeId);
-    if (!original) return;
-    const newNode: CanvasNode = {
-      ...JSON.parse(JSON.stringify(original)),
-      id: genNodeId(),
-      position: { x: original.position.x + 30, y: original.position.y + 30 },
-      selected: false,
-    };
-    setNodes((nds) => [...nds, newNode] as CanvasNode[]);
-    pushHistory([...nodes, newNode], edges);
-    toast.success("Node duplicated");
-  }, [selectedNodeId, nodes, edges, setNodes, pushHistory]);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      const isInput =
-        (e.target as HTMLElement)?.tagName === "INPUT" ||
-        (e.target as HTMLElement)?.tagName === "TEXTAREA";
-      if (isInput) return;
-
-      // Escape: deselect / close panels
-      if (e.key === "Escape") {
-        setSelectedNodeId(null);
-        setSelectedEdgeId(null);
-        setShowShortcuts(false);
-        setNodes((nds) => nds.map((n) => ({ ...n, selected: false })) as CanvasNode[]);
-        return;
-      }
-
-      if (e.key === "Delete" || e.key === "Backspace") {
-        deleteSelected();
-      }
-      if (e.ctrlKey || e.metaKey) {
-        if (e.key === "z") {
-          e.preventDefault();
-          undo();
-        }
-        if (e.key === "y") {
-          e.preventDefault();
-          redo();
-        }
-        if (e.key === "e") {
-          e.preventDefault();
-          doAnalysis();
-        }
-        if (e.key === "s") {
-          e.preventDefault();
-          doAutoSave();
-          toast.success("Model saved");
-        }
-        if (e.key === "a") {
-          e.preventDefault();
-          setNodes((nds) => nds.map((n) => ({ ...n, selected: true })) as CanvasNode[]);
-        }
-        // Ctrl+D: Duplicate selected
-        if (e.key === "d") {
-          e.preventDefault();
-          duplicateSelected();
-        }
-        // Ctrl+C: Copy selected
-        if (e.key === "c") {
-          e.preventDefault();
-          const sel = (nodes as CanvasNode[]).find((n) => n.id === selectedNodeId);
-          if (sel) {
-            clipboardRef.current = JSON.parse(JSON.stringify(sel));
-            toast.success("Node copied");
-          }
-        }
-        // Ctrl+V: Paste
-        if (e.key === "v") {
-          e.preventDefault();
-          if (clipboardRef.current) {
-            const newNode: CanvasNode = {
-              ...JSON.parse(JSON.stringify(clipboardRef.current)),
-              id: genNodeId(),
-              position: {
-                x: clipboardRef.current.position.x + 40,
-                y: clipboardRef.current.position.y + 40,
-              },
-              selected: false,
-            };
-            setNodes((nds) => [...nds, newNode] as CanvasNode[]);
-            pushHistory([...nodes, newNode], edges);
-            toast.success("Node pasted");
-          }
-        }
-        // Ctrl+0: Fit view
-        if (e.key === "0") {
-          e.preventDefault();
-          fitView({ duration: 300 });
-        }
-        // Ctrl+Shift+?: Show keyboard shortcuts
-        if (e.shiftKey && e.key === "?") {
-          e.preventDefault();
-          setShowShortcuts((v) => !v);
-        }
-      }
-      if (e.key === "?" && !e.ctrlKey && !e.metaKey) setShowOnboarding(true);
-      if (e.key === " " && !isInput) {
-        e.preventDefault();
-        fitView({ duration: 300 });
-      }
-      // +/- for zoom
-      if (e.key === "+" || e.key === "=") {
-        reactFlowInstance?.zoomIn({ duration: 200 });
-      }
-      if (e.key === "-") {
-        reactFlowInstance?.zoomOut({ duration: 200 });
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [
-    undo,
-    redo,
-    doAnalysis,
-    doAutoSave,
-    deleteSelected,
-    duplicateSelected,
-    selectedNodeId,
-    nodes,
-    edges,
-    fitView,
-    setNodes,
-    pushHistory,
-    reactFlowInstance,
-  ]);
-
-  const changeTrustLevel = useCallback(
-    (level: TrustLevel) => {
-      if (!selectedNodeId) return;
-      setNodes(
-        (nds) =>
-          nds.map((n) =>
-            n.id === selectedNodeId ? { ...n, data: { ...n.data, trustLevel: level } } : n,
-          ) as CanvasNode[],
-      );
-      pushHistory(nodes, edges);
-    },
-    [selectedNodeId, nodes, edges, setNodes, pushHistory],
-  );
-
-  const addTrustBoundary = useCallback(() => {
-    const newNode: CanvasNode = {
-      id: genNodeId(),
-      type: "trustBoundary",
-      position: { x: 100, y: 100 },
-      zIndex: -10,
-      style: { width: 300, height: 200, zIndex: -10 },
-      data: {
-        label: "Trust Boundary",
-        category: "trust-boundary",
-        maestroLayers: [MaestroLayer.SecurityCompliance],
-        trustLevel: "trusted",
-        threats: [],
-      } as CanvasNodeData,
-    };
-    setNodes((nds) => [...nds, newNode] as CanvasNode[]);
-    pushHistory([...nodes, newNode], edges);
-  }, [nodes, edges, setNodes, pushHistory]);
-
-  const groupInBoundary = useCallback(() => {
-    const selectedNodes = nodes.filter((n) => n.selected);
-    const targetNodes =
-      selectedNodes.length > 0
-        ? selectedNodes
-        : selectedNodeId
-          ? nodes.filter((n) => n.id === selectedNodeId)
-          : [];
-    if (targetNodes.length === 0) return;
-
-    const minX = Math.min(...targetNodes.map((n) => n.position.x));
-    const minY = Math.min(...targetNodes.map((n) => n.position.y));
-    const maxX = Math.max(...targetNodes.map((n) => n.position.x + 180));
-    const maxY = Math.max(...targetNodes.map((n) => n.position.y + 100));
-
-    const boundaryId = genNodeId();
-    const boundary: CanvasNode = {
-      id: boundaryId,
-      type: "trustBoundary",
-      position: { x: minX - 30, y: minY - 50 },
-      zIndex: -10,
-      style: { width: maxX - minX + 60, height: maxY - minY + 80, zIndex: -10 },
-      data: {
-        label: "Trust Boundary",
-        category: "trust-boundary",
-        maestroLayers: [MaestroLayer.SecurityCompliance],
-        trustLevel: "trusted",
-        threats: [],
-      } as CanvasNodeData,
-    };
-
-    const targetIds = new Set(targetNodes.map((n) => n.id));
-    setNodes((nds) => {
-      const updated = nds.map((n) => {
-        if (targetIds.has(n.id)) {
-          return {
-            ...n,
-            parentId: boundaryId,
-            position: {
-              x: n.position.x - boundary.position.x,
-              y: n.position.y - boundary.position.y,
-            },
-          };
-        }
-        return n;
-      }) as CanvasNode[];
-      return [boundary, ...updated];
-    });
-    pushHistory(nodes, edges);
-  }, [selectedNodeId, nodes, edges, setNodes, pushHistory]);
-
-  const getSelectedNodeIds = useCallback((): string[] => {
-    const multiSelected = nodes.filter((n) => n.selected).map((n) => n.id);
-    if (multiSelected.length > 0) return multiSelected;
-    if (selectedNodeId) return [selectedNodeId];
-    return [];
-  }, [nodes, selectedNodeId]);
-
-  const sendToFront = useCallback(() => {
-    const ids = new Set(getSelectedNodeIds());
-    if (ids.size === 0) return;
-    const maxZ = Math.max(
-      ...nodes.map((n) => (n.style as Record<string, number>)?.zIndex ?? n.zIndex ?? 0),
-    );
-    setNodes(
-      (nds) =>
-        nds.map((n) =>
-          ids.has(n.id) ? { ...n, zIndex: maxZ + 1, style: { ...n.style, zIndex: maxZ + 1 } } : n,
-        ) as CanvasNode[],
-    );
-    pushHistory(nodes, edges);
-  }, [getSelectedNodeIds, nodes, edges, setNodes, pushHistory]);
-
-  const sendToBack = useCallback(() => {
-    const ids = new Set(getSelectedNodeIds());
-    if (ids.size === 0) return;
-    const minZ = Math.min(
-      ...nodes.map((n) => (n.style as Record<string, number>)?.zIndex ?? n.zIndex ?? 0),
-    );
-    setNodes(
-      (nds) =>
-        nds.map((n) =>
-          ids.has(n.id) ? { ...n, zIndex: minZ - 1, style: { ...n.style, zIndex: minZ - 1 } } : n,
-        ) as CanvasNode[],
-    );
-    pushHistory(nodes, edges);
-  }, [getSelectedNodeIds, nodes, edges, setNodes, pushHistory]);
-
-  const sendForward = useCallback(() => {
-    const ids = new Set(getSelectedNodeIds());
-    if (ids.size === 0) return;
-    setNodes(
-      (nds) =>
-        nds.map((n) => {
-          if (!ids.has(n.id)) return n;
-          const cur = (n.style as Record<string, number>)?.zIndex ?? n.zIndex ?? 0;
-          return { ...n, zIndex: cur + 1, style: { ...n.style, zIndex: cur + 1 } };
-        }) as CanvasNode[],
-    );
-    pushHistory(nodes, edges);
-  }, [getSelectedNodeIds, nodes, edges, setNodes, pushHistory]);
-
-  const sendBackward = useCallback(() => {
-    const ids = new Set(getSelectedNodeIds());
-    if (ids.size === 0) return;
-    setNodes(
-      (nds) =>
-        nds.map((n) => {
-          if (!ids.has(n.id)) return n;
-          const cur = (n.style as Record<string, number>)?.zIndex ?? n.zIndex ?? 0;
-          return { ...n, zIndex: cur - 1, style: { ...n.style, zIndex: cur - 1 } };
-        }) as CanvasNode[],
-    );
-    pushHistory(nodes, edges);
-  }, [getSelectedNodeIds, nodes, edges, setNodes, pushHistory]);
-
-  const handleAutoLayout = useCallback(() => {
-    const laid = autoLayout(nodes as CanvasNode[], edges as CanvasEdge[]);
-    setNodes(laid as CanvasNode[]);
-    pushHistory(laid, edges);
-    setTimeout(() => fitView({ duration: 300 }), 50);
-    toast.success("Layout applied");
-  }, [nodes, edges, setNodes, pushHistory, fitView]);
-
-  const onDragOver = useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-  }, []);
-
-  const onDrop = useCallback(
-    (event: React.DragEvent) => {
-      event.preventDefault();
-      const itemData = event.dataTransfer.getData("application/reactflow-item");
-      if (!itemData || !reactFlowInstance) return;
-      const item: PaletteItem = JSON.parse(itemData);
-      const position = reactFlowInstance.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
-      const isCustom = item.category === "custom";
-      const customComp = isCustom
-        ? customComponents.find((c) => `custom-${c.id}` === item.id)
-        : undefined;
-      const itemAny = item as unknown as Record<string, unknown>;
-      const isTrustBoundary = item.category === "trust-boundary";
-      const newNode: CanvasNode = {
-        id: genNodeId(),
-        type: item.nodeType,
-        position,
-        ...(isTrustBoundary
-          ? { zIndex: -10, style: { width: 300, height: 200, zIndex: -10 } }
-          : {}),
-        data: {
-          label: item.label,
-          description: item.description,
-          category: item.category,
-          componentId: item.componentId,
-          maestroLayers: item.maestroLayers,
-          trustLevel: customComp?.trustLevel ?? (isTrustBoundary ? "trusted" : "semi-trusted"),
-          icon: item.icon,
-          color: item.color,
-          threats: [],
-          isCustom,
-          customThreatIds: customComp?.customThreats?.map((t) => t.id),
-          toolAccessMode: itemAny.toolAccessMode as CanvasNodeData["toolAccessMode"],
-          toolRiskTier: itemAny.toolRiskTier as CanvasNodeData["toolRiskTier"],
-          promptType: itemAny.promptType as CanvasNodeData["promptType"],
-        } as CanvasNodeData,
-      };
-      setNodes((nds) => [...nds, newNode] as CanvasNode[]);
-      pushHistory([...nodes, newNode], edges);
-    },
-    [reactFlowInstance, setNodes, nodes, edges, pushHistory, customComponents],
-  );
-
-  const onNodeClick = useCallback(
-    (_: React.MouseEvent, node: CanvasNode) => {
-      if (whatIfActive) {
-        setWhatIfNodeId(node.id);
-        const nodeLabel = (node.data as CanvasNodeData)?.label ?? "Unknown";
-        toast.info(`What-If: simulating removal of "${nodeLabel}"...`);
-
-        const filteredNodes = nodes.filter((n) => n.id !== node.id) as CanvasNode[];
-        const filteredEdges = edges.filter(
-          (e) => e.source !== node.id && e.target !== node.id,
-        ) as CanvasEdge[];
-
-        const beforeThreatCount = analysisResult?.summary.total ?? 0;
-        const beforeRiskScore = riskSummary?.overallScore ?? 0;
-        const beforePathCount = attackPaths.length;
-
-        const sim = analyzeThreatModel({
-          nodes: filteredNodes,
-          edges: filteredEdges,
-          customComponents,
-          threatStatuses: Object.fromEntries(threatStatuses),
-        });
-        const simResult = sim;
-        const simRisk = sim.riskSummary;
-        const simPaths = sim.attackPaths;
-
-        setWhatIfResult({
-          removedNodeLabel: nodeLabel,
-          beforeCount: beforeThreatCount,
-          afterCount: simResult.summary.total,
-          beforeRisk: beforeRiskScore,
-          afterRisk: simRisk.overallScore,
-          eliminatedPaths: beforePathCount - simPaths.length,
-        });
-        return;
-      }
-      setSelectedNodeId(node.id);
-      setSelectedEdgeId(null);
-    },
-    [
-      whatIfActive,
-      nodes,
-      edges,
-      analysisResult,
-      riskSummary,
-      attackPaths,
-      customComponents,
-      threatStatuses,
-    ],
-  );
-
-  const onEdgeClick = useCallback((_: React.MouseEvent, edge: CanvasEdge) => {
-    setSelectedEdgeId(edge.id ?? null);
-    setSelectedNodeId(null);
-  }, []);
-  const onPaneClick = useCallback(() => {
-    setSelectedNodeId(null);
-    setSelectedEdgeId(null);
-  }, []);
-
-  const onNodeDoubleClick = useCallback((_: React.MouseEvent, node: CanvasNode) => {
-    setEditingNodeId(node.id);
-  }, []);
-
-  const applySpatialContainment = useCallback(
-    (currentNodes: CanvasNode[], movedIds: Set<string>): CanvasNode[] | null => {
-      const boundaries = currentNodes.filter((n) => n.type === "trustBoundary");
-      if (boundaries.length === 0) return null;
-
-      let changed = false;
-      const updated = currentNodes.map((node) => {
-        if (node.type === "trustBoundary" || !movedIds.has(node.id)) return node;
-
-        const absX = node.parentId
-          ? node.position.x + (currentNodes.find((n) => n.id === node.parentId)?.position.x ?? 0)
-          : node.position.x;
-        const absY = node.parentId
-          ? node.position.y + (currentNodes.find((n) => n.id === node.parentId)?.position.y ?? 0)
-          : node.position.y;
-
-        let bestBoundary: CanvasNode | null = null;
-        for (const b of boundaries) {
-          const bw = (b.style as Record<string, number>)?.width ?? b.measured?.width ?? 300;
-          const bh = (b.style as Record<string, number>)?.height ?? b.measured?.height ?? 200;
-          if (
-            absX >= b.position.x &&
-            absX <= b.position.x + bw &&
-            absY >= b.position.y &&
-            absY <= b.position.y + bh
-          ) {
-            bestBoundary = b;
-          }
-        }
-
-        const currentParentIsBoundary =
-          node.parentId &&
-          currentNodes.find((n) => n.id === node.parentId)?.type === "trustBoundary";
-
-        if (bestBoundary && node.parentId !== bestBoundary.id) {
-          changed = true;
-          return {
-            ...node,
-            parentId: bestBoundary.id,
-            position: {
-              x: absX - bestBoundary.position.x,
-              y: absY - bestBoundary.position.y,
-            },
-          };
-        } else if (!bestBoundary && currentParentIsBoundary) {
-          changed = true;
-          return {
-            ...node,
-            parentId: undefined,
-            position: { x: absX, y: absY },
-          };
-        }
-        return node;
-      }) as CanvasNode[];
-
-      return changed ? updated : null;
-    },
-    [],
-  );
-
-  const onNodesChangeWrapped = useCallback(
-    (changes: NodeChange<CanvasNode>[]) => {
-      onNodesChange(changes);
-      const dragEndChanges = changes.filter(
-        (c) => c.type === "position" && (c as { dragging?: boolean }).dragging === false,
-      );
-      const hasMoves = dragEndChanges.length > 0;
-      const hasRemoves = changes.some((c) => c.type === "remove");
-
-      if (hasMoves) {
-        const movedIds = new Set(dragEndChanges.map((c) => (c as { id: string }).id));
-        setTimeout(() => {
-          setNodes((currentNodes) => {
-            const result = applySpatialContainment(currentNodes as CanvasNode[], movedIds);
-            return (result ?? currentNodes) as CanvasNode[];
-          });
-        }, 0);
-      }
-
-      if (hasMoves || hasRemoves) pushHistory(nodes, edges);
-    },
-    [onNodesChange, pushHistory, nodes, edges, setNodes, applySpatialContainment],
-  );
-
-  const selectedNode = useMemo(
-    () => nodes.find((n) => n.id === selectedNodeId) ?? null,
-    [nodes, selectedNodeId],
-  );
-  const selectedEdge = useMemo(
-    () => edges.find((e) => e.id === selectedEdgeId) ?? null,
-    [edges, selectedEdgeId],
-  );
-  const editingEdge = useMemo(
-    () => edges.find((e) => e.id === editingEdgeId) ?? null,
-    [edges, editingEdgeId],
-  );
-
-  const handleSaveEdgeMetadata = useCallback(
-    (metadata: DataFlowMetadata) => {
-      if (!editingEdgeId) return;
-      setEdges(
-        (eds) =>
-          eds.map((e) =>
-            e.id === editingEdgeId
-              ? { ...e, data: { ...e.data, ...metadata } as CanvasEdgeData }
-              : e,
-          ) as CanvasEdge[],
-      );
-    },
-    [editingEdgeId, setEdges],
-  );
-
-  const handleSaveCustomComponent = useCallback((comp: CustomComponentDefinition) => {
-    setCustomComponents((prev) => {
-      const i = prev.findIndex((c) => c.id === comp.id);
-      if (i >= 0) {
-        const u = [...prev];
-        u[i] = comp;
-        return u;
-      }
-      return [...prev, comp];
-    });
-  }, []);
-
-  const [userTemplatesList, setUserTemplatesList] = useState<UserTemplate[]>(() =>
-    getUserTemplates(),
-  );
-
-  const refreshUserTemplates = useCallback(() => {
-    setUserTemplatesList(getUserTemplates());
-  }, []);
-
-  const loadTemplate = useCallback(
-    (templateId: string) => {
-      // Check user templates first
-      const userTemplate = userTemplatesList.find((t) => t.id === templateId);
-      if (userTemplate) {
-        try {
-          const parsed = JSON.parse(userTemplate.data);
-          setNodes((parsed.nodes ?? []) as CanvasNode[]);
-          setEdges((parsed.edges ?? []) as CanvasEdge[]);
-          if (parsed.customComponents) setCustomComponents(parsed.customComponents);
-          pushHistory(parsed.nodes ?? [], parsed.edges ?? []);
-          setTimeout(() => fitView({ duration: 300 }), 100);
-          toast.success(`Loaded user template "${userTemplate.name}"`);
-        } catch {
-          toast.error("Failed to load user template");
-        }
-        return;
-      }
-
-      const template = ARCHITECTURE_TEMPLATES.find((t) => t.id === templateId);
-      if (!template) return;
-      const { nodes: newNodes, edges: newEdges } = instantiateTemplate(template);
-      setNodes(newNodes);
-      setEdges(newEdges);
-      pushHistory(newNodes, newEdges);
-      setTimeout(() => fitView({ duration: 300 }), 100);
-      toast.success(`Loaded "${template.name}" template`);
-    },
-    [setNodes, setEdges, pushHistory, fitView, userTemplatesList, setCustomComponents],
-  );
-
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
-
-  const doClearCanvas = useCallback(() => {
-    setNodes([]);
-    setEdges([]);
-    setAnalysisResult(null);
-    setRiskSummary(null);
-    setAttackPaths([]);
-    pushHistory([], []);
-    setShowClearConfirm(false);
-    localStorage.removeItem(AUTO_SAVE_KEY);
-    toast.info("Canvas cleared");
-  }, [setNodes, setEdges, pushHistory]);
-
-  const clearCanvas = useCallback(() => {
-    if (nodes.length === 0) return;
-    setShowClearConfirm(true);
-  }, [nodes.length]);
-
-  const exportJSON = useCallback(() => {
-    const data = {
-      nodes,
-      edges,
-      analysisResult,
-      methodology,
-      customComponents,
-      exportDate: new Date().toISOString(),
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `threat-model-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("JSON exported");
-  }, [nodes, edges, analysisResult, methodology, customComponents]);
-
-  const [pendingImport, setPendingImport] = useState<{
-    nodes: CanvasNode[];
-    edges: CanvasEdge[];
-    analysisResult?: ThreatAnalysisResult;
-    methodology?: MethodologyMode;
-    customComponents?: CustomComponentDefinition[];
-  } | null>(null);
-
-  const applyImport = useCallback(() => {
-    if (!pendingImport) return;
-    if (pendingImport.nodes) setNodes(pendingImport.nodes);
-    if (pendingImport.edges) setEdges(pendingImport.edges);
-    if (pendingImport.analysisResult) setAnalysisResult(pendingImport.analysisResult);
-    if (pendingImport.methodology) setMethodology(pendingImport.methodology);
-    if (pendingImport.customComponents) setCustomComponents(pendingImport.customComponents);
-    pushHistory(pendingImport.nodes ?? [], pendingImport.edges ?? []);
-    setPendingImport(null);
-    toast.success("Model imported");
-  }, [pendingImport, setNodes, setEdges, pushHistory]);
-
-  const importJSON = useCallback(() => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json";
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        try {
-          const data = JSON.parse(ev.target?.result as string);
-          if (!Array.isArray(data.nodes)) {
-            toast.error("Import failed: 'nodes' must be an array");
-            return;
-          }
-          const validNodes = data.nodes.every(
-            (n: Record<string, unknown>) => n.id && n.type && n.position && n.data,
-          );
-          if (!validNodes) {
-            toast.error("Import failed: each node must have id, type, position, and data");
-            return;
-          }
-          if (data.edges && !Array.isArray(data.edges)) {
-            toast.error("Import failed: 'edges' must be an array");
-            return;
-          }
-          const nodeIds = new Set((data.nodes as { id: string }[]).map((n) => n.id));
-          const invalidEdges = (data.edges ?? []).filter(
-            (e: { source: string; target: string }) =>
-              !nodeIds.has(e.source) || !nodeIds.has(e.target),
-          );
-          if (invalidEdges.length > 0) {
-            toast.error(
-              `Import failed: ${invalidEdges.length} edge(s) reference non-existent nodes`,
-            );
-            return;
-          }
-          if (nodes.length > 0) {
-            setPendingImport(data);
-          } else {
-            if (data.nodes) setNodes(data.nodes);
-            if (data.edges) setEdges(data.edges);
-            if (data.analysisResult) setAnalysisResult(data.analysisResult);
-            if (data.methodology) setMethodology(data.methodology);
-            if (data.customComponents) setCustomComponents(data.customComponents);
-            pushHistory(data.nodes ?? [], data.edges ?? []);
-            toast.success("Model imported");
-          }
-        } catch {
-          toast.error("Import failed: invalid JSON format");
-        }
-      };
-      reader.readAsText(file);
-    };
-    input.click();
-  }, [setNodes, setEdges, nodes.length, pushHistory]);
-
-  const handleExportPNG = useCallback(async () => {
-    const el = document.querySelector(".react-flow") as HTMLElement;
-    if (!el) {
-      toast.error("Canvas not found");
-      return;
-    }
-    try {
-      await exportCanvasPNG(el);
-      toast.success("PNG exported");
-    } catch {
-      toast.error("PNG export failed");
-    }
-  }, []);
-
-  const handleExportSVG = useCallback(async () => {
-    const el = document.querySelector(".react-flow") as HTMLElement;
-    if (!el) {
-      toast.error("Canvas not found");
-      return;
-    }
-    try {
-      await exportCanvasSVG(el);
-      toast.success("SVG exported");
-    } catch {
-      toast.error("SVG export failed");
-    }
-  }, []);
-
-  // Exports always use the full engine result (rescored with the current
-  // statuses/mitigations when available).
-  const exportAnalysisRef = useRef<AnalysisResult | null>(null);
-  const getExportAnalysis = useCallback((): AnalysisResult | null => {
-    if (!analysisResult) return null;
-    return (
-      exportAnalysisRef.current ??
-      analyzeThreatModel({
-        nodes: nodes as CanvasNode[],
-        edges: edges as CanvasEdge[],
-        customComponents,
-        threatStatuses: Object.fromEntries(threatStatuses),
-      })
-    );
-  }, [analysisResult, nodes, edges, customComponents, threatStatuses]);
-  const exportDoc = useMemo(
-    () => ({ name: "Threat model", nodes: nodes as CanvasNode[], edges: edges as CanvasEdge[] }),
-    [nodes, edges],
-  );
-
-  const handleExportCSV = useCallback(() => {
-    const result = getExportAnalysis();
-    if (!result) {
-      toast.error("Run analysis first");
-      return;
-    }
-    exportThreatsCSV(result, exportDoc);
-    toast.success("CSV exported");
-  }, [getExportAnalysis, exportDoc]);
-
-  const handleExportSARIF = useCallback(() => {
-    const result = getExportAnalysis();
-    if (!result) {
-      toast.error("Run analysis first");
-      return;
-    }
-    exportSARIF(result, exportDoc);
-    toast.success("SARIF exported");
-  }, [getExportAnalysis, exportDoc]);
-
-  const handleExportMarkdown = useCallback(() => {
-    const result = getExportAnalysis();
-    if (!result) {
-      toast.error("Run analysis first");
-      return;
-    }
-    downloadMarkdownReport(buildReportModel(exportDoc, result));
-    toast.success("Markdown report exported");
-  }, [getExportAnalysis, exportDoc]);
-
-  const handleExportPDF = useCallback(async () => {
-    const result = getExportAnalysis();
-    if (!result) {
-      toast.error("Run analysis first");
-      return;
-    }
-    toast.info("Generating PDF report...");
-    try {
-      await exportPDFReport(buildReportModel(exportDoc, result), {
-        canvasElement: reactFlowWrapper.current?.querySelector(".react-flow") as HTMLElement | null,
-        nodes: exportDoc.nodes,
-      });
-      toast.success("PDF report exported");
-    } catch {
-      toast.error("PDF export failed");
-    }
-  }, [getExportAnalysis, exportDoc]);
-
-  const handleSaveModel = useCallback((name: string, description: string) => {
-    toast.success(`Model "${name}" saved${description ? ` - ${description}` : ""}`);
-  }, []);
-  const handleLoadModel = useCallback(
-    (data: string) => {
-      try {
-        const parsed = JSON.parse(data);
-        if (parsed.nodes) setNodes(parsed.nodes);
-        if (parsed.edges) setEdges(parsed.edges);
-        if (parsed.methodology) setMethodology(parsed.methodology);
-        toast.success("Model loaded");
-      } catch {
-        toast.error("Failed to load model");
-      }
-    },
-    [setNodes, setEdges],
-  );
-
-  const onThreatClick = useCallback(
-    (threat: GeneratedThreat) => {
-      const nodeIds = new Set(threat.affectedNodeIds);
-      const edgeIds = new Set(threat.affectedEdgeIds);
-      setNodes((nds) => nds.map((n) => ({ ...n, selected: nodeIds.has(n.id) })) as CanvasNode[]);
-      setEdges((eds) => eds.map((e) => ({ ...e, selected: edgeIds.has(e.id!) })) as CanvasEdge[]);
-      if (threat.affectedNodeIds.length > 0) {
-        const targetNodes = nodes.filter((n) => nodeIds.has(n.id));
-        if (targetNodes.length > 0) fitView({ nodes: targetNodes, duration: 500, padding: 0.3 });
-      }
-    },
-    [nodes, setNodes, setEdges, fitView],
-  );
-
-  const miniMapNodeColor = useCallback(
-    (n: { data: Record<string, unknown> }) => {
-      const nd = n.data as unknown as CanvasNodeData;
-      if (heatMapActive && nd?.threats?.length) {
-        const hasHigh = nd.threats.some((t: ThreatBadge) => t.severity === "high");
-        return hasHigh ? "#ef4444" : nd.threats.length > 2 ? "#f97316" : "#eab308";
-      }
-      if (nd?.threats?.length > 0) return "#ef4444";
-      return "#6b7280";
-    },
-    [heatMapActive],
-  );
-
-  const currentModelData = useMemo(
-    () => JSON.stringify({ nodes, edges, methodology, customComponents }),
-    [nodes, edges, methodology, customComponents],
-  );
-
-  const handleDismissOnboarding = useCallback(() => {
-    setShowOnboarding(false);
-    localStorage.setItem(ONBOARDING_KEY, "true");
-  }, []);
-
-  const handleSaveNodeEdits = useCallback(
-    (nodeId: string, updates: Partial<CanvasNodeData>) => {
-      setNodes(
-        (nds) =>
-          nds.map((n) =>
-            n.id === nodeId ? { ...n, data: { ...n.data, ...updates } } : n,
-          ) as CanvasNode[],
-      );
-      pushHistory(nodes, edges);
-    },
-    [setNodes, nodes, edges, pushHistory],
-  );
-
-  const handleAddComponentFromPalette = useCallback(
-    (item: PaletteItem) => {
-      const viewport = reactFlowInstance?.getViewport();
-      const centerX = viewport ? (-viewport.x + 400) / (viewport.zoom || 1) : 300;
-      const centerY = viewport ? (-viewport.y + 300) / (viewport.zoom || 1) : 200;
-      const itemAny = item as unknown as Record<string, unknown>;
-      const isCustom = item.category === "custom";
-      const customComp = isCustom
-        ? customComponents.find((c) => `custom-${c.id}` === item.id)
-        : undefined;
-      const newNode: CanvasNode = {
-        id: genNodeId(),
-        type: item.nodeType,
-        position: { x: centerX, y: centerY },
-        data: {
-          label: item.label,
-          description: item.description,
-          category: item.category,
-          componentId: item.componentId,
-          maestroLayers: item.maestroLayers,
-          trustLevel: customComp?.trustLevel ?? "semi-trusted",
-          icon: item.icon,
-          color: item.color,
-          threats: [],
-          isCustom,
-          customThreatIds: customComp?.customThreats?.map((t) => t.id),
-          toolAccessMode: itemAny.toolAccessMode as CanvasNodeData["toolAccessMode"],
-          toolRiskTier: itemAny.toolRiskTier as CanvasNodeData["toolRiskTier"],
-          promptType: itemAny.promptType as CanvasNodeData["promptType"],
-        } as CanvasNodeData,
-      };
-      setNodes((nds) => [...nds, newNode] as CanvasNode[]);
-      pushHistory([...nodes, newNode], edges);
-      toast.success(`Added "${item.label}" to canvas`);
-    },
-    [reactFlowInstance, customComponents, setNodes, nodes, edges, pushHistory],
-  );
-
-  const handleAibomImport = useCallback(
-    (importedNodes: CanvasNode[], importedEdges: CanvasEdge[]) => {
-      const laid = autoLayout(importedNodes, importedEdges);
-      setNodes(laid);
-      setEdges(importedEdges);
-      pushHistory(laid, importedEdges);
-      setTimeout(() => {
-        fitView({ duration: 300 });
-        doAnalysisRef.current(); // latest closure: analyses the imported nodes (P3-25)
-      }, 150);
-      toast.success(
-        `Imported ${importedNodes.length} components and ${importedEdges.length} connections from AIBOM`,
-      );
-    },
-    [setNodes, setEdges, pushHistory, fitView],
-  );
-
-  const handleToggleMitigation = useCallback(
-    (nodeId: string, mitigationId: string, applied: boolean) => {
-      setNodes(
-        (nds) =>
-          nds.map((n) => {
-            if (n.id !== nodeId) return n;
-            const current = n.data?.appliedMitigations ?? [];
-            const updated = applied
-              ? [...new Set([...current, mitigationId])]
-              : current.filter((m) => m !== mitigationId);
-            const statuses = { ...(n.data?.mitigationStatuses ?? {}) };
-            if (applied) {
-              statuses[mitigationId] = { status: "implemented" };
-            } else {
-              delete statuses[mitigationId];
-            }
-            return {
-              ...n,
-              data: { ...n.data, appliedMitigations: updated, mitigationStatuses: statuses },
-            } as CanvasNode;
-          }) as CanvasNode[],
-      );
-    },
-    [setNodes],
-  );
-
-  const handleMitigationStatusChange = useCallback(
-    (
-      nodeId: string,
-      mitigationId: string,
-      status: import("./types").MitigationStatusValue,
-      justification?: string,
-    ) => {
-      setNodes(
-        (nds) =>
-          nds.map((n) => {
-            if (n.id !== nodeId) return n;
-            const statuses = { ...(n.data?.mitigationStatuses ?? {}) };
-            if (status === "not-started") {
-              delete statuses[mitigationId];
-            } else {
-              statuses[mitigationId] = {
-                status,
-                justification,
-                updatedAt: new Date().toISOString(),
-              };
-            }
-            const appliedIds = Object.entries(statuses)
-              .filter(([, s]) => s.status === "implemented")
-              .map(([id]) => id);
-            return {
-              ...n,
-              data: { ...n.data, mitigationStatuses: statuses, appliedMitigations: appliedIds },
-            } as CanvasNode;
-          }) as CanvasNode[],
-      );
-    },
-    [setNodes],
-  );
-
-  // Re-apply implemented mitigations and threat statuses without re-running the rules
-  // (residual = score × (1 − Σ effectiveness of implemented mitigations), §7.2.2).
-  const rescoredResult = useMemo(() => {
-    if (!fullAnalysisResult || !("modelScore" in fullAnalysisResult)) return null;
-    return rescoreAnalysis(fullAnalysisResult as AnalysisResult, {
-      nodes: nodes as CanvasNode[],
-      edges: edges as CanvasEdge[],
-      customComponents,
-      threatStatuses: Object.fromEntries(threatStatuses),
-    });
-  }, [fullAnalysisResult, nodes, edges, customComponents, threatStatuses]);
-
-  useEffect(() => {
-    exportAnalysisRef.current = rescoredResult;
-  }, [rescoredResult]);
-  const effectiveRiskSummary = rescoredResult?.riskSummary ?? riskSummary;
-
-  const filteredAnalysisResult = useMemo(() => {
-    if (!rescoredResult) return null;
-    if (showMitigated) return rescoredResult;
-    const { active } = filterMitigatedThreats(rescoredResult.threats);
-    const byMethodology: Record<string, number> = {};
-    const byLayer: Partial<Record<MaestroLayer, number>> = {};
-    for (const t of active) {
-      byMethodology[t.methodology] = (byMethodology[t.methodology] ?? 0) + 1;
-      if (t.maestroLayer !== undefined)
-        byLayer[t.maestroLayer] = (byLayer[t.maestroLayer] ?? 0) + 1;
-    }
-    return {
-      ...rescoredResult,
-      threats: active,
-      summary: {
-        ...rescoredResult.summary,
-        total: active.length,
-        critical: active.filter((t) => t.severity === "critical").length,
-        high: active.filter((t) => t.severity === "high").length,
-        medium: active.filter((t) => t.severity === "medium").length,
-        low: active.filter((t) => t.severity === "low").length,
-        inherited: active.filter((t) => t.inherited).length,
-        byMethodology,
-        byLayer,
-      },
-    };
-  }, [rescoredResult, showMitigated]);
+function ModelerShell() {
+  const actions = useCanvasActions();
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const onKeyDown = useModelerKeyboard(canvasRef, actions);
+  const desktop = useIsDesktop();
+  useLiveAnalysis();
+  useLifecycle(desktop);
 
   return (
-    <div className="flex h-full w-full relative">
-      <ComponentPalette
-        customComponents={customComponents}
-        onCreateCustom={() => setShowCustomDialog(true)}
-        onAddComponent={handleAddComponentFromPalette}
-      />
-
-      <div className="flex-1 flex flex-col min-w-0">
-        <CanvasToolbar
-          analysisMode={analysisMode}
-          onAnalysisModeChange={setAnalysisMode}
-          onAnalyze={doAnalysis}
-          onLoadTemplate={loadTemplate}
-          onCreateCustom={() => setShowCustomDialog(true)}
-          onUndo={undo}
-          onRedo={redo}
-          canUndo={historyIndex > 0}
-          canRedo={historyIndex < history.length - 1}
-          onExportJSON={exportJSON}
-          onExportPNG={handleExportPNG}
-          onExportSVG={handleExportSVG}
-          onExportMarkdown={handleExportMarkdown}
-          onExportCSV={handleExportCSV}
-          onExportSARIF={handleExportSARIF}
-          onExportPDF={handleExportPDF}
-          onImportJSON={importJSON}
-          onImportAibom={() => setShowAibomImport(true)}
-          onClear={clearCanvas}
-          onAutoLayout={handleAutoLayout}
-          onSaveModel={() => {
-            setModelManagerMode("save");
-            setModelManagerOpen(true);
-          }}
-          onLoadModel={() => {
-            setModelManagerMode("load");
-            setModelManagerOpen(true);
-          }}
-          onToggleHeatMap={() => setHeatMapActive((v) => !v)}
-          onToggleOnboarding={() => setShowOnboarding(true)}
-          onToggleSnapToGrid={() => setSnapToGrid((v) => !v)}
-          onWhatIf={() => {
-            setWhatIfActive((v) => !v);
-            if (whatIfActive) {
-              setWhatIfNodeId(null);
-              setWhatIfResult(null);
-            }
-            toast.info(
-              whatIfActive ? "What-If mode off" : "What-If: click a node to simulate its removal",
-            );
-          }}
-          isAnalyzing={isAnalyzing}
-          heatMapActive={heatMapActive}
-          snapToGrid={snapToGrid}
-          whatIfActive={whatIfActive}
-          saveIndicator={saveIndicator}
-          userTemplates={userTemplatesList.map((t) => ({ id: t.id, name: t.name }))}
-        />
-
-        <div className="flex-1" ref={reactFlowWrapper}>
-          <CanvasContextMenu
-            hasSelection={!!selectedNodeId || !!selectedEdgeId}
-            isNode={!!selectedNodeId}
-            isEdge={!!selectedEdgeId}
-            onDeleteSelected={deleteSelected}
-            onDuplicateSelected={duplicateSelected}
-            onChangeTrustLevel={changeTrustLevel}
-            onEditSelected={() => {
-              if (selectedEdgeId) setEditingEdgeId(selectedEdgeId);
-              if (selectedNodeId) setEditingNodeId(selectedNodeId);
-            }}
-            onAddTrustBoundary={addTrustBoundary}
-            onSelectAll={() =>
-              setNodes((nds) => nds.map((n) => ({ ...n, selected: true })) as CanvasNode[])
-            }
-            onFitView={() => fitView({ duration: 300 })}
-            onGroupInBoundary={groupInBoundary}
-            onSendToFront={sendToFront}
-            onSendToBack={sendToBack}
-            onSendForward={sendForward}
-            onSendBackward={sendBackward}
-          >
-            <div className="h-full w-full">
-              <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={onNodesChangeWrapped}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
-                isValidConnection={(c) =>
-                  isValidFlow(c, nodes as CanvasNode[], edges as CanvasEdge[])
-                }
-                onInit={setReactFlowInstance}
-                onDrop={onDrop}
-                onDragOver={onDragOver}
-                onNodeClick={onNodeClick}
-                onEdgeClick={onEdgeClick}
-                onPaneClick={onPaneClick}
-                onNodeDoubleClick={onNodeDoubleClick}
-                nodeTypes={nodeTypes}
-                edgeTypes={edgeTypes}
-                defaultEdgeOptions={{ type: "dataFlow" }}
-                snapToGrid={snapToGrid}
-                snapGrid={[16, 16]}
-                fitView
-                multiSelectionKeyCode="Shift"
-                selectionOnDrag
-                proOptions={{ hideAttribution: true }}
-                className={`bg-background ${whatIfActive ? "ring-2 ring-orange-500/50 ring-inset" : ""}`}
-              >
-                <Background
-                  variant={snapToGrid ? BackgroundVariant.Lines : BackgroundVariant.Dots}
-                  gap={16}
-                  size={snapToGrid ? 0.5 : 1}
-                  className="!bg-muted/30"
-                />
-                <Controls className="!bg-background !border !shadow-sm" />
-                <MiniMap
-                  className="!bg-background !border !shadow-sm"
-                  nodeColor={miniMapNodeColor}
-                  maskColor="rgba(0,0,0,0.1)"
-                />
-              </ReactFlow>
-            </div>
-          </CanvasContextMenu>
+    <div
+      className="flex h-full min-h-0 flex-col bg-background text-foreground"
+      onKeyDown={onKeyDown}
+    >
+      <ModeBanner />
+      <CanvasToolbar />
+      <div className="flex min-h-0 flex-1">
+        {desktop && <DesktopPalette />}
+        <div className="relative min-w-0 flex-1">
+          <CanvasRegion canvasRef={canvasRef} />
         </div>
+        {desktop && <RightPanes />}
       </div>
-
-      {(selectedNode || selectedEdge) && (
-        <NodePropertiesPanel
-          selectedNode={selectedNode as CanvasNode | undefined}
-          selectedEdge={selectedEdge as CanvasEdge | undefined}
-          onClose={() => {
-            setSelectedNodeId(null);
-            setSelectedEdgeId(null);
-          }}
-          onEditEdge={(id) => setEditingEdgeId(id)}
-          onEditNode={(id) => setEditingNodeId(id)}
-          onUpdateNodeData={(nodeId, partial) => {
-            setNodes(
-              (nds) =>
-                nds.map((n) =>
-                  n.id === nodeId ? { ...n, data: { ...n.data, ...partial } as CanvasNodeData } : n,
-                ) as CanvasNode[],
-            );
-            pushHistory(nodes, edges);
-          }}
-          allThreats={fullAnalysisResult?.threats}
-          onToggleMitigation={handleToggleMitigation}
-          onMitigationStatusChange={handleMitigationStatusChange}
-        />
-      )}
-
-      <ThreatResultsPanel
-        result={filteredAnalysisResult ?? analysisResult}
-        riskSummary={effectiveRiskSummary}
-        attackPaths={attackPaths}
-        nodes={nodes as CanvasNode[]}
-        edges={edges as CanvasEdge[]}
-        onThreatClick={onThreatClick}
-        onLocateThreat={(threat) => {
-          if (threat.affectedNodeIds.length > 0) {
-            const nodeIds = new Set(threat.affectedNodeIds);
-            setNodes(
-              (nds) => nds.map((n) => ({ ...n, selected: nodeIds.has(n.id) })) as CanvasNode[],
-            );
-            const firstNode = (nodes as CanvasNode[]).find((n) => nodeIds.has(n.id));
-            if (firstNode && reactFlowInstance) {
-              reactFlowInstance.setCenter(firstNode.position.x + 90, firstNode.position.y + 50, {
-                zoom: 1,
-                duration: 300,
-              });
-            }
-          }
-        }}
-        showMitigated={showMitigated}
-        onToggleShowMitigated={() => setShowMitigated((v) => !v)}
-        totalBeforeMitigation={fullAnalysisResult?.threats.length ?? 0}
-        aisvsResult={aisvsResult}
-        complianceViolations={complianceViolations}
-        complianceGapReport={complianceGapReport}
-        attackSurfaceScores={attackSurfaceScores}
-        onPathClick={(path) => {
-          const nodeIds = new Set(path.nodes);
-          setNodes(
-            (nds) => nds.map((n) => ({ ...n, selected: nodeIds.has(n.id) })) as CanvasNode[],
-          );
-          const pathEdges = new Set<string>();
-          for (let i = 0; i < path.nodes.length - 1; i++) {
-            for (const e of edges) {
-              if (
-                (e.source === path.nodes[i] && e.target === path.nodes[i + 1]) ||
-                (e.target === path.nodes[i] && e.source === path.nodes[i + 1])
-              ) {
-                pathEdges.add(e.id!);
-              }
-            }
-          }
-          setEdges(
-            (eds) => eds.map((e) => ({ ...e, selected: pathEdges.has(e.id!) })) as CanvasEdge[],
-          );
-          const targetNodes = nodes.filter((n) => nodeIds.has(n.id));
-          if (targetNodes.length > 0) fitView({ nodes: targetNodes, duration: 500, padding: 0.3 });
-        }}
-        whatIfResult={whatIfResult}
-        aiuc1Result={aiuc1Result}
-        threatStatuses={threatStatuses}
-        onUpdateThreatStatus={onUpdateThreatStatus}
-      />
-
-      {editingEdge?.data && (
-        <EdgeMetadataEditor
-          open={!!editingEdgeId}
-          onOpenChange={(open) => {
-            if (!open) setEditingEdgeId(null);
-          }}
-          metadata={editingEdge.data as DataFlowMetadata}
-          onSave={handleSaveEdgeMetadata}
-        />
-      )}
-
-      <CustomComponentDialog
-        open={showCustomDialog}
-        onOpenChange={setShowCustomDialog}
-        onSave={handleSaveCustomComponent}
-      />
-
-      <ModelManager
-        open={modelManagerOpen}
-        onOpenChange={(open) => {
-          setModelManagerOpen(open);
-          if (!open) refreshUserTemplates();
-        }}
-        mode={modelManagerMode}
-        onSave={(...args) => {
-          handleSaveModel(...args);
-          refreshUserTemplates();
-        }}
-        onLoad={handleLoadModel}
-        currentModelData={currentModelData}
-        nodeCount={nodes.length}
-        edgeCount={edges.length}
-      />
-
-      <AibomImportDialog
-        open={showAibomImport}
-        onOpenChange={setShowAibomImport}
-        onImport={handleAibomImport}
-      />
-
-      <NodeEditorDialog
-        open={!!editingNodeId}
-        onOpenChange={(open) => {
-          if (!open) setEditingNodeId(null);
-        }}
-        node={(nodes.find((n) => n.id === editingNodeId) as CanvasNode | null) ?? null}
-        onSave={handleSaveNodeEdits}
-      />
-
-      {showOnboarding && <OnboardingOverlay onDismiss={handleDismissOnboarding} />}
-      <KeyboardShortcutsPanel open={showShortcuts} onClose={() => setShowShortcuts(false)} />
-
-      {/* Loading overlay during analysis */}
-      {isAnalyzing && (
-        <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-3 p-6 rounded-lg bg-background border shadow-lg">
-            <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-            <p className="text-sm font-medium">Analyzing threats...</p>
-            <p className="text-xs text-muted-foreground">Running MAESTRO 7-layer analysis</p>
-          </div>
-        </div>
-      )}
-
-      {/* Heat map legend */}
-      {heatMapActive && (
-        <div className="absolute bottom-4 left-64 z-40 bg-background/95 border rounded-lg p-2 shadow-sm">
-          <p className="text-[10px] font-semibold mb-1">Threat Heat Map</p>
-          <div className="flex items-center gap-2 text-[9px]">
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded bg-red-500" /> High
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded bg-orange-500" /> Medium
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded bg-yellow-500" /> Low
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded bg-gray-400" /> None
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Empty canvas CTA */}
-      {nodes.length === 0 && !analysisResult && !showOnboarding && (
-        <div
-          className="absolute inset-0 flex items-center justify-center pointer-events-none z-30"
-          style={{ left: "224px" }}
-        >
-          <div className="pointer-events-auto bg-background/95 border rounded-xl p-6 shadow-lg max-w-md text-center space-y-4">
-            <h3 className="text-lg font-bold">Get Started with Threat Modeling</h3>
-            <p className="text-sm text-muted-foreground">
-              Drag components from the palette, load a template, or import an existing model.
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              {ARCHITECTURE_TEMPLATES.slice(0, 3).map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => loadTemplate(t.id)}
-                  className="p-3 border rounded-lg hover:bg-accent transition-colors text-left"
-                >
-                  <p className="text-xs font-semibold truncate">{t.name}</p>
-                  <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">
-                    {t.description}
-                  </p>
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-2 justify-center">
-              <Button variant="outline" size="sm" onClick={importJSON}>
-                Import JSON
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setShowAibomImport(true)}>
-                Import AIBOM
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Clear canvas confirmation dialog */}
-      <Dialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Clear Canvas?</DialogTitle>
-            <DialogDescription>
-              This will remove all {nodes.length} components and {edges.length} connections. This
-              action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setShowClearConfirm(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" size="sm" onClick={doClearCanvas}>
-              Clear All
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Import overwrite confirmation dialog */}
-      <Dialog
-        open={!!pendingImport}
-        onOpenChange={(open) => {
-          if (!open) setPendingImport(null);
-        }}
-      >
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Replace Current Model?</DialogTitle>
-            <DialogDescription>
-              Importing will replace your current model ({nodes.length} components, {edges.length}{" "}
-              connections). Save your current work first if needed.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setPendingImport(null)}>
-              Cancel
-            </Button>
-            <Button size="sm" onClick={applyImport}>
-              Replace
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {!desktop && <MobileBar />}
+      {!desktop && <MobileSheets />}
+      <DialogHost />
     </div>
   );
 }
 
-export default function ThreatModelCanvas({ initialTemplate }: { initialTemplate?: string } = {}) {
+/** Autosave flush, onboarding auto-open and the "moved to My models" notice. */
+function useLifecycle(desktop: boolean) {
+  const bootstrapped = useTM((s) => s.bootstrappedSearch !== null);
+  const stashed = useTM((s) => s.stashedModel);
+
+  useEffect(() => {
+    const flush = () => tm().flushAutosave();
+    window.addEventListener("beforeunload", flush);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      window.removeEventListener("beforeunload", flush);
+      window.removeEventListener("pagehide", flush);
+      flush();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!bootstrapped || !desktop) return;
+    const s = tm();
+    if (
+      readPrefs().onboardingSeen ||
+      s.document.nodes.length ||
+      s.persist === "readonly" ||
+      s.ui.dialog
+    )
+      return;
+    s.openDialog("onboarding");
+    // Only once per page load; the overlay records onboardingSeen itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bootstrapped]);
+
+  useEffect(() => {
+    if (!stashed) return;
+    toast.info(`Your previous canvas “${stashed.name}” was saved to My models`, {
+      action: { label: "Open", onClick: () => tm().openDialog("models", { mode: "load" }) },
+    });
+  }, [stashed]);
+}
+
+function CanvasRegion({ canvasRef }: { canvasRef: React.RefObject<HTMLDivElement> }) {
+  const actions = useCanvasActions();
+  const empty = useTM((s) => s.document.nodes.length === 0);
+  const readOnly = useTM((s) => s.persist === "readonly");
+  const bootstrapped = useTM((s) => s.bootstrappedSearch !== null);
+
   return (
-    <ReactFlowProvider>
-      <ThreatModelCanvasInner initialTemplate={initialTemplate} />
-    </ReactFlowProvider>
+    <CanvasContextMenu actions={actions}>
+      <div
+        ref={canvasRef}
+        role="region"
+        aria-label="Threat model canvas. Press question mark for keyboard shortcuts."
+        tabIndex={0}
+        data-tour="canvas"
+        className="tm-canvas absolute inset-0 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+      >
+        <FlowCanvas />
+        <AnalysisSweep />
+        <PathPlaybackBar />
+        <ModeHint />
+        <CanvasLegend className="absolute bottom-3 left-3 z-10 hidden sm:block" />
+        {empty && bootstrapped && !readOnly && <EmptyCanvasCard />}
+      </div>
+    </CanvasContextMenu>
+  );
+}
+
+function DesktopPalette() {
+  const mode = useTM((s) => s.ui.paletteMode);
+  return <ComponentPalette variant={mode === "rail" ? "rail" : "pane"} />;
+}
+
+/** Property pane (when something is selected) and the resizable results pane. */
+function RightPanes() {
+  const hasSelection = useTM((s) => !!(s.ui.selectedNodeId || s.ui.selectedEdgeId));
+  const resultsOpen = useTM((s) => s.ui.resultsOpen);
+  const wide = useMediaQuery("(min-width: 1280px)");
+  // Between lg and xl there is room for one side pane: properties win while selected.
+  const showResults = resultsOpen && (wide || !hasSelection);
+
+  return (
+    <>
+      {hasSelection && (
+        <div className="w-80 shrink-0">
+          <PropertyPanel variant="pane" />
+        </div>
+      )}
+      {showResults ? (
+        <ResultsPane />
+      ) : (
+        <CollapsedResults hiddenBySelection={resultsOpen && hasSelection} />
+      )}
+    </>
+  );
+}
+
+function ResultsPane() {
+  const stored = useTM((s) => s.ui.resultsWidth);
+  const [drag, setDrag] = useState<number | null>(null);
+  const start = useRef<{ x: number; w: number } | null>(null);
+  const width = clampWidth(drag ?? stored);
+
+  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    start.current = { x: e.clientX, w: width };
+    setDrag(width);
+  };
+  const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    if (!start.current) return;
+    setDrag(clampWidth(start.current.w + (start.current.x - e.clientX)));
+  };
+  const onPointerUp = () => {
+    if (!start.current) return;
+    start.current = null;
+    if (drag !== null) tm().setUi({ resultsWidth: clampWidth(drag) });
+    setDrag(null);
+  };
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const step = e.shiftKey ? 64 : 16;
+    let next: number | null = null;
+    if (e.key === "ArrowLeft") next = width + step;
+    else if (e.key === "ArrowRight") next = width - step;
+    else if (e.key === "Home") next = RESULTS_MIN;
+    else if (e.key === "End") next = RESULTS_MAX;
+    else if (e.key === "Enter") {
+      e.preventDefault();
+      tm().setUi({ resultsOpen: false });
+      return;
+    }
+    if (next === null) return;
+    e.preventDefault();
+    e.stopPropagation();
+    tm().setUi({ resultsWidth: clampWidth(next) });
+  };
+
+  return (
+    <div className="relative flex shrink-0 border-l" style={{ width }}>
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize results panel (arrow keys; Enter hides it)"
+        aria-valuemin={RESULTS_MIN}
+        aria-valuemax={RESULTS_MAX}
+        aria-valuenow={width}
+        tabIndex={0}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        onKeyDown={onKeyDown}
+        onDoubleClick={() => tm().setUi({ resultsWidth: 380 })}
+        className={cn(
+          "absolute inset-y-0 -left-1.5 z-20 w-3 cursor-col-resize touch-none outline-none",
+          "after:absolute after:inset-y-0 after:left-1/2 after:w-0.5 after:-translate-x-1/2 after:bg-transparent after:transition-colors",
+          "hover:after:bg-primary/50 focus-visible:after:bg-primary",
+          drag !== null && "after:bg-primary",
+        )}
+      />
+      <div className="min-w-0 flex-1">
+        <ResultsPanel variant="pane" />
+      </div>
+    </div>
+  );
+}
+
+function CollapsedResults({ hiddenBySelection }: { hiddenBySelection: boolean }) {
+  const open = useTM((s) => s.analysis?.summary.open ?? null);
+  const show = () => {
+    if (hiddenBySelection) tm().setUi({ selectedNodeId: null, selectedEdgeId: null });
+    tm().setUi({ resultsOpen: true });
+  };
+  return (
+    <button
+      type="button"
+      onClick={show}
+      aria-label={`Show results${open !== null ? ` (${open} open threats)` : ""}`}
+      className="flex w-9 shrink-0 flex-col items-center gap-2 border-l bg-muted/30 py-3 text-xs hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+    >
+      <ListChecks className="h-4 w-4" aria-hidden />
+      <span className="[writing-mode:vertical-rl]">Results</span>
+      {open !== null && (
+        <span className="rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">
+          {open}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function MobileBar() {
+  const open = useTM((s) => s.analysis?.summary.open ?? null);
+  const hasSelection = useTM((s) => !!(s.ui.selectedNodeId || s.ui.selectedEdgeId));
+  const readOnly = useTM((s) => s.persist === "readonly");
+  const item = "flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[11px] disabled:opacity-40";
+  return (
+    <nav
+      aria-label="Modeler panels"
+      className="flex shrink-0 border-t bg-card pb-[env(safe-area-inset-bottom)]"
+    >
+      <button
+        type="button"
+        className={item}
+        onClick={() => tm().setUi({ sheet: "palette" })}
+        disabled={readOnly}
+      >
+        <Puzzle className="h-5 w-5" aria-hidden />
+        Components
+      </button>
+      <button
+        type="button"
+        className={item}
+        onClick={() => tm().setUi({ sheet: "properties" })}
+        disabled={!hasSelection}
+      >
+        <SlidersHorizontal className="h-5 w-5" aria-hidden />
+        Properties
+      </button>
+      <button type="button" className={item} onClick={() => tm().setUi({ sheet: "results" })}>
+        <PanelBottomOpen className="h-5 w-5" aria-hidden />
+        Results{open !== null ? ` (${open})` : ""}
+      </button>
+    </nav>
+  );
+}
+
+function MobileSheets() {
+  const sheet = useTM((s) => s.ui.sheet);
+  const close = useCallback((open: boolean) => {
+    if (!open) tm().setUi({ sheet: null });
+  }, []);
+  return (
+    <>
+      <BottomSheet
+        open={sheet === "palette"}
+        onOpenChange={close}
+        title="Components"
+        description="Tap a component to add it to the canvas."
+      >
+        <ComponentPalette variant="sheet" onAdded={() => tm().setUi({ sheet: null })} />
+      </BottomSheet>
+      <BottomSheet open={sheet === "properties"} onOpenChange={close} title="Properties">
+        <PropertyPanel variant="sheet" />
+      </BottomSheet>
+      <BottomSheet open={sheet === "results"} onOpenChange={close} title="Results" height="85dvh">
+        <ResultsPanel variant="sheet" />
+      </BottomSheet>
+    </>
   );
 }

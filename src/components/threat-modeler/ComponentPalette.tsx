@@ -1,748 +1,461 @@
-import { useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import {
   ChevronDown,
   ChevronRight,
-  Search,
-  Plus,
-  Brain,
-  GitBranch,
-  Lightbulb,
-  Database,
-  Wrench,
-  Server,
-  User,
-  Globe,
-  Shield,
-  Box,
-  FileText,
-  FileSearch,
-  Terminal,
-  Mail,
-  CreditCard,
-  Eye,
+  PanelLeftClose,
   Pencil,
-  Cpu,
-  MousePointerClick,
+  Plus,
+  Search,
+  Trash2,
+  X,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { Icon } from "@/lib/icons";
+import { cn } from "@/lib/utils";
+import { useCanvasActions } from "./hooks/useCanvasActions";
 import {
-  type PaletteGroup,
-  type PaletteItem,
-  type CustomComponentDefinition,
-  type ToolAccessMode,
-  type ToolRiskTier,
-  type PromptType,
-  MaestroLayer,
-} from "./types";
+  PALETTE_DND_TYPE,
+  PALETTE_SECTIONS,
+  customEntry,
+  entryHaystack,
+  type PaletteEntry,
+  type PaletteSection,
+} from "./paletteData";
+import { tm, useTM } from "./store";
+import type { CustomComponentDefinition } from "./types";
 
-export interface PaletteItemWithMeta extends PaletteItem {
-  toolAccessMode?: ToolAccessMode;
-  toolRiskTier?: ToolRiskTier;
-  promptType?: PromptType;
+export interface ComponentPaletteProps {
+  /** "pane": docked column · "rail": 48px icon strip · "sheet": full-width mobile sheet. */
+  variant: "pane" | "rail" | "sheet";
+  /** Called after an item is added (e.g. to close the mobile sheet). */
+  onAdded?: () => void;
 }
 
-const ICON_MAP: Record<string, React.ElementType> = {
-  brain: Brain,
-  "git-branch": GitBranch,
-  lightbulb: Lightbulb,
-  database: Database,
-  wrench: Wrench,
-  server: Server,
-  user: User,
-  globe: Globe,
-  shield: Shield,
-  box: Box,
-  "file-text": FileText,
-  "file-search": FileSearch,
-  terminal: Terminal,
-  mail: Mail,
-  "credit-card": CreditCard,
-  eye: Eye,
-  pencil: Pencil,
-  cpu: Cpu,
-};
+const CUSTOM_ID = "custom";
+const CUSTOM_COLOR = "hsl(var(--muted-foreground))";
 
-const BUILT_IN_GROUPS: PaletteGroup[] = [
-  {
-    id: "kc1",
-    label: "KC1: AI Models",
-    color: "#3b82f6",
-    items: [
-      {
-        id: "kc1-llm",
-        label: "LLM / Foundation Model",
-        description: "Large Language Model",
-        category: "kc1",
-        componentId: "kc1",
-        maestroLayers: [MaestroLayer.FoundationModels],
-        icon: "brain",
-        color: "#3b82f6",
-        nodeType: "agentComponent",
-      },
-      {
-        id: "kc1-embedding",
-        label: "Embedding Model",
-        description: "Text embedding model",
-        category: "kc1",
-        componentId: "kc1.2",
-        maestroLayers: [MaestroLayer.FoundationModels],
-        icon: "brain",
-        color: "#3b82f6",
-        nodeType: "agentComponent",
-      },
-    ],
-  },
-  {
-    id: "kc2",
-    label: "KC2: Agent Architecture",
-    color: "#22c55e",
-    items: [
-      {
-        id: "kc2-agent",
-        label: "AI Agent",
-        description: "Autonomous agent",
-        category: "kc2",
-        componentId: "kc2",
-        maestroLayers: [MaestroLayer.AgentFrameworks, MaestroLayer.AgentEcosystem],
-        icon: "git-branch",
-        color: "#22c55e",
-        nodeType: "agentComponent",
-      },
-      {
-        id: "kc2-orchestrator",
-        label: "Orchestrator",
-        description: "Multi-agent coordinator",
-        category: "kc2",
-        componentId: "kc2.2",
-        maestroLayers: [MaestroLayer.AgentFrameworks],
-        icon: "git-branch",
-        color: "#22c55e",
-        nodeType: "agentComponent",
-      },
-    ],
-  },
-  {
-    id: "kc3",
-    label: "KC3: Agentic Patterns",
-    color: "#eab308",
-    items: [
-      {
-        id: "kc3-rag",
-        label: "RAG Pipeline",
-        description: "Retrieval-Augmented Generation",
-        category: "kc3",
-        componentId: "kc3",
-        maestroLayers: [MaestroLayer.AgentFrameworks],
-        icon: "lightbulb",
-        color: "#eab308",
-        nodeType: "agentComponent",
-      },
-      {
-        id: "kc3-cot",
-        label: "Chain-of-Thought",
-        description: "Reasoning chain",
-        category: "kc3",
-        componentId: "kc3.2",
-        maestroLayers: [MaestroLayer.AgentFrameworks],
-        icon: "lightbulb",
-        color: "#eab308",
-        nodeType: "agentComponent",
-      },
-      {
-        id: "kc3-prompt",
-        label: "Prompt Template",
-        description: "Reusable prompt template",
-        category: "kc3",
-        componentId: "kc3.3",
-        maestroLayers: [MaestroLayer.AgentFrameworks],
-        icon: "file-text",
-        color: "#eab308",
-        nodeType: "agentComponent",
-      },
-      {
-        id: "kc3-system-prompt",
-        label: "System Prompt",
-        description: "System-level instructions",
-        category: "kc3",
-        componentId: "kc3.5",
-        maestroLayers: [MaestroLayer.AgentFrameworks],
-        icon: "file-text",
-        color: "#eab308",
-        nodeType: "agentComponent",
-        promptType: "system",
-      } as PaletteItemWithMeta,
-      {
-        id: "kc3-user-prompt",
-        label: "User Prompt Template",
-        description: "User input template",
-        category: "kc3",
-        componentId: "kc3.6",
-        maestroLayers: [MaestroLayer.AgentFrameworks],
-        icon: "file-text",
-        color: "#eab308",
-        nodeType: "agentComponent",
-        promptType: "user",
-      } as PaletteItemWithMeta,
-      {
-        id: "kc3-few-shot",
-        label: "Few-Shot Template",
-        description: "Few-shot example prompt",
-        category: "kc3",
-        componentId: "kc3.7",
-        maestroLayers: [MaestroLayer.AgentFrameworks],
-        icon: "lightbulb",
-        color: "#eab308",
-        nodeType: "agentComponent",
-        promptType: "few-shot",
-      } as PaletteItemWithMeta,
-      {
-        id: "kc3-fn-call",
-        label: "Function Call Schema",
-        description: "Function/tool call definition",
-        category: "kc3",
-        componentId: "kc3.8",
-        maestroLayers: [MaestroLayer.AgentFrameworks],
-        icon: "terminal",
-        color: "#eab308",
-        nodeType: "agentComponent",
-        promptType: "function-call",
-      } as PaletteItemWithMeta,
-      {
-        id: "kc3-guardrail",
-        label: "Guardrail / Safety Filter",
-        description: "Input/output safety filter",
-        category: "kc3",
-        componentId: "kc3.4",
-        maestroLayers: [MaestroLayer.SecurityCompliance, MaestroLayer.AgentFrameworks],
-        icon: "shield",
-        color: "#eab308",
-        nodeType: "agentComponent",
-      },
-    ],
-  },
-  {
-    id: "kc4",
-    label: "KC4: Memory & Context",
-    color: "#a855f7",
-    items: [
-      {
-        id: "kc4-memory",
-        label: "Memory Store",
-        description: "Agent memory/context",
-        category: "kc4",
-        componentId: "kc4",
-        maestroLayers: [MaestroLayer.DataOperations],
-        icon: "database",
-        color: "#a855f7",
-        nodeType: "dataStore",
-      },
-      {
-        id: "kc4-vectordb",
-        label: "Vector Database",
-        description: "Embedding vector store",
-        category: "kc4",
-        componentId: "kc4.3",
-        maestroLayers: [MaestroLayer.DataOperations],
-        icon: "database",
-        color: "#a855f7",
-        nodeType: "dataStore",
-      },
-      {
-        id: "kc4-knowledge",
-        label: "Knowledge Base",
-        description: "Structured knowledge",
-        category: "kc4",
-        componentId: "kc4.5",
-        maestroLayers: [MaestroLayer.DataOperations],
-        icon: "database",
-        color: "#a855f7",
-        nodeType: "dataStore",
-      },
-    ],
-  },
-  {
-    id: "kc5",
-    label: "KC5: Tools & Capabilities",
-    color: "#ec4899",
-    items: [
-      {
-        id: "kc5-tool",
-        label: "Tool / API",
-        description: "External tool or API",
-        category: "kc5",
-        componentId: "kc5",
-        maestroLayers: [MaestroLayer.AgentFrameworks],
-        icon: "wrench",
-        color: "#ec4899",
-        nodeType: "agentComponent",
-      },
-      {
-        id: "kc5-mcp",
-        label: "MCP Server",
-        description: "Model Context Protocol server",
-        category: "kc5",
-        componentId: "kc5.3",
-        maestroLayers: [MaestroLayer.AgentFrameworks, MaestroLayer.AgentEcosystem],
-        icon: "server",
-        color: "#ec4899",
-        nodeType: "agentComponent",
-      },
-    ],
-  },
-  {
-    id: "kc5-ro",
-    label: "KC5 Read-Only Tools",
-    color: "#10b981",
-    items: [
-      {
-        id: "kc5-file-reader",
-        label: "File Reader",
-        description: "Read-only file access",
-        category: "kc5",
-        componentId: "kc5.ro.1",
-        maestroLayers: [MaestroLayer.AgentFrameworks],
-        icon: "file-search",
-        color: "#10b981",
-        nodeType: "agentComponent",
-        toolAccessMode: "read-only",
-        toolRiskTier: "benign",
-      } as PaletteItemWithMeta,
-      {
-        id: "kc5-web-scraper",
-        label: "Web Scraper",
-        description: "Read-only web content retrieval",
-        category: "kc5",
-        componentId: "kc5.ro.2",
-        maestroLayers: [MaestroLayer.AgentFrameworks],
-        icon: "eye",
-        color: "#10b981",
-        nodeType: "agentComponent",
-        toolAccessMode: "read-only",
-        toolRiskTier: "benign",
-      } as PaletteItemWithMeta,
-      {
-        id: "kc5-search",
-        label: "Search Tool",
-        description: "Web/data search (read-only)",
-        category: "kc5",
-        componentId: "kc5.ro.3",
-        maestroLayers: [MaestroLayer.AgentFrameworks],
-        icon: "file-search",
-        color: "#10b981",
-        nodeType: "agentComponent",
-        toolAccessMode: "read-only",
-        toolRiskTier: "benign",
-      } as PaletteItemWithMeta,
-      {
-        id: "kc5-db-query",
-        label: "Database Query (Read)",
-        description: "Read-only database access",
-        category: "kc5",
-        componentId: "kc5.ro.4",
-        maestroLayers: [MaestroLayer.AgentFrameworks, MaestroLayer.DataOperations],
-        icon: "database",
-        color: "#10b981",
-        nodeType: "agentComponent",
-        toolAccessMode: "read-only",
-        toolRiskTier: "benign",
-      } as PaletteItemWithMeta,
-    ],
-  },
-  {
-    id: "kc5-rw",
-    label: "KC5 Read-Write Tools",
-    color: "#f59e0b",
-    items: [
-      {
-        id: "kc5-db-rw",
-        label: "Database (Read-Write)",
-        description: "Full database access",
-        category: "kc5",
-        componentId: "kc5.rw.1",
-        maestroLayers: [MaestroLayer.AgentFrameworks, MaestroLayer.DataOperations],
-        icon: "database",
-        color: "#f59e0b",
-        nodeType: "agentComponent",
-        toolAccessMode: "read-write",
-        toolRiskTier: "sensitive",
-      } as PaletteItemWithMeta,
-      {
-        id: "kc5-file-mgr",
-        label: "File Manager",
-        description: "Read-write file system access",
-        category: "kc5",
-        componentId: "kc5.rw.2",
-        maestroLayers: [MaestroLayer.AgentFrameworks],
-        icon: "pencil",
-        color: "#f59e0b",
-        nodeType: "agentComponent",
-        toolAccessMode: "read-write",
-        toolRiskTier: "sensitive",
-      } as PaletteItemWithMeta,
-      {
-        id: "kc5-crm-api",
-        label: "CRM API",
-        description: "Customer data read-write",
-        category: "kc5",
-        componentId: "kc5.rw.3",
-        maestroLayers: [MaestroLayer.AgentFrameworks],
-        icon: "wrench",
-        color: "#f59e0b",
-        nodeType: "agentComponent",
-        toolAccessMode: "read-write",
-        toolRiskTier: "sensitive",
-      } as PaletteItemWithMeta,
-    ],
-  },
-  {
-    id: "kc5-exec",
-    label: "KC5 Execute Tools",
-    color: "#ef4444",
-    items: [
-      {
-        id: "kc5-code-interpreter",
-        label: "Code Interpreter",
-        description: "Executes generated code",
-        category: "kc5",
-        componentId: "kc5.ex.1",
-        maestroLayers: [MaestroLayer.AgentFrameworks, MaestroLayer.DeploymentInfrastructure],
-        icon: "terminal",
-        color: "#ef4444",
-        nodeType: "agentComponent",
-        toolAccessMode: "execute",
-        toolRiskTier: "destructive",
-      } as PaletteItemWithMeta,
-      {
-        id: "kc5-shell",
-        label: "Shell Executor",
-        description: "Shell command execution",
-        category: "kc5",
-        componentId: "kc5.ex.2",
-        maestroLayers: [MaestroLayer.AgentFrameworks, MaestroLayer.DeploymentInfrastructure],
-        icon: "terminal",
-        color: "#ef4444",
-        nodeType: "agentComponent",
-        toolAccessMode: "execute",
-        toolRiskTier: "destructive",
-      } as PaletteItemWithMeta,
-      {
-        id: "kc5-sandbox",
-        label: "Sandboxed Runtime",
-        description: "Isolated code execution",
-        category: "kc5",
-        componentId: "kc5.ex.3",
-        maestroLayers: [MaestroLayer.AgentFrameworks, MaestroLayer.DeploymentInfrastructure],
-        icon: "cpu",
-        color: "#ef4444",
-        nodeType: "agentComponent",
-        toolAccessMode: "execute",
-        toolRiskTier: "sensitive",
-      } as PaletteItemWithMeta,
-    ],
-  },
-  {
-    id: "kc5-ext",
-    label: "KC5 External APIs",
-    color: "#dc2626",
-    items: [
-      {
-        id: "kc5-email",
-        label: "Email Sender",
-        description: "Sends emails externally",
-        category: "kc5",
-        componentId: "kc5.ext.1",
-        maestroLayers: [MaestroLayer.AgentFrameworks],
-        icon: "mail",
-        color: "#dc2626",
-        nodeType: "agentComponent",
-        toolAccessMode: "write-only",
-        toolRiskTier: "critical",
-      } as PaletteItemWithMeta,
-      {
-        id: "kc5-payment",
-        label: "Payment API",
-        description: "Payment processing",
-        category: "kc5",
-        componentId: "kc5.ext.2",
-        maestroLayers: [MaestroLayer.AgentFrameworks],
-        icon: "credit-card",
-        color: "#dc2626",
-        nodeType: "agentComponent",
-        toolAccessMode: "write-only",
-        toolRiskTier: "critical",
-      } as PaletteItemWithMeta,
-      {
-        id: "kc5-deploy",
-        label: "Deployment Trigger",
-        description: "Triggers deployments",
-        category: "kc5",
-        componentId: "kc5.ext.3",
-        maestroLayers: [MaestroLayer.AgentFrameworks, MaestroLayer.DeploymentInfrastructure],
-        icon: "server",
-        color: "#dc2626",
-        nodeType: "agentComponent",
-        toolAccessMode: "execute",
-        toolRiskTier: "critical",
-      } as PaletteItemWithMeta,
-    ],
-  },
-  {
-    id: "kc6",
-    label: "KC6: Infrastructure",
-    color: "#6366f1",
-    items: [
-      {
-        id: "kc6-infra",
-        label: "Infrastructure",
-        description: "Deployment infrastructure",
-        category: "kc6",
-        componentId: "kc6",
-        maestroLayers: [MaestroLayer.DeploymentInfrastructure],
-        icon: "server",
-        color: "#6366f1",
-        nodeType: "agentComponent",
-      },
-      {
-        id: "kc6-runtime",
-        label: "Runtime Environment",
-        description: "Execution runtime",
-        category: "kc6",
-        componentId: "kc6.1",
-        maestroLayers: [MaestroLayer.DeploymentInfrastructure],
-        icon: "server",
-        color: "#6366f1",
-        nodeType: "agentComponent",
-      },
-    ],
-  },
-  {
-    id: "dfd",
-    label: "DFD Primitives",
-    color: "#94a3b8",
-    items: [
-      {
-        id: "dfd-user",
-        label: "User / Actor",
-        description: "Human user",
-        category: "actor",
-        maestroLayers: [MaestroLayer.AgentEcosystem],
-        icon: "user",
-        color: "#3b82f6",
-        nodeType: "actor",
-      },
-      {
-        id: "dfd-external",
-        label: "External System",
-        description: "Third-party service",
-        category: "external",
-        maestroLayers: [MaestroLayer.AgentEcosystem],
-        icon: "globe",
-        color: "#f97316",
-        nodeType: "actor",
-      },
-      {
-        id: "dfd-datastore",
-        label: "Data Store",
-        description: "Generic data storage",
-        category: "datastore",
-        maestroLayers: [MaestroLayer.DataOperations],
-        icon: "database",
-        color: "#a855f7",
-        nodeType: "dataStore",
-      },
-      {
-        id: "dfd-trust",
-        label: "Trust Boundary",
-        description: "Security boundary",
-        category: "trust-boundary",
-        maestroLayers: [MaestroLayer.SecurityCompliance],
-        icon: "shield",
-        color: "#ef4444",
-        nodeType: "trustBoundary",
-      },
-    ],
-  },
-];
+/**
+ * When the rail asks to expand, the pane variant mounts afterwards; this
+ * module-level hand-off tells it which section to reveal or to focus search.
+ */
+let pendingReveal: { section?: string; search?: boolean } | null = null;
 
-interface ComponentPaletteProps {
-  customComponents: CustomComponentDefinition[];
-  onCreateCustom: () => void;
-  onAddComponent?: (item: PaletteItem) => void;
+function sectionDomId(id: string) {
+  return `tm-palette-section-${id}`;
 }
 
-export default function ComponentPalette({
-  customComponents,
-  onCreateCustom,
-  onAddComponent,
-}: ComponentPaletteProps) {
-  const [search, setSearch] = useState("");
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({
-    kc1: true,
-    kc2: true,
-    dfd: true,
-  });
+/** Nodes created from a custom definition (same heuristic as the editor's sync). */
+function nodesUsing(def: CustomComponentDefinition): number {
+  const threatIds = new Set(def.customThreats.map((t) => t.id));
+  return tm().document.nodes.filter((n) => {
+    const d = n.data;
+    if (!d?.isCustom) return false;
+    return d.label === def.name || (d.customThreatIds ?? []).some((id) => threatIds.has(id));
+  }).length;
+}
 
-  const toggle = (id: string) => setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+function groupBySubgroup(
+  entries: PaletteEntry[],
+): { subgroup?: string; entries: PaletteEntry[] }[] {
+  const out: { subgroup?: string; entries: PaletteEntry[] }[] = [];
+  for (const e of entries) {
+    const last = out[out.length - 1];
+    if (last && last.subgroup === e.subgroup) last.entries.push(e);
+    else out.push({ subgroup: e.subgroup, entries: [e] });
+  }
+  return out;
+}
 
-  const filteredGroups = BUILT_IN_GROUPS.map((group) => ({
-    ...group,
-    items: group.items.filter(
-      (item) =>
-        item.label.toLowerCase().includes(search.toLowerCase()) ||
-        (item.description ?? "").toLowerCase().includes(search.toLowerCase()),
-    ),
-  })).filter((group) => group.items.length > 0);
+export default function ComponentPalette({ variant, onAdded }: ComponentPaletteProps) {
+  const actions = useCanvasActions();
+  const readOnly = useTM((s) => s.persist === "readonly");
+  const customComponents = useTM((s) => s.document.customComponents);
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState<Set<string>>(() => new Set(["agentic", CUSTOM_ID]));
+  const searchRef = useRef<HTMLInputElement>(null);
 
-  const customItems: PaletteItem[] = customComponents.map((c) => ({
-    id: `custom-${c.id}`,
-    label: c.name,
-    description: c.description,
-    category: "custom",
-    maestroLayers: c.maestroLayers,
-    icon: c.icon || "box",
-    color: c.color || "#6b7280",
-    nodeType: "customComponent",
-  }));
-
-  const filteredCustom = customItems.filter(
-    (item) =>
-      item.label.toLowerCase().includes(search.toLowerCase()) ||
-      (item.description ?? "").toLowerCase().includes(search.toLowerCase()),
+  const customSection: PaletteSection = useMemo(
+    () => ({
+      id: CUSTOM_ID,
+      label: "Custom components",
+      description: "Components you defined for this model, with their own threats.",
+      color: CUSTOM_COLOR,
+      icon: "puzzle",
+      entries: customComponents.map(customEntry),
+    }),
+    [customComponents],
   );
+  const sections = useMemo(() => [...PALETTE_SECTIONS, customSection], [customSection]);
 
-  const onDragStart = (event: React.DragEvent, item: PaletteItem) => {
-    event.dataTransfer.setData("application/reactflow-item", JSON.stringify(item));
-    event.dataTransfer.effectAllowed = "move";
+  const normalized = query.trim().toLowerCase();
+  const filtered = useMemo(() => {
+    const tokens = normalized.split(/\s+/).filter(Boolean);
+    return sections.map((s) => ({
+      section: s,
+      entries: tokens.length
+        ? s.entries.filter((e) => {
+            const hay = entryHaystack(e, s);
+            return tokens.every((t) => hay.includes(t));
+          })
+        : s.entries,
+    }));
+  }, [sections, normalized]);
+  const searching = normalized.length > 0;
+  const matchCount = filtered.reduce((n, f) => n + f.entries.length, 0);
+
+  // Consume a reveal request from the rail once the expanded palette mounts.
+  useEffect(() => {
+    if (variant === "rail" || !pendingReveal) return;
+    const req = pendingReveal;
+    pendingReveal = null;
+    if (req.search) {
+      window.requestAnimationFrame(() => searchRef.current?.focus());
+      return;
+    }
+    if (req.section) {
+      const id = req.section;
+      setOpen((s) => new Set(s).add(id));
+      window.requestAnimationFrame(() => {
+        const el = document.getElementById(sectionDomId(id));
+        el?.scrollIntoView({ block: "start", behavior: "smooth" });
+        el?.querySelector<HTMLButtonElement>("button[aria-expanded]")?.focus({
+          preventScroll: true,
+        });
+      });
+    }
+  }, [variant]);
+
+  const add = (entry: PaletteEntry) => {
+    if (readOnly) return;
+    const id = actions.addEntry(entry);
+    if (id) onAdded?.();
   };
 
-  const handleClickToAdd = (item: PaletteItem) => {
-    if (onAddComponent) onAddComponent(item);
+  const onDragStart = (e: DragEvent, entry: PaletteEntry) => {
+    if (readOnly) {
+      e.preventDefault();
+      return;
+    }
+    e.dataTransfer.setData(PALETTE_DND_TYPE, entry.id);
+    e.dataTransfer.effectAllowed = "copy";
+  };
+
+  const toggle = (id: string) =>
+    setOpen((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const deleteCustom = (def: CustomComponentDefinition) => {
+    const used = nodesUsing(def);
+    const msg =
+      `Delete custom component "${def.name}"?` +
+      (used
+        ? `\n\n${used} component${used === 1 ? "" : "s"} on the canvas use it. They stay on the canvas but lose this definition's custom threats.`
+        : "");
+    if (!window.confirm(msg)) return;
+    const ok = tm().commit(
+      (doc) => ({ ...doc, customComponents: doc.customComponents.filter((c) => c.id !== def.id) }),
+      "Delete custom component",
+    );
+    if (ok) toast.success(`Deleted "${def.name}"`, { description: "Undo with ⌘/Ctrl+Z." });
+  };
+
+  // ─── Rail ─────────────────────────────────────────────────────
+  if (variant === "rail") {
+    const expand = (req: { section?: string; search?: boolean }) => {
+      pendingReveal = req;
+      tm().setUi({ paletteMode: "open" });
+    };
+    return (
+      <nav
+        data-tour="palette"
+        aria-label="Component palette (collapsed)"
+        className="flex h-full w-12 shrink-0 flex-col items-center gap-1 overflow-y-auto border-r bg-background py-2"
+      >
+        <button
+          type="button"
+          onClick={() => expand({ search: true })}
+          aria-label="Search components"
+          title="Search components"
+          className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Search className="h-4 w-4" aria-hidden />
+        </button>
+        <div className="my-1 h-px w-6 bg-border" aria-hidden />
+        {sections.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            onClick={() => expand({ section: s.id })}
+            aria-label={`Open ${s.label} (${s.entries.length})`}
+            title={`${s.label} · ${s.entries.length}`}
+            className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Icon name={s.icon} className="h-4 w-4" style={{ color: s.color }} />
+          </button>
+        ))}
+      </nav>
+    );
+  }
+
+  // ─── Pane / sheet ─────────────────────────────────────────────
+  const renderItem = (entry: PaletteEntry, section: PaletteSection) => {
+    const whyId = `tm-palette-why-${entry.id}`;
+    const def = entry.customId ? customComponents.find((c) => c.id === entry.customId) : undefined;
+    return (
+      <li key={entry.id} className="group relative">
+        <div
+          className="flex items-stretch rounded-md border border-l-[3px] bg-card transition-colors hover:bg-accent/50"
+          style={{ borderLeftColor: section.color }}
+        >
+          <button
+            type="button"
+            draggable={!readOnly}
+            onDragStart={(e) => onDragStart(e, entry)}
+            onClick={() => add(entry)}
+            disabled={readOnly}
+            aria-label={entry.label}
+            aria-describedby={whyId}
+            title={readOnly ? undefined : "Click or press Enter to add · drag to place"}
+            className={cn(
+              "flex min-w-0 flex-1 items-start gap-2 rounded-l-md p-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+              readOnly ? "cursor-default opacity-70" : "cursor-grab active:cursor-grabbing",
+            )}
+          >
+            <Icon
+              name={entry.icon}
+              className="mt-0.5 h-4 w-4 shrink-0"
+              style={{ color: def?.color || section.color }}
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-xs font-medium">{entry.label}</span>
+              <span
+                id={whyId}
+                className="line-clamp-2 block text-[11px] leading-snug text-muted-foreground"
+              >
+                {entry.why}
+              </span>
+              {entry.chips.length > 0 && (
+                <span className="mt-1 flex flex-wrap gap-1">
+                  {entry.chips.slice(0, 3).map((c) => (
+                    <span
+                      key={c}
+                      className="rounded border bg-muted/50 px-1 text-[11px] leading-4 text-muted-foreground"
+                    >
+                      {c}
+                    </span>
+                  ))}
+                </span>
+              )}
+            </span>
+          </button>
+          <div className="flex flex-col items-center justify-start gap-0.5 p-1">
+            <button
+              type="button"
+              tabIndex={-1}
+              onClick={() => add(entry)}
+              disabled={readOnly}
+              aria-label={`Add ${entry.label} to canvas`}
+              title={`Add ${entry.label} to canvas`}
+              className="flex h-6 w-6 items-center justify-center rounded border bg-background text-foreground hover:bg-primary hover:text-primary-foreground disabled:pointer-events-none disabled:opacity-40"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden />
+            </button>
+            {def && !readOnly && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => tm().openDialog("customComponent", { editId: def.id })}
+                  aria-label={`Edit custom component ${def.name}`}
+                  title="Edit"
+                  className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Pencil className="h-3 w-3" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteCustom(def)}
+                  aria-label={`Delete custom component ${def.name}`}
+                  title="Delete"
+                  className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Trash2 className="h-3 w-3" aria-hidden />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </li>
+    );
   };
 
   return (
-    <div className="w-56 border-r bg-background/95 flex flex-col h-full">
-      <div className="p-2 border-b space-y-2">
-        <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            placeholder="Search components..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-7 h-7 text-xs"
-          />
-        </div>
-        <Button variant="outline" size="sm" className="w-full h-7 text-xs" onClick={onCreateCustom}>
-          <Plus className="h-3 w-3 mr-1" /> Create Custom
-        </Button>
-      </div>
-      <ScrollArea className="flex-1">
-        <div className="p-1.5 space-y-0.5">
-          {filteredGroups.map((group) => (
-            <div key={group.id}>
-              <button
-                onClick={() => toggle(group.id)}
-                className="flex items-center gap-1 w-full text-left px-1.5 py-1 hover:bg-accent rounded text-xs font-semibold"
-              >
-                {expanded[group.id] ? (
-                  <ChevronDown className="h-3 w-3" />
-                ) : (
-                  <ChevronRight className="h-3 w-3" />
-                )}
-                <span style={{ color: group.color }} className="truncate">
-                  {group.label}
-                </span>
-                <span className="text-muted-foreground ml-auto text-[10px]">
-                  {group.items.length}
-                </span>
-              </button>
-              {expanded[group.id] && (
-                <div className="ml-2 space-y-0.5">
-                  {group.items.map((item) => {
-                    const Icon = ICON_MAP[item.icon] ?? Box;
-                    return (
-                      <div
-                        key={item.id}
-                        draggable
-                        onDragStart={(e) => onDragStart(e, item)}
-                        className="flex items-center gap-1.5 px-1.5 py-1 rounded cursor-grab hover:bg-accent active:cursor-grabbing text-xs border border-transparent hover:border-border transition-all group/item"
-                        title={item.description}
-                      >
-                        <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: item.color }} />
-                        <span className="truncate flex-1">{item.label}</span>
-                        {onAddComponent && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleClickToAdd(item);
-                            }}
-                            className="hidden group-hover/item:flex h-4 w-4 items-center justify-center rounded bg-primary/10 hover:bg-primary/20 text-primary shrink-0"
-                            aria-label={`Add ${item.label} to canvas`}
-                            title="Click to add to canvas"
-                          >
-                            <MousePointerClick className="h-2.5 w-2.5" />
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ))}
-          {(filteredCustom.length > 0 || customComponents.length > 0) && (
-            <div>
-              <button
-                onClick={() => toggle("custom")}
-                className="flex items-center gap-1 w-full text-left px-1.5 py-1 hover:bg-accent rounded text-xs font-semibold"
-              >
-                {expanded.custom ? (
-                  <ChevronDown className="h-3 w-3" />
-                ) : (
-                  <ChevronRight className="h-3 w-3" />
-                )}
-                <span className="text-slate-500 truncate">Custom Components</span>
-                <span className="text-muted-foreground ml-auto text-[10px]">
-                  {filteredCustom.length}
-                </span>
-              </button>
-              {expanded.custom && (
-                <div className="ml-2 space-y-0.5">
-                  {filteredCustom.map((item) => {
-                    const Icon = ICON_MAP[item.icon] ?? Box;
-                    return (
-                      <div
-                        key={item.id}
-                        draggable
-                        onDragStart={(e) => onDragStart(e, item)}
-                        className="flex items-center gap-1.5 px-1.5 py-1 rounded cursor-grab hover:bg-accent active:cursor-grabbing text-xs border border-dashed border-transparent hover:border-border transition-all group/item"
-                        title={item.description}
-                      >
-                        <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: item.color }} />
-                        <span className="truncate flex-1">{item.label}</span>
-                        {onAddComponent && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleClickToAdd(item);
-                            }}
-                            className="hidden group-hover/item:flex h-4 w-4 items-center justify-center rounded bg-primary/10 hover:bg-primary/20 text-primary shrink-0"
-                            aria-label={`Add ${item.label} to canvas`}
-                            title="Click to add to canvas"
-                          >
-                            <MousePointerClick className="h-2.5 w-2.5" />
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+    <aside
+      data-tour="palette"
+      aria-label="Component palette"
+      className={cn(
+        "flex h-full min-h-0 flex-col bg-background",
+        variant === "pane" ? "w-64 shrink-0 border-r" : "w-full",
+      )}
+    >
+      <div className="space-y-2 border-b p-2">
+        <div className="flex items-center gap-2">
+          <h2 className="flex-1 text-sm font-semibold">Components</h2>
+          {variant === "pane" && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 p-0"
+              onClick={() => tm().setUi({ paletteMode: "rail" })}
+              aria-label="Collapse palette"
+              title="Collapse palette"
+            >
+              <PanelLeftClose className="h-4 w-4" aria-hidden />
+            </Button>
           )}
         </div>
-      </ScrollArea>
-    </div>
+        <div className="relative">
+          <Search
+            className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <Input
+            ref={searchRef}
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape" && query) {
+                e.stopPropagation();
+                setQuery("");
+              }
+            }}
+            placeholder="Search components, KC, chips…"
+            aria-label="Search components"
+            className="h-8 pl-7 text-xs"
+          />
+        </div>
+        {searching && (
+          <p className="text-[11px] text-muted-foreground" aria-live="polite">
+            {matchCount} match{matchCount === 1 ? "" : "es"}
+          </p>
+        )}
+        {readOnly ? (
+          <p className="rounded border bg-muted/40 p-1.5 text-[11px] text-muted-foreground">
+            Read-only shared model — make a copy to add components.
+          </p>
+        ) : (
+          <p className="text-[11px] text-muted-foreground">
+            Click, tap or press Enter to add · drag to place.
+          </p>
+        )}
+      </div>
+
+      <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2">
+        {searching && matchCount === 0 && (
+          <div className="py-6 text-center text-xs text-muted-foreground">
+            No components match “{query.trim()}”.
+            <Button
+              size="sm"
+              variant="link"
+              className="h-auto p-0 pl-1 text-xs"
+              onClick={() => setQuery("")}
+            >
+              <X className="mr-0.5 h-3 w-3" aria-hidden />
+              Clear
+            </Button>
+          </div>
+        )}
+        {filtered.map(({ section, entries }) => {
+          if (searching && entries.length === 0) return null;
+          const isCustom = section.id === CUSTOM_ID;
+          const expanded = searching || open.has(section.id);
+          const panelId = `${sectionDomId(section.id)}-panel`;
+          return (
+            <section key={section.id} id={sectionDomId(section.id)} className="scroll-mt-2">
+              <h3>
+                <button
+                  type="button"
+                  onClick={() => toggle(section.id)}
+                  aria-expanded={expanded}
+                  aria-controls={panelId}
+                  disabled={searching}
+                  className="flex w-full items-center gap-1.5 rounded-md px-1 py-1.5 text-left text-xs font-semibold hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default"
+                >
+                  {expanded ? (
+                    <ChevronDown
+                      className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                      aria-hidden
+                    />
+                  ) : (
+                    <ChevronRight
+                      className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                      aria-hidden
+                    />
+                  )}
+                  <Icon
+                    name={section.icon}
+                    className="h-3.5 w-3.5 shrink-0"
+                    style={{ color: section.color }}
+                  />
+                  <span className="min-w-0 flex-1 truncate">{section.label}</span>
+                  <span
+                    className="rounded-full bg-muted px-1.5 text-[11px] font-normal text-muted-foreground"
+                    aria-label={`${entries.length} components`}
+                  >
+                    {searching
+                      ? `${entries.length}/${section.entries.length}`
+                      : section.entries.length}
+                  </span>
+                </button>
+              </h3>
+              {expanded && (
+                <div id={panelId} className="space-y-1.5 pb-2 pl-1 pt-0.5">
+                  {!searching && (
+                    <p className="px-1 text-[11px] leading-snug text-muted-foreground">
+                      {section.description}
+                    </p>
+                  )}
+                  {isCustom && !searching && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 w-full gap-1 text-xs"
+                      onClick={() => tm().openDialog("customComponent")}
+                      disabled={readOnly}
+                    >
+                      <Plus className="h-3.5 w-3.5" aria-hidden />
+                      New custom component
+                    </Button>
+                  )}
+                  {isCustom && entries.length === 0 && !searching && (
+                    <p className="px-1 text-[11px] text-muted-foreground">
+                      None yet. Custom components are saved with this model.
+                    </p>
+                  )}
+                  {groupBySubgroup(entries).map((g, i) => (
+                    <Fragment key={`${g.subgroup ?? "_"}-${i}`}>
+                      {g.subgroup && (
+                        <h4 className="px-1 pt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                          {g.subgroup}
+                        </h4>
+                      )}
+                      <ul className="space-y-1.5" aria-label={g.subgroup ?? section.label}>
+                        {g.entries.map((e) => renderItem(e, section))}
+                      </ul>
+                    </Fragment>
+                  ))}
+                </div>
+              )}
+            </section>
+          );
+        })}
+      </div>
+    </aside>
   );
 }

@@ -56,7 +56,7 @@ export const EDGE_RULES: ThreatRule[] = [
     maps: {
       owaspAsi: ["ASI01"],
       cisco: ["OB-001"],
-      ciscoTechniques: ["AITech-1.1", "AITech-1.3"],
+      ciscoTechniques: ["AITech-1.1"],
       aisvs: ["C2"],
       stride: ["T", "E"],
       maestroLayer: MaestroLayer.AgentFrameworks,
