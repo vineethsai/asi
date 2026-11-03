@@ -16,6 +16,7 @@ const SWEEP_CSS = `
  */
 export default function AnalysisSweep() {
   const running = useTM((s) => s.analysisPhase === "running");
+  const hasAnalysis = useTM((s) => s.analysis != null);
   const total = useTM((s) => s.analysis?.summary.total ?? null);
   const open = useTM((s) => s.analysis?.summary.open ?? null);
   const error = useTM((s) => s.analysisError);
@@ -33,6 +34,12 @@ export default function AnalysisSweep() {
       );
     wasRunning.current = running;
   }, [running, total, open, error]);
+
+  // Clearing, loading or importing a model resets the analysis: never leave a
+  // stale "Analysis complete" announcement behind.
+  useEffect(() => {
+    if (!hasAnalysis && !running) setMessage((m) => (m ? "Analysis results cleared." : m));
+  }, [hasAnalysis, running]);
 
   return (
     <>
