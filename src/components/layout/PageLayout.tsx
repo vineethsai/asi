@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, type ReactNode } from "react";
+import { Suspense, lazy, memo, useEffect, useMemo, type ReactNode } from "react";
 import { Helmet } from "react-helmet";
 import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -37,6 +37,73 @@ export interface PageLayoutProps {
   children: ReactNode;
 }
 
+interface PageMetaProps {
+  fullTitle: string;
+  description: string;
+  keywords?: string;
+  noindex: boolean;
+  canonicalUrl: string;
+  ogType: "website" | "article";
+  image: string;
+  jsonLdText: string[];
+}
+
+/**
+ * Head tags, memoised on primitive props. react-helmet commits DOM changes on a deferred
+ * animation frame and reschedules it on every re-render of a <Helmet>; keeping this subtree
+ * out of the page's re-render path (count-ups, lazy chunks, scroll spies) guarantees the
+ * commit lands even when frames are throttled.
+ */
+const PageMeta = memo(
+  function PageMeta({
+    fullTitle,
+    description,
+    keywords,
+    noindex,
+    canonicalUrl,
+    ogType,
+    image,
+    jsonLdText,
+  }: PageMetaProps) {
+    return (
+      <Helmet>
+        <title>{fullTitle}</title>
+        <meta name="description" content={description} />
+        {keywords && <meta name="keywords" content={keywords} />}
+        <meta name="robots" content={noindex ? "noindex, nofollow" : "index, follow"} />
+        <link rel="canonical" href={canonicalUrl} />
+        <meta property="og:site_name" content={SITE_NAME} />
+        <meta property="og:type" content={ogType} />
+        <meta property="og:title" content={fullTitle} />
+        <meta property="og:description" content={description} />
+        <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:image" content={image} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={fullTitle} />
+        <meta name="twitter:description" content={description} />
+        <meta name="twitter:image" content={image} />
+        {jsonLdText.map((text, i) => (
+          <script key={i} type="application/ld+json">
+            {text}
+          </script>
+        ))}
+      </Helmet>
+    );
+  },
+  (a, b) =>
+    a.fullTitle === b.fullTitle &&
+    a.description === b.description &&
+    a.keywords === b.keywords &&
+    a.noindex === b.noindex &&
+    a.canonicalUrl === b.canonicalUrl &&
+    a.ogType === b.ogType &&
+    a.image === b.image &&
+    a.jsonLdText.length === b.jsonLdText.length &&
+    a.jsonLdText.every((t, i) => t === b.jsonLdText[i]),
+);
+
 /**
  * Page shell (IMPROVEMENT_PLAN P1-01). The Header, mobile drawer and skip link live in AppShell
  * (outside the route Suspense boundary); PageLayout owns per-page metadata, the optional
@@ -64,7 +131,10 @@ export function PageLayout({
   const fullTitle = formatTitle(title);
   const canonicalUrl = absoluteUrl(canonicalPath.split("#")[0]);
   const image = absoluteUrl(ogImage ?? `/og/${ogSlug(canonicalPath)}.png`);
-  const ldItems = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
+  const ldJson = useMemo(() => {
+    const items = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
+    return items.map((item) => JSON.stringify(item));
+  }, [jsonLd]);
 
   // Register the section so the mobile drawer can list its entities.
   useEffect(() => {
@@ -94,30 +164,16 @@ export function PageLayout({
 
   return (
     <>
-      <Helmet>
-        <title>{fullTitle}</title>
-        <meta name="description" content={description} />
-        {keywords && <meta name="keywords" content={keywords} />}
-        <meta name="robots" content={noindex ? "noindex, nofollow" : "index, follow"} />
-        <link rel="canonical" href={canonicalUrl} />
-        <meta property="og:site_name" content={SITE_NAME} />
-        <meta property="og:type" content={ogType} />
-        <meta property="og:title" content={fullTitle} />
-        <meta property="og:description" content={description} />
-        <meta property="og:url" content={canonicalUrl} />
-        <meta property="og:image" content={image} />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={fullTitle} />
-        <meta name="twitter:description" content={description} />
-        <meta name="twitter:image" content={image} />
-        {ldItems.map((item, i) => (
-          <script key={i} type="application/ld+json">
-            {JSON.stringify(item)}
-          </script>
-        ))}
-      </Helmet>
+      <PageMeta
+        fullTitle={fullTitle}
+        description={description}
+        keywords={keywords}
+        noindex={noindex}
+        canonicalUrl={canonicalUrl}
+        ogType={ogType}
+        image={image}
+        jsonLdText={ldJson}
+      />
 
       {section ? (
         <div className="flex min-h-[calc(100vh-3.5rem)] items-stretch">
