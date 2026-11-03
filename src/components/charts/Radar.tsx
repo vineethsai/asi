@@ -221,7 +221,7 @@ export function Radar({
         ]),
       }}
     >
-      <div ref={ref} className="w-full min-w-0 max-w-full overflow-hidden">
+      <div ref={ref} className="w-full min-w-0 max-w-full overflow-hidden [contain:inline-size]">
         {current === "overlay" || series.length <= 1 ? (
           <div className="flex justify-center">{chart(series, safeWidth, height, "overlay")}</div>
         ) : (
