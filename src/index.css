@@ -340,6 +340,12 @@
   animation: ash-enter var(--duration-base) var(--ease-standard) backwards;
   animation-delay: min(calc(var(--i, 0) * 40ms), 400ms);
 }
+/* Once the stagger window has passed the container is settled: no animation can keep
+   content hidden, and hover transforms are free to apply. */
+.motion-ok [data-settled] .enter {
+  animation: none;
+  opacity: 1;
+}
 @keyframes ash-enter {
   from {
     opacity: 0;

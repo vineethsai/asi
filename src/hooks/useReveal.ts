@@ -28,10 +28,15 @@ export function useReveal<T extends Element = HTMLDivElement>(options: RevealOpt
 
   useEffect(() => {
     if (!node || isVisible) return;
+    let settle = 0;
     const reveal = () => {
       node.classList.add("is-visible");
       node.setAttribute("data-visible", "");
       setIsVisible(true);
+      // After the stagger window, mark the container settled so the CSS drops the
+      // entrance animation entirely (content can never stay hidden if the
+      // animation never starts, e.g. in throttled or embedded rendering).
+      settle = window.setTimeout(() => node.setAttribute("data-settled", ""), 1200);
     };
     if (typeof IntersectionObserver === "undefined") {
       reveal();
@@ -43,7 +48,7 @@ export function useReveal<T extends Element = HTMLDivElement>(options: RevealOpt
     const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
     if (rect.height > 0 && rect.top < viewportHeight && rect.bottom > 0) {
       reveal();
-      return;
+      return () => window.clearTimeout(settle);
     }
     const observer = new IntersectionObserver(
       (entries) => {
@@ -63,6 +68,7 @@ export function useReveal<T extends Element = HTMLDivElement>(options: RevealOpt
     return () => {
       observer.disconnect();
       window.clearTimeout(timer);
+      window.clearTimeout(settle);
     };
   }, [node, isVisible, rootMargin, threshold]);
 
