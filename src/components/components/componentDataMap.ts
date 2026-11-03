@@ -1,6 +1,13 @@
 // Shared component data map for human-readable component names and descriptions
 // Used by Architectures list page and ArchitectureDetail page
 
+export const source = {
+  name: "OWASP Securing Agentic Applications Guide (KC1-KC6 sub-components)",
+  version: "1.0 (Jul 2025)",
+  url: "https://genai.owasp.org/resource/securing-agentic-applications-guide-1-0/",
+  retrievedAt: "2026-11-03",
+};
+
 export const componentDataMap: Record<string, { title: string; description: string }> = {
   "kc1.1": {
     title: "Large Language Models (LLMs)",

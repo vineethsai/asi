@@ -1,8 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Helmet } from "react-helmet";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
+import PageLayout from "@/components/layout/PageLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -77,160 +75,141 @@ export default function Implementation() {
   };
 
   return (
-    <>
-      <Helmet>
-        <title>Implementation Guide | Agentic Security Hub</title>
-        <meta
-          name="description"
-          content="Step-by-step security implementation guide for AI agentic systems. Organized by lifecycle phase: Design, Build, and Operations with detailed controls and code examples."
-        />
-        <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://agenticsecurity.info/implementation" />
-        <meta property="og:title" content="Implementation Guide | Agentic Security Hub" />
-        <meta
-          property="og:description"
-          content="Step-by-step security implementation guide for AI agentic systems organized by lifecycle phase."
-        />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://agenticsecurity.info/implementation" />
-      </Helmet>
-      <Header />
-      <main id="main-content" className="container mx-auto px-4 py-8 space-y-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight">Implementation Guide</h1>
-          <p className="mt-1 text-muted-foreground">
-            Practical security controls organized by development lifecycle phase. Each control
-            includes implementation details, tooling recommendations, and threat mappings.
-          </p>
-        </div>
+    <PageLayout
+      title="Implementation Guide"
+      description="Step-by-step security implementation guide for AI agentic systems. Organized by lifecycle phase: Design, Build, and Operations with detailed controls and code examples."
+      canonicalPath="/implementation"
+      className="space-y-8"
+    >
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold tracking-tight">Implementation Guide</h1>
+        <p className="mt-1 text-muted-foreground">
+          Practical security controls organized by development lifecycle phase. Each control
+          includes implementation details, tooling recommendations, and threat mappings.
+        </p>
+      </div>
 
-        <div className="flex flex-wrap gap-6 text-sm text-muted-foreground mb-6">
-          {phases.map((phase) => (
-            <span key={phase.id}>
-              <strong className="text-foreground">{stats[phase.id as keyof typeof stats]}</strong>{" "}
-              {phase.label} Controls
-            </span>
-          ))}
-          <span>
-            <strong className="text-foreground">{stats.total}</strong> Total
+      <div className="flex flex-wrap gap-6 text-sm text-muted-foreground mb-6">
+        {phases.map((phase) => (
+          <span key={phase.id}>
+            <strong className="text-foreground">{stats[phase.id as keyof typeof stats]}</strong>{" "}
+            {phase.label} Controls
           </span>
-        </div>
+        ))}
+        <span>
+          <strong className="text-foreground">{stats.total}</strong> Total
+        </span>
+      </div>
 
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search controls..."
-            className="pl-10"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+      {/* Search */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="search"
+          placeholder="Search controls..."
+          className="pl-10"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
 
-        {/* Phase Tabs */}
-        <Tabs value={activePhase} onValueChange={setActivePhase}>
-          <TabsList className="grid w-full grid-cols-3">
-            {phases.map((phase) => (
-              <TabsTrigger key={phase.id} value={phase.id} className="flex items-center gap-2">
-                {phase.icon}
-                {phase.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
+      {/* Phase Tabs */}
+      <Tabs value={activePhase} onValueChange={setActivePhase}>
+        <TabsList className="grid w-full grid-cols-3">
           {phases.map((phase) => (
-            <TabsContent key={phase.id} value={phase.id} className="space-y-4 mt-6">
-              <p className="text-muted-foreground">{phase.description}</p>
-              <div className="text-sm text-muted-foreground">
-                Showing {filteredMitigations.length} control
-                {filteredMitigations.length !== 1 ? "s" : ""}
-              </div>
+            <TabsTrigger key={phase.id} value={phase.id} className="flex items-center gap-2">
+              {phase.icon}
+              {phase.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-              <div className="grid gap-4">
-                {filteredMitigations.map((m) => (
-                  <Card key={m.id} className="hover:bg-muted/50 transition-colors">
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Shield className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
-                          {m.name}
-                        </CardTitle>
-                        {m.status && (
-                          <Badge variant={m.status === "active" ? "default" : "secondary"}>
-                            {m.status}
+        {phases.map((phase) => (
+          <TabsContent key={phase.id} value={phase.id} className="space-y-4 mt-6">
+            <p className="text-muted-foreground">{phase.description}</p>
+            <div className="text-sm text-muted-foreground">
+              Showing {filteredMitigations.length} control
+              {filteredMitigations.length !== 1 ? "s" : ""}
+            </div>
+
+            <div className="grid gap-4">
+              {filteredMitigations.map((m) => (
+                <Card key={m.id} className="hover:bg-muted/50 transition-colors">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Shield className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+                        {m.name}
+                      </CardTitle>
+                      {m.status && (
+                        <Badge variant={m.status === "active" ? "default" : "secondary"}>
+                          {m.status}
+                        </Badge>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-sm text-muted-foreground">{m.description}</p>
+
+                    {m.implementationDetail[phase.id as keyof typeof m.implementationDetail] && (
+                      <div className="rounded-lg p-4">
+                        <h4 className="text-sm font-semibold mb-1 flex items-center gap-2">
+                          <CheckCircle2
+                            className="h-4 w-4 text-muted-foreground"
+                            aria-hidden="true"
+                          />
+                          {phase.label} Guidance
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          {m.implementationDetail[phase.id as keyof typeof m.implementationDetail]}
+                        </p>
+                      </div>
+                    )}
+
+                    {m.implementationDetail.toolsAndFrameworks && (
+                      <div className="text-sm">
+                        <span className="font-medium">Tools: </span>
+                        <span className="text-muted-foreground">
+                          {m.implementationDetail.toolsAndFrameworks}
+                        </span>
+                      </div>
+                    )}
+
+                    {m.threatIds.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {getThreatNames(m.threatIds).map((name) => (
+                          <Badge key={name} variant="outline" className="text-xs">
+                            {name}
+                          </Badge>
+                        ))}
+                        {m.threatIds.length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{m.threatIds.length - 3} more
                           </Badge>
                         )}
                       </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <p className="text-sm text-muted-foreground">{m.description}</p>
+                    )}
 
-                      {m.implementationDetail[phase.id as keyof typeof m.implementationDetail] && (
-                        <div className="rounded-lg p-4">
-                          <h4 className="text-sm font-semibold mb-1 flex items-center gap-2">
-                            <CheckCircle2
-                              className="h-4 w-4 text-muted-foreground"
-                              aria-hidden="true"
-                            />
-                            {phase.label} Guidance
-                          </h4>
-                          <p className="text-sm text-muted-foreground">
-                            {
-                              m.implementationDetail[
-                                phase.id as keyof typeof m.implementationDetail
-                              ]
-                            }
-                          </p>
-                        </div>
-                      )}
+                    <div className="flex justify-end">
+                      <Link to={`/controls/${m.id}`}>
+                        <Button variant="ghost" size="sm" className="text-primary">
+                          View Full Details <ArrowRight className="h-4 w-4 ml-1" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
 
-                      {m.implementationDetail.toolsAndFrameworks && (
-                        <div className="text-sm">
-                          <span className="font-medium">Tools: </span>
-                          <span className="text-muted-foreground">
-                            {m.implementationDetail.toolsAndFrameworks}
-                          </span>
-                        </div>
-                      )}
-
-                      {m.threatIds.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {getThreatNames(m.threatIds).map((name) => (
-                            <Badge key={name} variant="outline" className="text-xs">
-                              {name}
-                            </Badge>
-                          ))}
-                          {m.threatIds.length > 3 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{m.threatIds.length - 3} more
-                            </Badge>
-                          )}
-                        </div>
-                      )}
-
-                      <div className="flex justify-end">
-                        <Link to={`/controls/${m.id}`}>
-                          <Button variant="ghost" size="sm" className="text-primary">
-                            View Full Details <ArrowRight className="h-4 w-4 ml-1" />
-                          </Button>
-                        </Link>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-
-                {filteredMitigations.length === 0 && (
-                  <div className="text-center py-12 text-muted-foreground">
-                    No controls found matching your search for this phase.
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-          ))}
-        </Tabs>
-      </main>
-      <Footer />
-    </>
+              {filteredMitigations.length === 0 && (
+                <div className="text-center py-12 text-muted-foreground">
+                  No controls found matching your search for this phase.
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        ))}
+      </Tabs>
+    </PageLayout>
   );
 }

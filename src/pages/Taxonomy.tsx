@@ -1,7 +1,6 @@
 import React, { useState, useMemo, Suspense, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
+import PageLayout from "@/components/layout/PageLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -1010,9 +1009,43 @@ const TabLoader = () => (
   </div>
 );
 
+const TAB_META: Record<string, { title: string; description: string }> = {
+  overview: {
+    title: "Threat Taxonomy",
+    description:
+      "Unified view of AI security frameworks — OWASP Agentic Top 10, Cisco AI Security Taxonomy, AIVSS and AIUC-1 — and how they map to the agentic threat catalog.",
+  },
+  cisco: {
+    title: "Cisco AI Security Taxonomy",
+    description:
+      "Cisco AI security taxonomy objectives, techniques and sub-techniques, cross-referenced with the agentic threat catalog.",
+  },
+  "owasp-agentic": {
+    title: "OWASP Top 10 for Agentic Applications",
+    description:
+      "The OWASP Top 10 for Agentic Applications (ASI01–ASI10) with examples, attack scenarios, prevention guidelines and related threats.",
+  },
+  aivss: {
+    title: "AIVSS Calculator",
+    description:
+      "Score agentic AI vulnerabilities with the OWASP AI Vulnerability Scoring System and compare pre-scored core risks.",
+  },
+  "aiuc-1": {
+    title: "AIUC-1 Requirements",
+    description:
+      "AIUC-1 requirements by principle with their OWASP Agentic Top 10 and AIVSS cross-references.",
+  },
+};
+
+/** Alternate spellings accepted in ?tab= (deep links from the command palette use "aiuc1"). */
+const TAB_ALIASES: Record<string, string> = { aiuc1: "aiuc-1" };
+
 export default function Taxonomy() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get("tab") || "overview";
+  const rawTab = searchParams.get("tab") ?? "overview";
+  const resolvedTab = TAB_ALIASES[rawTab] ?? rawTab;
+  const activeTab = resolvedTab in TAB_META ? resolvedTab : "overview";
+  const tabMeta = TAB_META[activeTab];
 
   const handleTabChange = useCallback(
     (value: string) => {
@@ -1029,87 +1062,87 @@ export default function Taxonomy() {
   const { nodes } = useFrameworkData();
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
-      <main id="main-content" className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight">Threat Taxonomy</h1>
-          <p className="mt-1 text-muted-foreground">
-            Unified view of AI security frameworks, standards, and their interconnections
-          </p>
+    <PageLayout
+      title={tabMeta.title}
+      description={tabMeta.description}
+      canonicalPath={activeTab === "overview" ? "/taxonomy" : `/taxonomy?tab=${activeTab}`}
+    >
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold tracking-tight">Threat Taxonomy</h1>
+        <p className="mt-1 text-muted-foreground">
+          Unified view of AI security frameworks, standards, and their interconnections
+        </p>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <div className="overflow-x-auto -mx-4 px-4 mb-6">
+          <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 p-1 rounded-xl">
+            <TabsTrigger value="overview" className="gap-1.5">
+              <Network className="h-4 w-4" />
+              <span className="hidden sm:inline">Overview & Mapping</span>
+              <span className="sm:hidden">Overview</span>
+            </TabsTrigger>
+            <TabsTrigger value="cisco" className="gap-1.5">
+              <Layers className="h-4 w-4" />
+              <span className="hidden sm:inline">Cisco Taxonomy</span>
+              <span className="sm:hidden">Cisco</span>
+            </TabsTrigger>
+            <TabsTrigger value="owasp-agentic" className="gap-1.5">
+              <Target className="h-4 w-4" />
+              <span className="hidden sm:inline">Agentic Top 10</span>
+              <span className="sm:hidden">Agentic</span>
+            </TabsTrigger>
+            <TabsTrigger value="aivss" className="gap-1.5">
+              <Calculator className="h-4 w-4" />
+              <span className="hidden sm:inline">AIVSS Calculator</span>
+              <span className="sm:hidden">AIVSS</span>
+            </TabsTrigger>
+            <TabsTrigger value="aiuc-1" className="gap-1.5">
+              <Shield className="h-4 w-4" />
+              <span className="hidden sm:inline">AIUC-1</span>
+              <span className="sm:hidden">AIUC-1</span>
+            </TabsTrigger>
+          </TabsList>
         </div>
 
-        <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <div className="overflow-x-auto -mx-4 px-4 mb-6">
-            <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 p-1 rounded-xl">
-              <TabsTrigger value="overview" className="gap-1.5">
-                <Network className="h-4 w-4" />
-                <span className="hidden sm:inline">Overview & Mapping</span>
-                <span className="sm:hidden">Overview</span>
-              </TabsTrigger>
-              <TabsTrigger value="cisco" className="gap-1.5">
-                <Layers className="h-4 w-4" />
-                <span className="hidden sm:inline">Cisco Taxonomy</span>
-                <span className="sm:hidden">Cisco</span>
-              </TabsTrigger>
-              <TabsTrigger value="owasp-agentic" className="gap-1.5">
-                <Target className="h-4 w-4" />
-                <span className="hidden sm:inline">Agentic Top 10</span>
-                <span className="sm:hidden">Agentic</span>
-              </TabsTrigger>
-              <TabsTrigger value="aivss" className="gap-1.5">
-                <Calculator className="h-4 w-4" />
-                <span className="hidden sm:inline">AIVSS Calculator</span>
-                <span className="sm:hidden">AIVSS</span>
-              </TabsTrigger>
-              <TabsTrigger value="aiuc-1" className="gap-1.5">
-                <Shield className="h-4 w-4" />
-                <span className="hidden sm:inline">AIUC-1</span>
-                <span className="sm:hidden">AIUC-1</span>
-              </TabsTrigger>
-            </TabsList>
+        <TabsContent value="overview" className="mt-0 space-y-6">
+          <div className="flex flex-wrap gap-6 text-sm text-muted-foreground mb-6">
+            {nodes.map((fw) => (
+              <span key={fw.id}>
+                <strong className="text-foreground">{fw.count}</strong> {fw.shortName}
+              </span>
+            ))}
           </div>
 
-          <TabsContent value="overview" className="mt-0 space-y-6">
-            <div className="flex flex-wrap gap-6 text-sm text-muted-foreground mb-6">
-              {nodes.map((fw) => (
-                <span key={fw.id}>
-                  <strong className="text-foreground">{fw.count}</strong> {fw.shortName}
-                </span>
-              ))}
-            </div>
+          <ThreatSankeyDiagram />
+          <FrameworkVisualization onSelectTab={handleTabChange} />
+          <MappingMatrix />
+        </TabsContent>
 
-            <ThreatSankeyDiagram />
-            <FrameworkVisualization onSelectTab={handleTabChange} />
-            <MappingMatrix />
-          </TabsContent>
+        <TabsContent value="cisco" className="mt-0">
+          <Suspense fallback={<TabLoader />}>
+            <CiscoTaxonomyContent />
+          </Suspense>
+        </TabsContent>
 
-          <TabsContent value="cisco" className="mt-0">
-            <Suspense fallback={<TabLoader />}>
-              <CiscoTaxonomyContent />
-            </Suspense>
-          </TabsContent>
+        <TabsContent value="owasp-agentic" className="mt-0">
+          <Suspense fallback={<TabLoader />}>
+            <OwaspAgenticTop10Content />
+          </Suspense>
+        </TabsContent>
 
-          <TabsContent value="owasp-agentic" className="mt-0">
-            <Suspense fallback={<TabLoader />}>
-              <OwaspAgenticTop10Content />
-            </Suspense>
-          </TabsContent>
+        <TabsContent value="aivss" className="mt-0">
+          <Suspense fallback={<TabLoader />}>
+            <AIVSSCalculatorContent />
+          </Suspense>
+        </TabsContent>
 
-          <TabsContent value="aivss" className="mt-0">
-            <Suspense fallback={<TabLoader />}>
-              <AIVSSCalculatorContent />
-            </Suspense>
-          </TabsContent>
-
-          <TabsContent value="aiuc-1" className="mt-0">
-            <Suspense fallback={<TabLoader />}>
-              <AIUC1ContentLazy />
-            </Suspense>
-          </TabsContent>
-        </Tabs>
-      </main>
-      <Footer />
-    </div>
+        <TabsContent value="aiuc-1" className="mt-0">
+          <Suspense fallback={<TabLoader />}>
+            <AIUC1ContentLazy />
+          </Suspense>
+        </TabsContent>
+      </Tabs>
+    </PageLayout>
   );
 }

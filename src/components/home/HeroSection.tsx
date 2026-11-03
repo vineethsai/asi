@@ -1,11 +1,17 @@
 import { ArrowRight, ShieldCheck, Target, Shield, Network, Brain, Crosshair } from "lucide-react";
 import { Link } from "react-router-dom";
+import { aisvsData } from "@/data/aisvs";
+import { architecturesData } from "@/components/components/architecturesData";
+
+// Counts come from the data so the copy can't drift (P0-11).
+const aisvsChapterCount = Object.keys(aisvsData).length;
+const architectureCount = Object.keys(architecturesData).length;
 
 const sectionLinks = [
   {
     icon: ShieldCheck,
     title: "AISVS Standards",
-    description: "13 verification categories for AI agent security",
+    description: `${aisvsChapterCount} verification chapters for AI system security`,
     path: "/aisvs",
   },
   {
@@ -29,7 +35,7 @@ const sectionLinks = [
   {
     icon: Brain,
     title: "Architecture Patterns",
-    description: "5 agentic architectures with security analysis",
+    description: `${architectureCount} agentic architectures with security analysis`,
     path: "/architectures",
   },
   {

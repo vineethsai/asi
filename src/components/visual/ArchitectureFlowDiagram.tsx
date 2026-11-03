@@ -1,4 +1,4 @@
-import { memo, useCallback } from "react";
+import { memo, useCallback, useState } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -18,7 +18,18 @@ import {
   useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Brain, GitBranch, Lightbulb, Database, Wrench, Server, User, Globe } from "lucide-react";
+import {
+  Brain,
+  GitBranch,
+  Lightbulb,
+  Database,
+  Wrench,
+  Server,
+  User,
+  Globe,
+  Maximize2,
+} from "lucide-react";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 // ---------------------------------------------------------------------------
 // Compact node components designed for read-only architecture diagrams
@@ -373,11 +384,28 @@ const ARCHITECTURE_FLOWS: Record<string, FlowDef> = {
 interface ArchitectureFlowDiagramProps {
   architectureId: string;
   className?: string;
+  /** Accessible name for the fullscreen dialog. */
+  title?: string;
 }
 
-function ArchitectureFlowInner({ architectureId }: { architectureId: string }) {
+function isCoarsePointer() {
+  return typeof window !== "undefined" && !!window.matchMedia?.("(pointer: coarse)").matches;
+}
+
+/**
+ * Inline mode never captures the mouse wheel (the page scrolls; P0-03) and, on touch screens,
+ * never captures one-finger drags. The fullscreen dialog enables wheel zoom and panning.
+ */
+function ArchitectureFlowInner({
+  architectureId,
+  interactive = false,
+}: {
+  architectureId: string;
+  interactive?: boolean;
+}) {
   const { fitView } = useReactFlow();
   const flowData = ARCHITECTURE_FLOWS[architectureId];
+  const [coarse] = useState(isCoarsePointer);
 
   const onInit = useCallback(() => {
     setTimeout(() => fitView({ padding: 0.15, duration: 200 }), 30);
@@ -401,8 +429,10 @@ function ArchitectureFlowInner({ architectureId }: { architectureId: string }) {
       nodesDraggable={false}
       nodesConnectable={false}
       elementsSelectable={false}
-      panOnDrag
-      zoomOnScroll
+      panOnDrag={interactive || !coarse}
+      zoomOnScroll={interactive}
+      panOnScroll={false}
+      preventScrolling={interactive}
       zoomOnPinch
       fitView
       fitViewOptions={{ padding: 0.15 }}
@@ -419,12 +449,44 @@ function ArchitectureFlowInner({ architectureId }: { architectureId: string }) {
 export default function ArchitectureFlowDiagram({
   architectureId,
   className = "w-full h-[400px]",
+  title = "Architecture diagram",
 }: ArchitectureFlowDiagramProps) {
+  const [fullscreen, setFullscreen] = useState(false);
+  const hasDiagram = Boolean(ARCHITECTURE_FLOWS[architectureId]);
+
   return (
-    <div className={`${className} rounded-lg overflow-hidden border border-border/40`}>
+    <div className={`${className} relative rounded-lg overflow-hidden border border-border/40`}>
       <ReactFlowProvider key={architectureId}>
         <ArchitectureFlowInner architectureId={architectureId} />
       </ReactFlowProvider>
+      {hasDiagram && (
+        <button
+          type="button"
+          onClick={() => setFullscreen(true)}
+          className="absolute right-2 top-2 z-10 inline-flex h-8 w-8 items-center justify-center rounded-md border bg-background/90 text-muted-foreground shadow-sm backdrop-blur transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={`Open ${title} fullscreen`}
+          title="Fullscreen (scroll to zoom)"
+        >
+          <Maximize2 className="h-4 w-4" aria-hidden="true" />
+        </button>
+      )}
+      <Dialog open={fullscreen} onOpenChange={setFullscreen}>
+        <DialogContent className="flex h-[88vh] w-[96vw] max-w-6xl flex-col gap-0 overflow-hidden p-0">
+          <div className="border-b px-4 py-3 pr-12">
+            <DialogTitle className="text-base">{title}</DialogTitle>
+            <DialogDescription className="text-xs">
+              Scroll or pinch to zoom, drag to pan.
+            </DialogDescription>
+          </div>
+          <div className="min-h-0 flex-1">
+            {fullscreen && (
+              <ReactFlowProvider key={`${architectureId}-fullscreen`}>
+                <ArchitectureFlowInner architectureId={architectureId} interactive />
+              </ReactFlowProvider>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

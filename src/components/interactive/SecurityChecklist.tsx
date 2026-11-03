@@ -814,30 +814,36 @@ export const SecurityChecklist: React.FC = () => {
                     <CardContent className="p-0">
                       <Accordion type="single" collapsible className="w-full">
                         <AccordionItem value={item.id} className="border-none">
-                          <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                            <div className="flex items-start gap-4 w-full">
-                              <Checkbox
-                                checked={completedItems.has(item.id)}
-                                onCheckedChange={() => toggleItem(item.id)}
-                                className="mt-1"
-                              />
-                              <div className="flex-1 text-left">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <h4 className="font-semibold">{item.title}</h4>
-                                  <Badge className={getPriorityColor(item.priority)}>
-                                    {item.priority}
-                                  </Badge>
-                                  <Badge variant="outline" className="text-xs">
-                                    {item.aisvsReference}
-                                  </Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground">{item.description}</p>
-                                <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                                  <span>⏱️ {item.estimatedTime}</span>
-                                </div>
-                              </div>
+                          {/* Checkbox sits beside (not inside) the trigger button: no nested buttons (P0-08). */}
+                          <div className="flex items-start gap-4 px-6">
+                            <Checkbox
+                              checked={completedItems.has(item.id)}
+                              onCheckedChange={() => toggleItem(item.id)}
+                              className="mt-5"
+                              aria-label={`Mark "${item.title}" as done`}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <AccordionTrigger className="py-4 hover:no-underline">
+                                <span className="block flex-1 text-left">
+                                  <span className="mb-2 flex items-center gap-3">
+                                    <span className="font-semibold">{item.title}</span>
+                                    <Badge className={getPriorityColor(item.priority)}>
+                                      {item.priority}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs">
+                                      {item.aisvsReference}
+                                    </Badge>
+                                  </span>
+                                  <span className="block text-sm font-normal text-muted-foreground">
+                                    {item.description}
+                                  </span>
+                                  <span className="mt-2 flex items-center gap-4 text-xs font-normal text-muted-foreground">
+                                    <span>⏱️ {item.estimatedTime}</span>
+                                  </span>
+                                </span>
+                              </AccordionTrigger>
                             </div>
-                          </AccordionTrigger>
+                          </div>
 
                           <AccordionContent className="px-6 pb-6">
                             <div className="space-y-4">

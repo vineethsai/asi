@@ -13,7 +13,32 @@ export interface AgenticTop10Entry {
   relatedCiscoObjectives: string[];
   color: string;
   icon: string;
+  /** Secondary / overlapping AIVSS core risks (OWASP AIVSS v0.8 Appendix B). */
+  relatedAIVSSSecondary?: string[];
 }
+
+/** Edition of the OWASP Top 10 for Agentic Applications this data follows. */
+export const AGENTIC_TOP10_EDITION = {
+  name: "OWASP Top 10 for Agentic Applications",
+  version: "2026",
+  published: "2025-12",
+} as const;
+
+export const source = {
+  name: "OWASP Top 10 for Agentic Applications",
+  version: "2026 (Dec 2025)",
+  url: "https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/",
+  retrievedAt: "2026-11-03",
+};
+
+/*
+ * Mapping provenance:
+ * - relatedThreats: Appendix A "OWASP Agentic AI Security Mapping Matrix" of the Top 10 (T1-T17,
+ *   OWASP Agentic AI Threats & Mitigations v1.1).
+ * - relatedAIVSSRisk / relatedAIVSSSecondary: OWASP AIVSS v0.8 Appendix B (primary / secondary).
+ * - relatedCiscoObjectives: every Cisco AI Security Taxonomy v2 objective whose techniques or
+ *   sub-techniques carry an "OWASP: ASIxx" mapping in Cisco's own data (cisco_taxonomy.json).
+ */
 
 export const agenticTop10Data: AgenticTop10Entry[] = [
   {
@@ -63,22 +88,29 @@ export const agenticTop10Data: AgenticTop10Entry[] = [
     references: [
       {
         title: "Security Advisory - ChatGPT Crawler Reflective DDOS Vulnerability",
-        url: "https://www.securityadvisory.io",
+        url: "https://github.com/bf/security-advisories/blob/main/2025-01-ChatGPT-Crawler-Reflective-DDOS-Vulnerability.md",
       },
-      { title: "AIM Echoleak Blog Post", url: "https://aim.security/blog/echoleak" },
+      {
+        title: "EchoLeak (CVE-2025-32711): Microsoft 365 Copilot information disclosure",
+        url: "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2025-32711",
+      },
       {
         title: "ChatGPT Plugin Exploit Explained",
         url: "https://embracethered.com/blog/posts/2023/chatgpt-plugin-exploit/",
       },
       {
-        title: "AgentFlayer: 0click inception attack on ChatGPT users",
-        url: "https://arxiv.org/abs/2503.12188",
+        title: "AgentFlayer: 0click Exploit Methods (Zenity Labs)",
+        url: "https://www.zenity.io/research/agentflayer-vulnerabilities",
       },
     ],
     relatedLLMTop10: ["LLM01:2025 Prompt Injection", "LLM06:2025 Excessive Agency"],
     relatedThreats: ["t6", "t7"],
-    relatedAIVSSRisk: "Agent Goal & Instruction Manipulation",
-    relatedCiscoObjectives: ["OB-001", "OB-002"],
+    relatedAIVSSRisk: "Agent Goal and Instruction Manipulation",
+    relatedAIVSSSecondary: [
+      "Agent Memory and Context Manipulation",
+      "Insecure Agent Critical Systems Interaction",
+    ],
+    relatedCiscoObjectives: ["OB-001", "OB-019"],
     color: "#ef4444",
     icon: "target",
   },
@@ -131,21 +163,26 @@ export const agenticTop10Data: AgenticTop10Entry[] = [
     references: [
       {
         title: "Progent: Programmable Privilege Control for LLM Agents",
-        url: "https://arxiv.org/abs/2504.19951",
+        url: "https://arxiv.org/abs/2504.11703",
       },
       {
-        title: "AgentFlayer: 0click Exploit Leading to Data Exfiltration",
-        url: "https://aim.security",
+        title:
+          "A Copilot Studio Story 2: When AIjacking Leads to Full Data Exfiltration (Zenity Labs)",
+        url: "https://labs.zenity.io/post/a-copilot-studio-story-2-when-aijacking-leads-to-full-data-exfiltration-bc4a",
       },
       {
         title: "Amazon Q Developer: Secrets Leaked via DNS and Prompt Injection",
-        url: "https://www.bleepingcomputer.com",
+        url: "https://embracethered.com/blog/posts/2025/amazon-q-developer-data-exfil-via-dns/",
       },
     ],
     relatedLLMTop10: ["LLM06:2025 Excessive Agency"],
-    relatedThreats: ["t2", "t4"],
+    relatedThreats: ["t2", "t4", "t16"],
     relatedAIVSSRisk: "Agentic AI Tool Misuse",
-    relatedCiscoObjectives: ["OB-012"],
+    relatedAIVSSSecondary: [
+      "Agent Orchestration and Multi-Agent Exploitation",
+      "Insecure Agent Critical Systems Interaction",
+    ],
+    relatedCiscoObjectives: ["OB-008", "OB-012", "OB-018"],
     color: "#f97316",
     icon: "wrench",
   },
@@ -194,7 +231,10 @@ export const agenticTop10Data: AgenticTop10Entry[] = [
       "Detect Delegated and Transitive Permissions: Monitor when an agent gains new permissions indirectly.",
     ],
     references: [
-      { title: "15 Ways to Break Your Copilot, BHUSA 2024", url: "https://blackhat.com" },
+      {
+        title: "15 Ways to Break Your Copilot (Black Hat USA 2024)",
+        url: "https://i.blackhat.com/BH-US-24/Presentations/US24-MichaelBargury-15WaystoBreakYourCopilot.pdf",
+      },
       {
         title: "Confused Deputy Problem",
         url: "https://css.csail.mit.edu/6.858/2015/readings/confused-deputy.html",
@@ -207,7 +247,8 @@ export const agenticTop10Data: AgenticTop10Entry[] = [
     ],
     relatedThreats: ["t3"],
     relatedAIVSSRisk: "Agent Access Control Violation",
-    relatedCiscoObjectives: ["OB-003", "OB-014"],
+    relatedAIVSSSecondary: ["Agent Identity Impersonation", "Agent Untraceability"],
+    relatedCiscoObjectives: ["OB-003", "OB-004", "OB-007", "OB-014"],
     color: "#eab308",
     icon: "users",
   },
@@ -262,14 +303,19 @@ export const agenticTop10Data: AgenticTop10Entry[] = [
         url: "https://invariantlabs.ai/blog/mcp-github-vulnerability",
       },
       {
-        title: "Securing GenAI multi-agent systems against tool squatting",
-        url: "https://arxiv.org/pdf/2504.19951",
+        title:
+          "Securing GenAI Multi-Agent Systems Against Tool Squatting: A Zero Trust Registry-Based Approach",
+        url: "https://arxiv.org/abs/2504.19951",
       },
     ],
     relatedLLMTop10: ["LLM03:2025 Supply Chain Vulnerabilities"],
-    relatedThreats: ["t2", "t11", "t12", "t13"],
-    relatedAIVSSRisk: "Agent Supply Chain & Dependency Attacks",
-    relatedCiscoObjectives: ["OB-009"],
+    relatedThreats: ["t2", "t11", "t12", "t13", "t16", "t17"],
+    relatedAIVSSRisk: "Agent Supply Chain and Dependency Risk",
+    relatedAIVSSSecondary: [
+      "Agentic AI Tool Misuse",
+      "Agent Orchestration and Multi-Agent Exploitation",
+    ],
+    relatedCiscoObjectives: ["OB-005", "OB-007", "OB-009", "OB-010", "OB-012"],
     color: "#22c55e",
     icon: "git-branch",
   },
@@ -319,10 +365,13 @@ export const agenticTop10Data: AgenticTop10Entry[] = [
       "Code analysis and monitoring: Do static scans before execution; enable runtime monitoring.",
     ],
     references: [
-      { title: "RCE via Waclaude memory exploitation", url: "https://cole-murray.com" },
       {
-        title: "GitHub Copilot: Remote Code Execution via Prompt Injection",
-        url: "https://github.com",
+        title: "How I Used an AI Agent's Memory to Achieve Remote Code Execution (Waclaude)",
+        url: "https://murraycole.com/posts/how-i-used-an-ai-agents-memory-to-achieve-remote-code-execution",
+      },
+      {
+        title: "GitHub Copilot: Remote Code Execution via Prompt Injection (CVE-2025-53773)",
+        url: "https://embracethered.com/blog/posts/2025/github-copilot-remote-code-execution-via-prompt-injection/",
       },
       {
         title: "RCE + container escape (Auto-GPT)",
@@ -331,8 +380,12 @@ export const agenticTop10Data: AgenticTop10Entry[] = [
     ],
     relatedLLMTop10: ["LLM01:2025 Prompt Injection", "LLM05:2025 Improper Output Handling"],
     relatedThreats: ["t11"],
-    relatedAIVSSRisk: "Insecure Agent Critical Systems Interaction",
-    relatedCiscoObjectives: ["OB-009", "OB-012"],
+    relatedAIVSSRisk: "Agentic AI Tool Misuse",
+    relatedAIVSSSecondary: [
+      "Agent Access Control Violation",
+      "Insecure Agent Critical Systems Interaction",
+    ],
+    relatedCiscoObjectives: ["OB-009", "OB-012", "OB-017", "OB-019"],
     color: "#06b6d4",
     icon: "code",
   },
@@ -398,7 +451,8 @@ export const agenticTop10Data: AgenticTop10Entry[] = [
     ],
     relatedThreats: ["t1", "t4", "t6", "t12"],
     relatedAIVSSRisk: "Agent Memory and Context Manipulation",
-    relatedCiscoObjectives: ["OB-005", "OB-006", "OB-007"],
+    relatedAIVSSSecondary: ["Agent Goal and Instruction Manipulation", "Agent Cascading Failures"],
+    relatedCiscoObjectives: ["OB-004", "OB-005", "OB-006", "OB-007", "OB-019"],
     color: "#8b5cf6",
     icon: "database",
   },
@@ -446,14 +500,18 @@ export const agenticTop10Data: AgenticTop10Entry[] = [
     references: [
       {
         title: "Local Model Poisoning Attacks to Byzantine-Robust Federated Learning",
-        url: "https://www.usenix.org",
+        url: "https://www.usenix.org/conference/usenixsecurity20/presentation/fang",
       },
-      { title: "Resilient Consensus Control for Multi-Agent Systems", url: "https://www.mdpi.com" },
+      {
+        title: "Resilient Consensus Control for Multi-Agent Systems: A Comparative Survey",
+        url: "https://www.mdpi.com/1424-8220/23/6/2904",
+      },
     ],
     relatedLLMTop10: ["LLM02:2025 Sensitive Information Disclosure", "LLM06:2025 Excessive Agency"],
-    relatedThreats: ["t12"],
+    relatedThreats: ["t12", "t16"],
     relatedAIVSSRisk: "Agent Orchestration and Multi-Agent Exploitation",
-    relatedCiscoObjectives: ["OB-004", "OB-016"],
+    relatedAIVSSSecondary: ["Agent Access Control Violation", "Agent Identity Impersonation"],
+    relatedCiscoObjectives: ["OB-001", "OB-004", "OB-016"],
     color: "#ec4899",
     icon: "network",
   },
@@ -518,7 +576,11 @@ export const agenticTop10Data: AgenticTop10Entry[] = [
     ],
     relatedThreats: ["t5", "t8"],
     relatedAIVSSRisk: "Agent Cascading Failures",
-    relatedCiscoObjectives: ["OB-013"],
+    relatedAIVSSSecondary: [
+      "Agent Orchestration and Multi-Agent Exploitation",
+      "Agent Memory and Context Manipulation",
+    ],
+    relatedCiscoObjectives: ["OB-006", "OB-013", "OB-018"],
     color: "#f43f5e",
     icon: "zap",
   },
@@ -583,8 +645,12 @@ export const agenticTop10Data: AgenticTop10Entry[] = [
       "LLM09:2025 Misinformation",
     ],
     relatedThreats: ["t7", "t8", "t10"],
-    relatedAIVSSRisk: "Agent Untraceability",
-    relatedCiscoObjectives: ["OB-008", "OB-015"],
+    relatedAIVSSRisk: "Agent Identity Impersonation",
+    relatedAIVSSSecondary: [
+      "Agent Goal and Instruction Manipulation",
+      "Agent Access Control Violation",
+    ],
+    relatedCiscoObjectives: ["OB-002", "OB-008"],
     color: "#a855f7",
     icon: "user",
   },
@@ -643,8 +709,9 @@ export const agenticTop10Data: AgenticTop10Entry[] = [
     ],
     relatedLLMTop10: ["LLM02:2025 Sensitive Information Disclosure", "LLM09:2025 Misinformation"],
     relatedThreats: ["t13", "t14", "t15"],
-    relatedAIVSSRisk: "Behavioral Integrity / Operational Security",
-    relatedCiscoObjectives: ["OB-004", "OB-018"],
+    relatedAIVSSRisk: "Agent Access Control Violation",
+    relatedAIVSSSecondary: ["Agent Untraceability", "Agent Goal and Instruction Manipulation"],
+    relatedCiscoObjectives: ["OB-002"],
     color: "#14b8a6",
     icon: "shield-check",
   },

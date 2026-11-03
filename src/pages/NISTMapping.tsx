@@ -1,8 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import * as d3 from "d3";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
+import PageLayout from "@/components/layout/PageLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,8 +21,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { aisvsData, type AISVSCategory } from "../components/components/securityData";
-import SidebarNav from "../components/layout/SidebarNav";
-import { Helmet } from "react-helmet";
 import {
   Search,
   Shield,
@@ -78,7 +75,9 @@ interface GraphNode {
 }
 
 // NIST AI RMF Data Structure
-const nistAIRMF: NISTFunction[] = [
+// Exported for the command palette index (paletteIndex.ts). TODO: move to a data module.
+// eslint-disable-next-line react-refresh/only-export-components
+export const nistAIRMF: NISTFunction[] = [
   {
     id: "govern",
     code: "GOVERN",
@@ -865,7 +864,6 @@ const nistAIRMF: NISTFunction[] = [
 export const NISTMapping = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFunction, setSelectedFunction] = useState<string>("all");
@@ -936,14 +934,6 @@ export const NISTMapping = () => {
 
     const hash = hashMapping[value] || value;
     navigate(`${location.pathname}#${hash}`, { replace: true });
-  };
-
-  const handleMobileMenuToggle = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
-
-  const handleMobileMenuClose = () => {
-    setIsMobileMenuOpen(false);
   };
 
   // Filter NIST functions based on search and filters
@@ -1455,721 +1445,632 @@ export const NISTMapping = () => {
   }, [activeTab, expandedNodes, aisvsCategories, getAISVSCategory, selectedNode]);
 
   return (
-    <>
-      <Helmet>
-        <title>
-          NIST AI RMF Mapping to AI Agents | Interactive AI Security Framework Visualization
-        </title>
-        <meta
-          name="description"
-          content="Interactive NIST AI Risk Management Framework mapping for AI agents and agentic systems. Comprehensive D3.js visualization connecting NIST AI RMF to OWASP AISVS controls, agent security requirements, and secure AI development practices."
-        />
-        <meta
-          name="keywords"
-          content="NIST AI RMF mapping to AI agent, AI agents security, NIST AI Risk Management Framework, AI security framework, agent architectures, secure AI development, OWASP AISVS mapping, interactive AI governance, AI risk management, agentic systems compliance, artificial intelligence security standards"
-        />
-        <link rel="canonical" href="https://agenticsecurity.info/nist-mapping" />
+    <PageLayout
+      title="NIST AI RMF Mapping"
+      description="Interactive mapping between the NIST AI Risk Management Framework (AI RMF 1.0) and OWASP AISVS, with a graph, detailed subcategory mapping and a compliance matrix."
+      canonicalPath="/nist-mapping"
+      keywords="NIST AI RMF mapping to AI agent, AI agents security, NIST AI Risk Management Framework, AI security framework, agent architectures, secure AI development, OWASP AISVS mapping, interactive AI governance, AI risk management, agentic systems compliance, artificial intelligence security standards"
+    >
+      {/* Header Section */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold tracking-tight">NIST AI RMF Mapping</h1>
+        <p className="mt-1 text-muted-foreground">
+          Explore the comprehensive mapping between NIST AI Risk Management Framework (AI RMF) and
+          OWASP AI Security Verification Standard (AISVS). This visual guide helps organizations
+          understand how these frameworks complement each other for comprehensive AI governance and
+          security.
+        </p>
 
-        {/* Open Graph */}
-        <meta property="og:title" content="NIST AI RMF to AISVS Mapping" />
-        <meta
-          property="og:description"
-          content="Visual mapping between NIST AI Risk Management Framework and OWASP AISVS categories."
-        />
-        <meta property="og:url" content="https://agenticsecurity.info/#/nist-mapping" />
-        <meta property="og:type" content="website" />
+        {/* Inline Stats */}
+        <div className="flex flex-wrap gap-6 text-sm text-muted-foreground mb-6">
+          <span>
+            <strong className="text-foreground">{nistAIRMF.length}</strong> NIST Functions
+          </span>
+          <span>
+            <strong className="text-foreground">{mappingStats.totalNISTSubcategories}</strong> NIST
+            Subcategories
+          </span>
+          <span>
+            <strong className="text-foreground">{aisvsCategories.length}</strong> AISVS Categories
+          </span>
+        </div>
+      </div>
 
-        {/* Twitter Card */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="NIST AI RMF to AISVS Mapping" />
-        <meta
-          name="twitter:description"
-          content="Visual mapping between NIST AI Risk Management Framework and OWASP AISVS categories."
-        />
-      </Helmet>
+      {/* Modern Filters */}
+      <div className="flex flex-wrap gap-3 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 min-w-0">
+          <div className="relative group">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 group-focus-within:text-primary transition-colors" />
+            <Input
+              placeholder="Search NIST functions, categories, or subcategories..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              aria-label="Search NIST functions, categories, or subcategories"
+              className="pl-10 border-border/50 focus:border-primary/50 bg-background/50 focus:bg-background transition-all duration-200"
+            />
+          </div>
+          <Select value={selectedFunction} onValueChange={setSelectedFunction}>
+            <SelectTrigger
+              aria-label="Filter by NIST function"
+              className="border-border/50 focus:border-primary/50 bg-background/50 focus:bg-background transition-all duration-200"
+            >
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="All NIST Functions" />
+              </div>
+            </SelectTrigger>
+            <SelectContent className="z-[9999] bg-popover border border-border shadow-lg">
+              <SelectItem value="all">All NIST Functions</SelectItem>
+              {nistAIRMF.map((func) => (
+                <SelectItem key={func.id} value={func.id}>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: func.color }}
+                    ></div>
+                    {func.code} - {func.name}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={selectedAISVS} onValueChange={setSelectedAISVS}>
+            <SelectTrigger
+              aria-label="Filter by AISVS category"
+              className="border-border/50 focus:border-primary/50 bg-background/50 focus:bg-background transition-all duration-200"
+            >
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                <SelectValue placeholder="All AISVS Categories" />
+              </div>
+            </SelectTrigger>
+            <SelectContent className="z-[9999] bg-popover border border-border shadow-lg">
+              <SelectItem value="all">All AISVS Categories</SelectItem>
+              {aisvsCategories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.code}>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: cat.color }}
+                    ></div>
+                    {cat.code} - {cat.name.split(" &")[0]}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-      <div className="min-h-screen bg-background">
-        <Header onMobileMenuToggle={handleMobileMenuToggle} isMobileMenuOpen={isMobileMenuOpen} />
-
-        {/* Mobile Navigation Sidebar */}
-        <SidebarNav type="controls" isOpen={isMobileMenuOpen} onClose={handleMobileMenuClose} />
-
-        <main id="main-content" className="container mx-auto px-4 py-8">
-          {/* Header Section */}
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold tracking-tight">NIST AI RMF Mapping</h1>
-            <p className="mt-1 text-muted-foreground">
-              Explore the comprehensive mapping between NIST AI Risk Management Framework (AI RMF)
-              and OWASP AI Security Verification Standard (AISVS). This visual guide helps
-              organizations understand how these frameworks complement each other for comprehensive
-              AI governance and security.
-            </p>
-
-            {/* Inline Stats */}
-            <div className="flex flex-wrap gap-6 text-sm text-muted-foreground mb-6">
-              <span>
-                <strong className="text-foreground">{nistAIRMF.length}</strong> NIST Functions
-              </span>
-              <span>
-                <strong className="text-foreground">{mappingStats.totalNISTSubcategories}</strong>{" "}
-                NIST Subcategories
-              </span>
-              <span>
-                <strong className="text-foreground">{aisvsCategories.length}</strong> AISVS
-                Categories
-              </span>
+      {/* Main Content Tabs */}
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+        <TabsList className="grid w-full grid-cols-4 bg-muted/50 p-1 rounded-xl border border-border/50">
+          <TabsTrigger
+            value="graph"
+            className="data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/50 rounded-lg transition-all duration-200"
+          >
+            <div className="flex items-center gap-2">
+              <Network className="h-4 w-4" />
+              <span className="hidden sm:inline">Interactive Graph</span>
+              <span className="sm:hidden">Graph</span>
             </div>
+          </TabsTrigger>
+          <TabsTrigger
+            value="overview"
+            className="data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/50 rounded-lg transition-all duration-200"
+          >
+            <div className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              <span className="hidden sm:inline">Framework Overview</span>
+              <span className="sm:hidden">Overview</span>
+            </div>
+          </TabsTrigger>
+          <TabsTrigger
+            value="mapping"
+            className="data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/50 rounded-lg transition-all duration-200"
+          >
+            <div className="flex items-center gap-2">
+              <Layers className="h-4 w-4" />
+              <span className="hidden sm:inline">Detailed Mapping</span>
+              <span className="sm:hidden">Mapping</span>
+            </div>
+          </TabsTrigger>
+          <TabsTrigger
+            value="matrix"
+            className="data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/50 rounded-lg transition-all duration-200"
+          >
+            <div className="flex items-center gap-2">
+              <GitBranch className="h-4 w-4" />
+              <span className="hidden sm:inline">Compliance Matrix</span>
+              <span className="sm:hidden">Matrix</span>
+            </div>
+          </TabsTrigger>
+        </TabsList>
 
-            {/* Quick Navigation */}
-            <Card className="mb-8">
+        {/* Framework Overview Tab */}
+        <TabsContent value="overview" className="mt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* NIST AI RMF Overview */}
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5 text-muted-foreground" />
-                  Quick Navigation
+                  <Shield className="h-5 w-5 text-muted-foreground" />
+                  NIST AI Risk Management Framework
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <Link
-                    to="/nist-mapping#framework-overview"
-                    className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                    onClick={() => handleTabChange("overview")}
-                  >
-                    <Shield className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Framework Overview</span>
-                  </Link>
-                  <Link
-                    to="/nist-mapping#detailed-mapping"
-                    className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                    onClick={() => handleTabChange("mapping")}
-                  >
-                    <GitBranch className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Detailed Mapping</span>
-                  </Link>
-                  <Link
-                    to="/nist-mapping#integration-matrix"
-                    className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                    onClick={() => handleTabChange("matrix")}
-                  >
-                    <Network className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Integration Matrix</span>
-                  </Link>
-                  <Link
-                    to="/nist-mapping#interactive-graph"
-                    className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                    onClick={() => handleTabChange("graph")}
-                  >
-                    <Layers className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Interactive Graph</span>
-                  </Link>
+                <p className="text-muted-foreground mb-4">
+                  A comprehensive framework for managing AI risks across the entire AI lifecycle,
+                  organized into four core functions that provide a structured approach to AI
+                  governance.
+                </p>
+                <div className="space-y-3">
+                  {nistAIRMF.map((func) => (
+                    <div key={func.id} className="p-3 border rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: func.color }}
+                        ></div>
+                        <h4 className="font-semibold">{func.code}</h4>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{func.description}</p>
+                      <div className="mt-2">
+                        <Badge variant="outline" className="text-xs">
+                          {func.categories.length} categories
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
-          </div>
 
-          {/* Modern Filters */}
-          <div className="flex flex-wrap gap-3 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 min-w-0">
-              <div className="relative group">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 group-focus-within:text-primary transition-colors" />
-                <Input
-                  placeholder="Search NIST functions, categories, or subcategories..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  aria-label="Search NIST functions, categories, or subcategories"
-                  className="pl-10 border-border/50 focus:border-primary/50 bg-background/50 focus:bg-background transition-all duration-200"
-                />
-              </div>
-              <Select value={selectedFunction} onValueChange={setSelectedFunction}>
-                <SelectTrigger
-                  aria-label="Filter by NIST function"
-                  className="border-border/50 focus:border-primary/50 bg-background/50 focus:bg-background transition-all duration-200"
-                >
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-muted-foreground" />
-                    <SelectValue placeholder="All NIST Functions" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent className="z-[9999] bg-popover border border-border shadow-lg">
-                  <SelectItem value="all">All NIST Functions</SelectItem>
-                  {nistAIRMF.map((func) => (
-                    <SelectItem key={func.id} value={func.id}>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: func.color }}
-                        ></div>
-                        {func.code} - {func.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={selectedAISVS} onValueChange={setSelectedAISVS}>
-                <SelectTrigger
-                  aria-label="Filter by AISVS category"
-                  className="border-border/50 focus:border-primary/50 bg-background/50 focus:bg-background transition-all duration-200"
-                >
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-                    <SelectValue placeholder="All AISVS Categories" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent className="z-[9999] bg-popover border border-border shadow-lg">
-                  <SelectItem value="all">All AISVS Categories</SelectItem>
+            {/* AISVS Overview */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-muted-foreground" />
+                  OWASP AI Security Verification Standard
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4">
+                  A comprehensive set of security requirements and controls specifically designed
+                  for AI systems, providing detailed technical guidance for secure AI
+                  implementation.
+                </p>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
                   {aisvsCategories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.code}>
+                    <div key={cat.id} className="p-2 border rounded text-sm">
                       <div className="flex items-center gap-2">
                         <div
                           className="w-2 h-2 rounded-full"
                           style={{ backgroundColor: cat.color }}
                         ></div>
-                        {cat.code} - {cat.name.split(" &")[0]}
+                        <span className="font-medium">{cat.code}</span>
+                        <span className="text-muted-foreground">{cat.name.split(" &")[0]}</span>
                       </div>
-                    </SelectItem>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
+        </TabsContent>
 
-          {/* Main Content Tabs */}
-          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 bg-muted/50 p-1 rounded-xl border border-border/50">
-              <TabsTrigger
-                value="graph"
-                className="data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/50 rounded-lg transition-all duration-200"
-              >
-                <div className="flex items-center gap-2">
-                  <Network className="h-4 w-4" />
-                  <span className="hidden sm:inline">Interactive Graph</span>
-                  <span className="sm:hidden">Graph</span>
-                </div>
-              </TabsTrigger>
-              <TabsTrigger
-                value="overview"
-                className="data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/50 rounded-lg transition-all duration-200"
-              >
-                <div className="flex items-center gap-2">
-                  <BookOpen className="h-4 w-4" />
-                  <span className="hidden sm:inline">Framework Overview</span>
-                  <span className="sm:hidden">Overview</span>
-                </div>
-              </TabsTrigger>
-              <TabsTrigger
-                value="mapping"
-                className="data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/50 rounded-lg transition-all duration-200"
-              >
-                <div className="flex items-center gap-2">
-                  <Layers className="h-4 w-4" />
-                  <span className="hidden sm:inline">Detailed Mapping</span>
-                  <span className="sm:hidden">Mapping</span>
-                </div>
-              </TabsTrigger>
-              <TabsTrigger
-                value="matrix"
-                className="data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/50 rounded-lg transition-all duration-200"
-              >
-                <div className="flex items-center gap-2">
-                  <GitBranch className="h-4 w-4" />
-                  <span className="hidden sm:inline">Compliance Matrix</span>
-                  <span className="sm:hidden">Matrix</span>
-                </div>
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Framework Overview Tab */}
-            <TabsContent value="overview" className="mt-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* NIST AI RMF Overview */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Shield className="h-5 w-5 text-muted-foreground" />
-                      NIST AI Risk Management Framework
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground mb-4">
-                      A comprehensive framework for managing AI risks across the entire AI
-                      lifecycle, organized into four core functions that provide a structured
-                      approach to AI governance.
-                    </p>
-                    <div className="space-y-3">
-                      {nistAIRMF.map((func) => (
-                        <div key={func.id} className="p-3 border rounded-lg">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: func.color }}
-                            ></div>
-                            <h4 className="font-semibold">{func.code}</h4>
-                          </div>
-                          <p className="text-sm text-muted-foreground">{func.description}</p>
-                          <div className="mt-2">
-                            <Badge variant="outline" className="text-xs">
-                              {func.categories.length} categories
-                            </Badge>
-                          </div>
-                        </div>
-                      ))}
+        {/* Detailed Mapping Tab */}
+        <TabsContent value="mapping" className="mt-6">
+          <div className="space-y-6">
+            {filteredNISTFunctions.map((func) => (
+              <Card key={func.id} className="overflow-hidden">
+                <CardHeader className="pb-4 bg-card">
+                  <CardTitle className="flex items-center gap-3">
+                    <Shield className="h-6 w-6 text-muted-foreground" />
+                    <div>
+                      <h3 className="text-lg font-bold" style={{ color: func.color }}>
+                        {func.code}: {func.name}
+                      </h3>
+                      <p className="text-muted-foreground text-sm mt-1">{func.description}</p>
                     </div>
-                  </CardContent>
-                </Card>
-
-                {/* AISVS Overview */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <CheckCircle className="h-5 w-5 text-muted-foreground" />
-                      OWASP AI Security Verification Standard
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground mb-4">
-                      A comprehensive set of security requirements and controls specifically
-                      designed for AI systems, providing detailed technical guidance for secure AI
-                      implementation.
-                    </p>
-                    <div className="space-y-2 max-h-96 overflow-y-auto">
-                      {aisvsCategories.map((cat) => (
-                        <div key={cat.id} className="p-2 border rounded text-sm">
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-2 h-2 rounded-full"
-                              style={{ backgroundColor: cat.color }}
-                            ></div>
-                            <span className="font-medium">{cat.code}</span>
-                            <span className="text-muted-foreground">{cat.name.split(" &")[0]}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* Detailed Mapping Tab */}
-            <TabsContent value="mapping" className="mt-6">
-              <div className="space-y-6">
-                {filteredNISTFunctions.map((func) => (
-                  <Card key={func.id} className="overflow-hidden">
-                    <CardHeader className="pb-4 bg-card">
-                      <CardTitle className="flex items-center gap-3">
-                        <Shield className="h-6 w-6 text-muted-foreground" />
-                        <div>
-                          <h3 className="text-lg font-bold" style={{ color: func.color }}>
-                            {func.code}: {func.name}
-                          </h3>
-                          <p className="text-muted-foreground text-sm mt-1">{func.description}</p>
-                        </div>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-6">
-                      <Accordion type="multiple" className="w-full">
-                        {func.categories.map((category) => (
-                          <AccordionItem key={category.id} value={category.id}>
-                            <AccordionTrigger className="hover:no-underline">
-                              <div className="flex items-center gap-3 text-left">
-                                <Badge variant="outline">{category.code}</Badge>
-                                <div>
-                                  <div className="font-medium">{category.name}</div>
-                                  <div className="text-sm text-muted-foreground mt-1">
-                                    {category.subcategories.length} subcategories
-                                  </div>
-                                </div>
-                              </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="px-4 pb-4">
-                              <div className="space-y-4">
-                                {category.subcategories.map((subcategory) => (
-                                  <div key={subcategory.id} className="border rounded-lg p-4">
-                                    <div className="flex items-start justify-between mb-3">
-                                      <div className="flex-1">
-                                        <h5 className="font-semibold text-sm mb-1">
-                                          {subcategory.code}: {subcategory.name}
-                                        </h5>
-                                        <p className="text-muted-foreground text-sm">
-                                          {subcategory.description}
-                                        </p>
-                                      </div>
-                                    </div>
-
-                                    {/* AISVS Mappings */}
-                                    <div className="mt-3 pt-3 border-t">
-                                      <div className="flex items-center gap-2 mb-2">
-                                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                                        <span className="text-sm font-medium">Maps to AISVS:</span>
-                                      </div>
-                                      <div className="flex flex-wrap gap-2">
-                                        {subcategory.aisvsMapping.length > 0 ? (
-                                          subcategory.aisvsMapping.map((aisvsCode) => {
-                                            const aisvsCategory = getAISVSCategory(aisvsCode);
-                                            return aisvsCategory ? (
-                                              <Link key={aisvsCode} to="/aisvs">
-                                                <Badge
-                                                  variant="default"
-                                                  className="text-xs hover:opacity-80 transition-opacity cursor-pointer"
-                                                  style={{ backgroundColor: aisvsCategory.color }}
-                                                >
-                                                  {aisvsCode}: {aisvsCategory.name.split(" &")[0]}
-                                                </Badge>
-                                              </Link>
-                                            ) : (
-                                              <Badge
-                                                key={aisvsCode}
-                                                variant="outline"
-                                                className="text-xs"
-                                              >
-                                                {aisvsCode}
-                                              </Badge>
-                                            );
-                                          })
-                                        ) : (
-                                          <Badge variant="secondary" className="text-xs">
-                                            No direct AISVS mapping identified
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                        ))}
-                      </Accordion>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </TabsContent>
-
-            {/* Compliance Matrix Tab */}
-            <TabsContent value="matrix" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Network className="h-5 w-5 text-muted-foreground" />
-                    Framework Compliance Matrix
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr>
-                          <th className="border p-2 text-left font-medium">NIST AI RMF</th>
-                          {aisvsCategories.slice(0, 10).map((cat) => (
-                            <th
-                              key={cat.id}
-                              className="border p-2 text-center text-xs font-medium min-w-16"
-                            >
-                              <div className="transform -rotate-45 origin-center">{cat.code}</div>
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {nistAIRMF.map((func) =>
-                          func.categories.map((category) =>
-                            category.subcategories.map((subcategory) => (
-                              <tr key={subcategory.id}>
-                                <td className="border p-2 text-sm">
-                                  <div className="font-medium">{subcategory.code}</div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {subcategory.name}
-                                  </div>
-                                </td>
-                                {aisvsCategories.slice(0, 10).map((cat) => (
-                                  <td key={cat.id} className="border p-2 text-center">
-                                    {subcategory.aisvsMapping.includes(cat.code) ? (
-                                      <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mx-auto" />
-                                    ) : (
-                                      <div className="w-4 h-4 mx-auto"></div>
-                                    )}
-                                  </td>
-                                ))}
-                              </tr>
-                            )),
-                          ),
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="mt-6 p-4 bg-muted/30 rounded-lg">
-                    <h4 className="font-semibold mb-2">Matrix Legend</h4>
-                    <div className="flex items-center gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-                        <span>Direct mapping exists</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 border border-muted-foreground/20 rounded"></div>
-                        <span>No direct mapping</span>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Interactive Graph Tab */}
-            <TabsContent value="graph" className="mt-6">
-              <Card className="border-border/50">
-                <CardHeader className="bg-card border-b border-border/50 pb-3">
-                  <div className="flex items-center justify-between flex-wrap gap-3">
-                    <div className="flex items-center gap-3">
-                      <Network className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <h3 className="text-base font-semibold">NIST AI RMF to AISVS Mapping</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Click functions to expand categories and subcategories. Click AISVS nodes
-                          to highlight related NIST controls.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setExpandedNodes(new Set(["govern"]));
-                          setSelectedNode(null);
-                          setSelectedNodeData(null);
-                        }}
-                        className="text-xs h-7"
-                      >
-                        <RotateCcw className="h-3 w-3 mr-1" />
-                        Reset
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const all = new Set<string>();
-                          nistAIRMF.forEach((func) => {
-                            all.add(func.id);
-                            func.categories.forEach((cat) => {
-                              all.add(`${func.id}-${cat.id}`);
-                            });
-                          });
-                          setExpandedNodes(all);
-                        }}
-                        className="text-xs h-7"
-                      >
-                        <Maximize className="h-3 w-3 mr-1" />
-                        Expand All
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setExpandedNodes(new Set())}
-                        className="text-xs h-7"
-                      >
-                        Collapse All
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="relative w-full h-[650px] border-b border-border/50 bg-muted/30 overflow-hidden">
-                    <svg
-                      ref={svgRef}
-                      width="100%"
-                      height="100%"
-                      role="img"
-                      aria-label="Interactive tree visualization of NIST AI RMF functions mapped to AISVS security categories"
-                    />
-                  </div>
-
-                  {/* Selected Node Detail */}
-                  {selectedNodeData && (
-                    <div className="p-4 border-t border-border/50">
-                      <div className="flex items-start gap-3">
-                        <div
-                          className="w-3 h-3 rounded-full mt-1 shrink-0"
-                          style={{ backgroundColor: selectedNodeData.color }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="font-semibold text-sm">{selectedNodeData.label}</h4>
-                            <Badge variant="outline" className="text-xs">
-                              {selectedNodeData.type === "nist-function" && "NIST Function"}
-                              {selectedNodeData.type === "nist-category" && "NIST Category"}
-                              {selectedNodeData.type === "nist-subcategory" && "NIST Subcategory"}
-                              {selectedNodeData.type === "aisvs-category" && "AISVS Category"}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {selectedNodeData.description}
-                          </p>
-
-                          {selectedNodeData.type === "nist-function" && (
-                            <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                              <span className="text-muted-foreground">
-                                {(selectedNodeData.data as NISTFunction).categories.length}{" "}
-                                categories,{" "}
-                                {(selectedNodeData.data as NISTFunction).categories.reduce(
-                                  (t: number, c: NISTCategory) => t + c.subcategories.length,
-                                  0,
-                                )}{" "}
-                                subcategories
-                              </span>
-                              <span className="text-muted-foreground">
-                                {expandedNodes.has(selectedNodeData.id)
-                                  ? "Click to collapse"
-                                  : "Click to expand"}
-                              </span>
-                            </div>
-                          )}
-
-                          {selectedNodeData.type === "nist-category" && (
-                            <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                              <span className="text-muted-foreground">
-                                {(selectedNodeData.data as NISTCategory).subcategories.length}{" "}
-                                subcategories
-                              </span>
-                              <span className="text-muted-foreground">
-                                Part of {selectedNodeData.parentId?.toUpperCase()}
-                              </span>
-                            </div>
-                          )}
-
-                          {selectedNodeData.type === "nist-subcategory" && (
-                            <div className="mt-3">
-                              {(selectedNodeData.data as NISTSubcategory).aisvsMapping.length >
-                              0 ? (
-                                <div className="flex flex-wrap gap-1.5">
-                                  <span className="text-xs text-muted-foreground mr-1">
-                                    Maps to:
-                                  </span>
-                                  {(selectedNodeData.data as NISTSubcategory).aisvsMapping.map(
-                                    (code: string) => {
-                                      const cat = getAISVSCategory(code);
-                                      return cat ? (
-                                        <Link key={code} to="/aisvs">
-                                          <Badge
-                                            variant="default"
-                                            className="text-xs cursor-pointer hover:opacity-80"
-                                            style={{ backgroundColor: cat.color }}
-                                          >
-                                            {code}: {cat.name.split(" &")[0]}
-                                          </Badge>
-                                        </Link>
-                                      ) : (
-                                        <Badge key={code} variant="outline" className="text-xs">
-                                          {code}
-                                        </Badge>
-                                      );
-                                    },
-                                  )}
-                                </div>
-                              ) : (
-                                <span className="text-xs text-muted-foreground">
-                                  No direct AISVS mapping
-                                </span>
-                              )}
-                            </div>
-                          )}
-
-                          {selectedNodeData.type === "aisvs-category" && (
-                            <div className="mt-3 space-y-2">
-                              <div className="text-xs text-muted-foreground">
-                                Supported by NIST subcategories across{" "}
-                                {
-                                  ["govern", "map", "measure", "manage"].filter((fid) => {
-                                    const func = nistAIRMF.find((f) => f.id === fid);
-                                    return func?.categories.some((c) =>
-                                      c.subcategories.some((s) =>
-                                        s.aisvsMapping.includes(selectedNodeData.label),
-                                      ),
-                                    );
-                                  }).length
-                                }{" "}
-                                functions
+                <CardContent className="p-6">
+                  <Accordion type="multiple" className="w-full">
+                    {func.categories.map((category) => (
+                      <AccordionItem key={category.id} value={category.id}>
+                        <AccordionTrigger className="hover:no-underline">
+                          <div className="flex items-center gap-3 text-left">
+                            <Badge variant="outline">{category.code}</Badge>
+                            <div>
+                              <div className="font-medium">{category.name}</div>
+                              <div className="text-sm text-muted-foreground mt-1">
+                                {category.subcategories.length} subcategories
                               </div>
-                              <Link to="/aisvs" className="text-xs text-primary hover:underline">
-                                View full AISVS details &rarr;
-                              </Link>
                             </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4 pb-4">
+                          <div className="space-y-4">
+                            {category.subcategories.map((subcategory) => (
+                              <div key={subcategory.id} className="border rounded-lg p-4">
+                                <div className="flex items-start justify-between mb-3">
+                                  <div className="flex-1">
+                                    <h5 className="font-semibold text-sm mb-1">
+                                      {subcategory.code}: {subcategory.name}
+                                    </h5>
+                                    <p className="text-muted-foreground text-sm">
+                                      {subcategory.description}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* AISVS Mappings */}
+                                <div className="mt-3 pt-3 border-t">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm font-medium">Maps to AISVS:</span>
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {subcategory.aisvsMapping.length > 0 ? (
+                                      subcategory.aisvsMapping.map((aisvsCode) => {
+                                        const aisvsCategory = getAISVSCategory(aisvsCode);
+                                        return aisvsCategory ? (
+                                          <Link key={aisvsCode} to="/aisvs">
+                                            <Badge
+                                              variant="default"
+                                              className="text-xs hover:opacity-80 transition-opacity cursor-pointer"
+                                              style={{ backgroundColor: aisvsCategory.color }}
+                                            >
+                                              {aisvsCode}: {aisvsCategory.name.split(" &")[0]}
+                                            </Badge>
+                                          </Link>
+                                        ) : (
+                                          <Badge
+                                            key={aisvsCode}
+                                            variant="outline"
+                                            className="text-xs"
+                                          >
+                                            {aisvsCode}
+                                          </Badge>
+                                        );
+                                      })
+                                    ) : (
+                                      <Badge variant="secondary" className="text-xs">
+                                        No direct AISVS mapping identified
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
                 </CardContent>
               </Card>
-            </TabsContent>
-          </Tabs>
+            ))}
+          </div>
+        </TabsContent>
 
-          {/* References Section */}
-          <Card className="mt-8">
+        {/* Compliance Matrix Tab */}
+        <TabsContent value="matrix" className="mt-6">
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BookOpen className="h-5 w-5 text-muted-foreground" />
-                Framework References
+                <Network className="h-5 w-5 text-muted-foreground" />
+                Framework Compliance Matrix
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-semibold mb-3">NIST AI Risk Management Framework</h4>
-                  <div className="space-y-2">
-                    <a
-                      href="https://www.nist.gov/itl/ai-risk-management-framework"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 p-3 rounded-lg border hover:bg-accent/50 transition-colors text-sm"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      <span>NIST AI RMF Official Documentation</span>
-                      <span className="sr-only">(opens in new tab)</span>
-                    </a>
-                    <a
-                      href="https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.100-1.pdf"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 p-3 rounded-lg border hover:bg-accent/50 transition-colors text-sm"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      <span>NIST AI RMF 1.0 (PDF)</span>
-                      <span className="sr-only">(opens in new tab)</span>
-                    </a>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="border p-2 text-left font-medium">NIST AI RMF</th>
+                      {aisvsCategories.slice(0, 10).map((cat) => (
+                        <th
+                          key={cat.id}
+                          className="border p-2 text-center text-xs font-medium min-w-16"
+                        >
+                          <div className="transform -rotate-45 origin-center">{cat.code}</div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {nistAIRMF.map((func) =>
+                      func.categories.map((category) =>
+                        category.subcategories.map((subcategory) => (
+                          <tr key={subcategory.id}>
+                            <td className="border p-2 text-sm">
+                              <div className="font-medium">{subcategory.code}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {subcategory.name}
+                              </div>
+                            </td>
+                            {aisvsCategories.slice(0, 10).map((cat) => (
+                              <td key={cat.id} className="border p-2 text-center">
+                                {subcategory.aisvsMapping.includes(cat.code) ? (
+                                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mx-auto" />
+                                ) : (
+                                  <div className="w-4 h-4 mx-auto"></div>
+                                )}
+                              </td>
+                            ))}
+                          </tr>
+                        )),
+                      ),
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-6 p-4 bg-muted/30 rounded-lg">
+                <h4 className="font-semibold mb-2">Matrix Legend</h4>
+                <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    <span>Direct mapping exists</span>
                   </div>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-3">OWASP AISVS</h4>
-                  <div className="space-y-2">
-                    <Link
-                      to="/aisvs"
-                      className="flex items-center gap-2 p-3 rounded-lg border hover:bg-accent/50 transition-colors text-sm"
-                    >
-                      <ArrowRight className="h-4 w-4" />
-                      <span>Interactive AISVS Tool</span>
-                    </Link>
-                    <a
-                      href="https://github.com/OWASP/AISVS"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 p-3 rounded-lg border hover:bg-accent/50 transition-colors text-sm"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      <span>OWASP AISVS GitHub Repository</span>
-                      <span className="sr-only">(opens in new tab)</span>
-                    </a>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border border-muted-foreground/20 rounded"></div>
+                    <span>No direct mapping</span>
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
-        </main>
+        </TabsContent>
 
-        <Footer />
-      </div>
-    </>
+        {/* Interactive Graph Tab */}
+        <TabsContent value="graph" className="mt-6">
+          <Card className="border-border/50">
+            <CardHeader className="bg-card border-b border-border/50 pb-3">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                  <Network className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <h3 className="text-base font-semibold">NIST AI RMF to AISVS Mapping</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Click functions to expand categories and subcategories. Click AISVS nodes to
+                      highlight related NIST controls.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setExpandedNodes(new Set(["govern"]));
+                      setSelectedNode(null);
+                      setSelectedNodeData(null);
+                    }}
+                    className="text-xs h-7"
+                  >
+                    <RotateCcw className="h-3 w-3 mr-1" />
+                    Reset
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const all = new Set<string>();
+                      nistAIRMF.forEach((func) => {
+                        all.add(func.id);
+                        func.categories.forEach((cat) => {
+                          all.add(`${func.id}-${cat.id}`);
+                        });
+                      });
+                      setExpandedNodes(all);
+                    }}
+                    className="text-xs h-7"
+                  >
+                    <Maximize className="h-3 w-3 mr-1" />
+                    Expand All
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setExpandedNodes(new Set())}
+                    className="text-xs h-7"
+                  >
+                    Collapse All
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="relative w-full h-[650px] border-b border-border/50 bg-muted/30 overflow-hidden">
+                <svg
+                  ref={svgRef}
+                  width="100%"
+                  height="100%"
+                  role="img"
+                  aria-label="Interactive tree visualization of NIST AI RMF functions mapped to AISVS security categories"
+                />
+              </div>
+
+              {/* Selected Node Detail */}
+              {selectedNodeData && (
+                <div className="p-4 border-t border-border/50">
+                  <div className="flex items-start gap-3">
+                    <div
+                      className="w-3 h-3 rounded-full mt-1 shrink-0"
+                      style={{ backgroundColor: selectedNodeData.color }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-semibold text-sm">{selectedNodeData.label}</h4>
+                        <Badge variant="outline" className="text-xs">
+                          {selectedNodeData.type === "nist-function" && "NIST Function"}
+                          {selectedNodeData.type === "nist-category" && "NIST Category"}
+                          {selectedNodeData.type === "nist-subcategory" && "NIST Subcategory"}
+                          {selectedNodeData.type === "aisvs-category" && "AISVS Category"}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {selectedNodeData.description}
+                      </p>
+
+                      {selectedNodeData.type === "nist-function" && (
+                        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                          <span className="text-muted-foreground">
+                            {(selectedNodeData.data as NISTFunction).categories.length} categories,{" "}
+                            {(selectedNodeData.data as NISTFunction).categories.reduce(
+                              (t: number, c: NISTCategory) => t + c.subcategories.length,
+                              0,
+                            )}{" "}
+                            subcategories
+                          </span>
+                          <span className="text-muted-foreground">
+                            {expandedNodes.has(selectedNodeData.id)
+                              ? "Click to collapse"
+                              : "Click to expand"}
+                          </span>
+                        </div>
+                      )}
+
+                      {selectedNodeData.type === "nist-category" && (
+                        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                          <span className="text-muted-foreground">
+                            {(selectedNodeData.data as NISTCategory).subcategories.length}{" "}
+                            subcategories
+                          </span>
+                          <span className="text-muted-foreground">
+                            Part of {selectedNodeData.parentId?.toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+
+                      {selectedNodeData.type === "nist-subcategory" && (
+                        <div className="mt-3">
+                          {(selectedNodeData.data as NISTSubcategory).aisvsMapping.length > 0 ? (
+                            <div className="flex flex-wrap gap-1.5">
+                              <span className="text-xs text-muted-foreground mr-1">Maps to:</span>
+                              {(selectedNodeData.data as NISTSubcategory).aisvsMapping.map(
+                                (code: string) => {
+                                  const cat = getAISVSCategory(code);
+                                  return cat ? (
+                                    <Link key={code} to="/aisvs">
+                                      <Badge
+                                        variant="default"
+                                        className="text-xs cursor-pointer hover:opacity-80"
+                                        style={{ backgroundColor: cat.color }}
+                                      >
+                                        {code}: {cat.name.split(" &")[0]}
+                                      </Badge>
+                                    </Link>
+                                  ) : (
+                                    <Badge key={code} variant="outline" className="text-xs">
+                                      {code}
+                                    </Badge>
+                                  );
+                                },
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              No direct AISVS mapping
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {selectedNodeData.type === "aisvs-category" && (
+                        <div className="mt-3 space-y-2">
+                          <div className="text-xs text-muted-foreground">
+                            Supported by NIST subcategories across{" "}
+                            {
+                              ["govern", "map", "measure", "manage"].filter((fid) => {
+                                const func = nistAIRMF.find((f) => f.id === fid);
+                                return func?.categories.some((c) =>
+                                  c.subcategories.some((s) =>
+                                    s.aisvsMapping.includes(selectedNodeData.label),
+                                  ),
+                                );
+                              }).length
+                            }{" "}
+                            functions
+                          </div>
+                          <Link to="/aisvs" className="text-xs text-primary hover:underline">
+                            View full AISVS details &rarr;
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* References Section */}
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-muted-foreground" />
+            Framework References
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h4 className="font-semibold mb-3">NIST AI Risk Management Framework</h4>
+              <div className="space-y-2">
+                <a
+                  href="https://www.nist.gov/itl/ai-risk-management-framework"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 p-3 rounded-lg border hover:bg-accent/50 transition-colors text-sm"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  <span>NIST AI RMF Official Documentation</span>
+                  <span className="sr-only">(opens in new tab)</span>
+                </a>
+                <a
+                  href="https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.100-1.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 p-3 rounded-lg border hover:bg-accent/50 transition-colors text-sm"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  <span>NIST AI RMF 1.0 (PDF)</span>
+                  <span className="sr-only">(opens in new tab)</span>
+                </a>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-3">OWASP AISVS</h4>
+              <div className="space-y-2">
+                <Link
+                  to="/aisvs"
+                  className="flex items-center gap-2 p-3 rounded-lg border hover:bg-accent/50 transition-colors text-sm"
+                >
+                  <ArrowRight className="h-4 w-4" />
+                  <span>Interactive AISVS Tool</span>
+                </Link>
+                <a
+                  href="https://github.com/OWASP/AISVS"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 p-3 rounded-lg border hover:bg-accent/50 transition-colors text-sm"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  <span>OWASP AISVS GitHub Repository</span>
+                  <span className="sr-only">(opens in new tab)</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </PageLayout>
   );
 };
 

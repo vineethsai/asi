@@ -20,6 +20,18 @@ export type Architecture = {
   displayOrder?: number;
 };
 
+/**
+ * The five reference patterns are this site's synthesis of the agent architectures described in
+ * the OWASP Agentic AI Threats & Mitigations and Securing Agentic Applications Guide; threat and
+ * control links use the T1-T17 / m1-m20 ids in securityData.ts.
+ */
+export const source = {
+  name: "Agentic Security Hub architecture patterns (editorial, after OWASP Agentic AI T&M v1.1)",
+  version: "2026.11",
+  url: "https://genai.owasp.org/resource/agentic-ai-threats-and-mitigations/",
+  retrievedAt: "2026-11-03",
+};
+
 export const architecturesData: Record<string, Architecture> = {
   sequential: {
     id: "sequential",
@@ -66,8 +78,8 @@ export const architecturesData: Record<string, Architecture> = {
     ],
     riskScore: 5,
     status: "active",
-    version: "2025.1",
-    lastUpdated: "2025-01-22",
+    version: "2026.11",
+    lastUpdated: "2026-11-03",
     updatedBy: "vineeth",
     color: "#2563eb",
     icon: "flow-linear",
@@ -103,8 +115,22 @@ export const architecturesData: Record<string, Architecture> = {
       },
     ],
     keyComponents: ["kc1.1", "kc1.4", "kc2.2", "kc3.1", "kc4.2", "kc5.2", "kc6.2", "kc6.4"],
-    threatIds: ["t3", "t6", "t9", "t12"],
-    mitigationIds: ["m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m10", "m11", "m12", "m13"],
+    threatIds: ["t3", "t6", "t9", "t12", "t16"],
+    mitigationIds: [
+      "m1",
+      "m2",
+      "m3",
+      "m4",
+      "m5",
+      "m6",
+      "m7",
+      "m8",
+      "m10",
+      "m11",
+      "m12",
+      "m13",
+      "m19",
+    ],
     tags: ["multi-agent", "orchestration", "complex"],
     references: [
       {
@@ -115,8 +141,8 @@ export const architecturesData: Record<string, Architecture> = {
     ],
     riskScore: 8,
     status: "active",
-    version: "2025.1",
-    lastUpdated: "2025-01-22",
+    version: "2026.11",
+    lastUpdated: "2026-11-03",
     updatedBy: "vineeth",
     color: "#22c55e",
     icon: "flow-hierarchical",
@@ -152,8 +178,8 @@ export const architecturesData: Record<string, Architecture> = {
       },
     ],
     keyComponents: ["kc1.1", "kc1.2", "kc2.3", "kc3.4", "kc4.4", "kc5.1"],
-    threatIds: ["t1", "t8", "t9", "t12", "t13"],
-    mitigationIds: ["m1", "m2", "m3", "m4", "m5", "m6", "m7", "m10", "m11", "m12", "m13"],
+    threatIds: ["t1", "t8", "t9", "t12", "t13", "t16"],
+    mitigationIds: ["m1", "m2", "m3", "m4", "m5", "m6", "m7", "m10", "m11", "m12", "m13", "m19"],
     tags: ["collaborative", "swarm", "distributed"],
     references: [
       { title: "OpenAI Swarm Framework", url: "https://github.com/openai/swarm" },
@@ -164,8 +190,8 @@ export const architecturesData: Record<string, Architecture> = {
     ],
     riskScore: 7,
     status: "active",
-    version: "2025.1",
-    lastUpdated: "2025-01-22",
+    version: "2026.11",
+    lastUpdated: "2026-11-03",
     updatedBy: "vineeth",
     color: "#f59e42",
     icon: "flow-swarm",
@@ -217,8 +243,8 @@ export const architecturesData: Record<string, Architecture> = {
     ],
     riskScore: 6,
     status: "active",
-    version: "2025.1",
-    lastUpdated: "2025-01-22",
+    version: "2026.11",
+    lastUpdated: "2026-11-03",
     updatedBy: "vineeth",
     color: "#eab308",
     icon: "flow-reactive",
@@ -278,8 +304,8 @@ export const architecturesData: Record<string, Architecture> = {
     ],
     riskScore: 7,
     status: "active",
-    version: "2025.1",
-    lastUpdated: "2025-01-22",
+    version: "2026.11",
+    lastUpdated: "2026-11-03",
     updatedBy: "vineeth",
     color: "#a21caf",
     icon: "flow-knowledge",

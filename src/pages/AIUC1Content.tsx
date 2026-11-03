@@ -319,7 +319,3 @@ export function AIUC1Content() {
     </div>
   );
 }
-
-export default function AIUC1Page() {
-  return null;
-}

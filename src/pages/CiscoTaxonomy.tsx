@@ -1,7 +1,5 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Header } from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -256,17 +254,5 @@ export function CiscoTaxonomyContent() {
         </div>
       )}
     </>
-  );
-}
-
-export default function CiscoTaxonomy() {
-  return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
-        <CiscoTaxonomyContent />
-      </main>
-      <Footer />
-    </div>
   );
 }

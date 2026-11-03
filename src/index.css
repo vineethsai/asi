@@ -81,6 +81,34 @@
     --security-medium: 38 92% 50%;
     --security-low: 142 71% 45%;
     --security-info: 199 89% 48%;
+    --security-critical-fg: 0 74% 40%;
+    --security-high-fg: 20 91% 33%;
+    --security-medium-fg: 32 95% 29%;
+    --security-low-fg: 142 72% 25%;
+    --security-info-fg: 201 96% 30%;
+    --kc-1: 217 91% 60%;
+    --kc-2: 142 71% 45%;
+    --kc-3: 45 93% 47%;
+    --kc-4: 271 91% 65%;
+    --kc-5: 330 81% 60%;
+    --kc-6: 239 84% 67%;
+    --fw-asi: 350 89% 60%;
+    --fw-tm: 258 90% 66%;
+    --fw-cisco: 189 94% 43%;
+    --fw-aivss: 38 92% 50%;
+    --fw-aiuc1: 160 84% 39%;
+    --fw-nist: 221 83% 53%;
+    --maestro-1: 217 91% 60%;
+    --maestro-2: 271 91% 65%;
+    --maestro-3: 142 71% 45%;
+    --maestro-4: 25 95% 53%;
+    --maestro-5: 189 94% 43%;
+    --maestro-6: 0 84% 60%;
+    --maestro-7: 45 93% 47%;
+    --nist-govern: 217 91% 60%;
+    --nist-map: 160 84% 39%;
+    --nist-measure: 38 92% 50%;
+    --nist-manage: 0 84% 60%;
 
     /* Interactive elements */
     --interactive-hover: 220 70% 45%;
@@ -150,6 +178,34 @@
     --security-medium: 38 92% 55%;
     --security-low: 142 71% 50%;
     --security-info: 199 89% 53%;
+    --security-critical-fg: 0 94% 82%;
+    --security-high-fg: 31 97% 72%;
+    --security-medium-fg: 46 97% 65%;
+    --security-low-fg: 142 77% 73%;
+    --security-info-fg: 199 95% 74%;
+    --kc-1: 213 94% 68%;
+    --kc-2: 142 69% 58%;
+    --kc-3: 48 96% 53%;
+    --kc-4: 270 95% 75%;
+    --kc-5: 330 81% 70%;
+    --kc-6: 234 89% 74%;
+    --fw-asi: 351 95% 71%;
+    --fw-tm: 255 92% 76%;
+    --fw-cisco: 188 86% 53%;
+    --fw-aivss: 43 96% 56%;
+    --fw-aiuc1: 158 64% 52%;
+    --fw-nist: 213 94% 68%;
+    --maestro-1: 213 94% 68%;
+    --maestro-2: 270 95% 75%;
+    --maestro-3: 142 69% 58%;
+    --maestro-4: 27 96% 61%;
+    --maestro-5: 188 86% 53%;
+    --maestro-6: 0 91% 71%;
+    --maestro-7: 48 96% 53%;
+    --nist-govern: 213 94% 68%;
+    --nist-map: 158 64% 52%;
+    --nist-measure: 43 96% 56%;
+    --nist-manage: 0 91% 71%;
 
     --interactive-hover: 220 70% 60%;
     --interactive-active: 220 70% 70%;
@@ -233,205 +289,11 @@
     @apply bg-transparent border-0 p-0;
   }
 
-  /* Component styles */
-  .glass-card {
-    @apply bg-card border rounded-lg shadow-sm;
-  }
-
   .security-card {
     @apply bg-card border rounded-lg hover:bg-muted/50 transition-colors duration-200;
   }
 
-  .interactive-card {
-    @apply bg-card border rounded-lg hover:bg-muted/50 transition-colors duration-200 cursor-pointer;
-  }
-
-  .threat-card {
-    @apply border-l-4 bg-card;
-    border-left-color: hsl(var(--security-critical));
-  }
-
-  .control-card {
-    @apply border-l-4 bg-card;
-    border-left-color: hsl(var(--primary));
-  }
-
-  .success-card {
-    @apply border-l-4 bg-card;
-    border-left-color: hsl(var(--success));
-  }
-
-  .warning-card {
-    @apply border-l-4 bg-card;
-    border-left-color: hsl(var(--warning));
-  }
-
-  /* Status indicators */
-  .status-critical {
-    @apply bg-red-100 text-red-800 dark:bg-red-950/30 dark:text-red-300;
-  }
-
-  .status-high {
-    @apply bg-orange-100 text-orange-800 dark:bg-orange-950/30 dark:text-orange-300;
-  }
-
-  .status-medium {
-    @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-300;
-  }
-
-  .status-low {
-    @apply bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-300;
-  }
-
-  .status-info {
-    @apply bg-blue-100 text-blue-800 dark:bg-blue-950/30 dark:text-blue-300;
-  }
-
-  /* Navigation improvements */
-  .nav-link {
-    @apply relative overflow-hidden rounded-lg px-3 py-2 transition-all duration-200;
-  }
-
-  .nav-link::before {
-    @apply absolute inset-0 bg-primary/5 scale-x-0 transition-transform duration-200 origin-left rounded-lg;
-    content: "";
-  }
-
-  .nav-link:hover::before {
-    @apply scale-x-100;
-  }
-
-  .nav-link:hover {
-    @apply text-primary;
-  }
-
-  .nav-link-active {
-    @apply bg-primary/10 text-primary font-medium;
-  }
-
-  /* Interactive elements */
-  .btn-primary {
-    @apply bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-200;
-  }
-
-  .btn-secondary {
-    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 focus:ring-2 focus:ring-secondary focus:ring-offset-2 transition-all duration-200;
-  }
-
-  .btn-ghost {
-    @apply hover:bg-accent hover:text-accent-foreground focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-all duration-200;
-  }
-
-  /* Form improvements */
-  .form-input {
-    @apply border-input bg-background hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200;
-  }
-
-  .form-label {
-    @apply text-sm font-medium text-foreground;
-  }
-
-  /* Accessibility improvements */
-  .focus-visible {
-    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background rounded;
-  }
-
-  .sr-only {
-    @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
-    clip: rect(0, 0, 0, 0);
-  }
-
-  /* Mobile responsive improvements */
-  .mobile-nav-overlay {
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    @apply bg-black/20;
-  }
-
-  .mobile-nav-sidebar {
-    @apply shadow-2xl border-r bg-white/95 dark:bg-gray-900/95;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
-
-  /* Smooth scrolling and animations */
-  html {
-    scroll-behavior: smooth;
-  }
-
-  .animate-slide-in {
-    animation: slide-in 0.3s ease-out;
-  }
-
-  .animate-fade-in {
-    animation: fade-in 0.3s ease-out;
-  }
-
-  .animate-scale-in {
-    animation: scale-in 0.2s ease-out;
-  }
-
-  /* Loading states */
-  .loading-skeleton {
-    @apply bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 animate-pulse;
-    background-size: 200% 100%;
-    animation: loading-shimmer 1.5s infinite;
-  }
-
-  /* Code syntax highlighting */
-  .code-keyword {
-    color: hsl(var(--code-keyword));
-  }
-  .code-string {
-    color: hsl(var(--code-string));
-  }
-  .code-comment {
-    color: hsl(var(--code-comment));
-  }
-  .code-number {
-    color: hsl(var(--code-number));
-  }
-
-  /* Diagram and visual aid styles */
-  .diagram-container {
-    @apply relative rounded-lg border bg-card p-6;
-  }
-
-  .flowchart-node {
-    @apply rounded-md border-2 bg-card p-4 hover:bg-muted/50 transition-colors duration-200;
-  }
-
-  .flowchart-connector {
-    @apply stroke-primary stroke-2;
-  }
-
-  /* Interactive quiz styles */
-  .quiz-option {
-    @apply border rounded-lg p-4 cursor-pointer transition-all duration-200 hover:border-primary hover:bg-primary/5;
-  }
-
-  .quiz-option.selected {
-    @apply border-primary bg-primary/10 text-primary;
-  }
-
-  .quiz-option.correct {
-    @apply border-green-500 bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-300;
-  }
-
-  .quiz-option.incorrect {
-    @apply border-red-500 bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-300;
-  }
-
-  /* Progress indicators */
-  .progress-bar {
-    @apply bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden;
-  }
-
-  .progress-fill {
-    @apply bg-gradient-to-r from-primary to-primary/80 h-full transition-all duration-500 ease-out;
-  }
-
-  /* Checklist styles */
+  /* Used by SecurityChecklist rows */
   .checklist-item {
     @apply flex items-start gap-3 p-3 rounded-lg hover:bg-accent/50 transition-colors duration-200;
   }
@@ -439,189 +301,11 @@
   .checklist-item.completed {
     @apply bg-green-100 dark:bg-green-950/30 border border-green-200 dark:border-green-800;
   }
-}
 
-/* Animation keyframes */
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
+  /* In-page anchors scroll smoothly; route changes scroll instantly (ScrollToTop). */
+  html {
+    scroll-behavior: smooth;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slide-in {
-  from {
-    opacity: 0;
-    transform: translateX(-16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes loading-shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-/* Radix UI Theme Integration */
-.radix-themes {
-  --default-font-family:
-    "Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --code-font-family: "Geist Mono", Consolas, "Liberation Mono", Menlo, Courier, monospace;
-}
-
-/* Enhanced Radix UI component styling */
-.rt-Card {
-  @apply shadow-sm border-border/50 backdrop-blur-sm;
-}
-
-.rt-Button {
-  @apply transition-all duration-200 font-medium;
-}
-
-.rt-Button:hover {
-  @apply transform scale-[1.02];
-}
-
-.rt-Text {
-  @apply leading-relaxed;
-}
-
-.rt-Heading {
-  @apply tracking-tight;
-}
-
-.rt-Badge {
-  @apply font-medium;
-}
-
-.rt-Separator {
-  @apply bg-border/60;
-}
-
-/* Professional panel styling */
-.rt-Panel {
-  @apply border-border/50 shadow-sm;
-}
-
-/* Enhanced tab styling */
-.rt-TabsRoot .rt-TabsList {
-  @apply bg-muted/30 backdrop-blur-sm border border-border/50 rounded-lg p-1;
-}
-
-.rt-TabsRoot .rt-TabsTrigger {
-  @apply transition-all duration-200 font-medium text-muted-foreground;
-}
-
-.rt-TabsRoot .rt-TabsTrigger[data-state="active"] {
-  @apply bg-background text-foreground shadow-sm border border-border/50;
-}
-
-.rt-TabsRoot .rt-TabsTrigger:hover:not([data-state="active"]) {
-  @apply text-foreground/80 bg-muted/50;
-}
-
-/* Professional container styling */
-.rt-Container {
-  @apply px-4 md:px-6 lg:px-8;
-}
-
-/* Enhanced grid styling */
-.rt-Grid {
-  @apply gap-4;
-}
-
-/* Professional flex styling */
-.rt-Flex {
-  @apply items-center;
-}
-
-/* Section styling */
-.rt-Section {
-  @apply py-8 md:py-12 lg:py-16;
-}
-
-/* Box styling with glass effects */
-.rt-Box {
-  @apply relative;
-}
-
-/* Professional typography scaling */
-.rt-Text[data-size="1"] {
-  @apply text-xs;
-}
-.rt-Text[data-size="2"] {
-  @apply text-sm;
-}
-.rt-Text[data-size="3"] {
-  @apply text-base;
-}
-.rt-Text[data-size="4"] {
-  @apply text-lg;
-}
-.rt-Text[data-size="5"] {
-  @apply text-xl;
-}
-.rt-Text[data-size="6"] {
-  @apply text-2xl;
-}
-.rt-Text[data-size="7"] {
-  @apply text-3xl;
-}
-.rt-Text[data-size="8"] {
-  @apply text-4xl;
-}
-.rt-Text[data-size="9"] {
-  @apply text-5xl;
-}
-
-.rt-Heading[data-size="1"] {
-  @apply text-xs;
-}
-.rt-Heading[data-size="2"] {
-  @apply text-sm;
-}
-.rt-Heading[data-size="3"] {
-  @apply text-base;
-}
-.rt-Heading[data-size="4"] {
-  @apply text-lg;
-}
-.rt-Heading[data-size="5"] {
-  @apply text-xl;
-}
-.rt-Heading[data-size="6"] {
-  @apply text-2xl;
-}
-.rt-Heading[data-size="7"] {
-  @apply text-3xl;
-}
-.rt-Heading[data-size="8"] {
-  @apply text-4xl;
-}
-.rt-Heading[data-size="9"] {
-  @apply text-5xl;
 }
 
 /* Skip to main content link */
@@ -631,6 +315,101 @@
 }
 .skip-to-content:focus {
   @apply top-4;
+}
+
+/* ===== Motion system (IMPROVEMENT_PLAN §8; tokens mirrored in src/lib/motion.ts) ===== */
+
+:root {
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-base: 320ms;
+}
+
+/*
+ * 8.1 Entrance stagger. Children marked .enter start hidden (only when JS has confirmed
+ * motion is OK via html.motion-ok) and rise in once an ancestor is revealed by useReveal()
+ * (.is-visible / [data-visible]). Delay = --i * 40ms, capped at 400ms. The animation uses
+ * fill-mode "backwards" so hover transforms (.card-hover) work after it finishes.
+ */
+.motion-ok .enter {
+  opacity: 0;
+}
+.motion-ok :is(.is-visible, [data-visible]) .enter,
+.motion-ok .enter:is(.is-visible, [data-visible]) {
+  opacity: 1;
+  animation: ash-enter var(--duration-base) var(--ease-standard) backwards;
+  animation-delay: min(calc(var(--i, 0) * 40ms), 400ms);
+}
+@keyframes ash-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* 8.8 Hover depth for cards (also when a wrapping link has keyboard focus). */
+.card-hover {
+  transition:
+    transform var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+.card-hover:hover,
+:focus-visible > .card-hover {
+  transform: translateY(-2px);
+  border-color: hsl(var(--primary) / 0.4);
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+/* 8.8 Link underline that grows from the left. */
+.link-underline {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  background-size: 0% 1px;
+  transition: background-size var(--duration-fast) var(--ease-standard);
+}
+.link-underline:hover,
+.link-underline:focus-visible,
+.link-underline[aria-current="page"] {
+  background-size: 100% 1px;
+}
+
+/* 8.7 Route transitions (document.startViewTransition in AppShell): 150ms cross-fade. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--duration-fast);
+  animation-timing-function: var(--ease-standard);
+}
+
+/* 8.9 Loading skeletons. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background-color: hsl(var(--muted));
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(90deg, transparent, hsl(var(--foreground) / 0.06), transparent);
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media print {
+  .enter {
+    opacity: 1 !important;
+    animation: none !important;
+  }
 }
 
 /* ===== Hero Styles ===== */
@@ -667,5 +446,10 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }

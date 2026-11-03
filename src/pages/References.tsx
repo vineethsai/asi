@@ -1,13 +1,11 @@
 import { useState, useMemo } from "react";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
+import PageLayout from "@/components/layout/PageLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ExternalLink, Search, BookOpen, Shield, Target, Database } from "lucide-react";
-import { Helmet } from "react-helmet";
 import { usePageTracking } from "@/hooks/useAnalytics";
 import { threatsData, mitigationsData, aisvsData } from "@/components/components/securityData";
 
@@ -180,224 +178,196 @@ const References = () => {
   }, [allReferences, groupedByDomain]);
 
   return (
-    <>
-      <Helmet>
-        <title>References & Resources | AI Agents Security Guide</title>
-        <meta
-          name="description"
-          content="Comprehensive collection of references and resources for AI agents security, including research papers, standards, tools, and documentation from OWASP AISVS, threats, and security controls."
-        />
-        <meta
-          name="keywords"
-          content="AI security references, AI agents resources, OWASP AISVS references, AI security research, AI threat references, security controls documentation, AI security standards"
-        />
-        <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://agenticsecurity.info/references" />
-        <meta property="og:title" content="AI Security References & Resources" />
-        <meta
-          property="og:description"
-          content="Comprehensive collection of AI agents security references and resources."
-        />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://agenticsecurity.info/references" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="AI Security References & Resources" />
-        <meta
-          name="twitter:description"
-          content="Comprehensive collection of AI agents security references and resources."
-        />
-      </Helmet>
+    <PageLayout
+      title="References & Resources"
+      description="Comprehensive collection of references and resources for AI agents security, including research papers, standards, tools, and documentation from OWASP AISVS, threats, and security controls."
+      canonicalPath="/references"
+      keywords="AI security references, AI agents resources, OWASP AISVS references, AI security research, AI threat references, security controls documentation, AI security standards"
+    >
+      {/* Header Section */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold tracking-tight">References</h1>
+        <p className="mt-1 text-muted-foreground">
+          This page aggregates all external references from our AI security framework, including
+          research papers, standards documents, tools, and resources related to threats,
+          mitigations, and AISVS requirements.
+        </p>
 
-      <Header />
-
-      <main id="main-content" className="container mx-auto px-4 py-8">
-        {/* Header Section */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight">References</h1>
-          <p className="mt-1 text-muted-foreground">
-            This page aggregates all external references from our AI security framework, including
-            research papers, standards documents, tools, and resources related to threats,
-            mitigations, and AISVS requirements.
-          </p>
-
-          <div className="flex flex-wrap gap-6 text-sm text-muted-foreground mb-6">
-            <span>
-              <strong className="text-foreground">{stats.total}</strong> Total References
-            </span>
-            <span>
-              <strong className="text-foreground">{stats.threatRefs}</strong> Threat References
-            </span>
-            <span>
-              <strong className="text-foreground">{stats.mitigationRefs}</strong> Control References
-            </span>
-            <span>
-              <strong className="text-foreground">{stats.aisvsRefs}</strong> AISVS References
-            </span>
-            <span>
-              <strong className="text-foreground">{stats.uniqueDomains}</strong> Unique Sources
-            </span>
-          </div>
+        <div className="flex flex-wrap gap-6 text-sm text-muted-foreground mb-6">
+          <span>
+            <strong className="text-foreground">{stats.total}</strong> Total References
+          </span>
+          <span>
+            <strong className="text-foreground">{stats.threatRefs}</strong> Threat References
+          </span>
+          <span>
+            <strong className="text-foreground">{stats.mitigationRefs}</strong> Control References
+          </span>
+          <span>
+            <strong className="text-foreground">{stats.aisvsRefs}</strong> AISVS References
+          </span>
+          <span>
+            <strong className="text-foreground">{stats.uniqueDomains}</strong> Unique Sources
+          </span>
         </div>
+      </div>
 
-        <div className="flex flex-wrap gap-3 mb-6">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search references by title or source..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Button
-            variant={selectedType === "all" ? "default" : "outline"}
-            onClick={() => setSelectedType("all")}
-            className="whitespace-nowrap"
-          >
-            All ({allReferences.length})
-          </Button>
-          <Button
-            variant={selectedType === "threat" ? "default" : "outline"}
-            onClick={() => setSelectedType("threat")}
-            className="whitespace-nowrap"
-          >
-            Threats ({stats.threatRefs})
-          </Button>
-          <Button
-            variant={selectedType === "mitigation" ? "default" : "outline"}
-            onClick={() => setSelectedType("mitigation")}
-            className="whitespace-nowrap"
-          >
-            Controls ({stats.mitigationRefs})
-          </Button>
-          <Button
-            variant={selectedType === "aisvs" ? "default" : "outline"}
-            onClick={() => setSelectedType("aisvs")}
-            className="whitespace-nowrap"
-          >
-            AISVS ({stats.aisvsRefs})
-          </Button>
+      <div className="flex flex-wrap gap-3 mb-6">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Search references by title or source..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
         </div>
+        <Button
+          variant={selectedType === "all" ? "default" : "outline"}
+          onClick={() => setSelectedType("all")}
+          className="whitespace-nowrap"
+        >
+          All ({allReferences.length})
+        </Button>
+        <Button
+          variant={selectedType === "threat" ? "default" : "outline"}
+          onClick={() => setSelectedType("threat")}
+          className="whitespace-nowrap"
+        >
+          Threats ({stats.threatRefs})
+        </Button>
+        <Button
+          variant={selectedType === "mitigation" ? "default" : "outline"}
+          onClick={() => setSelectedType("mitigation")}
+          className="whitespace-nowrap"
+        >
+          Controls ({stats.mitigationRefs})
+        </Button>
+        <Button
+          variant={selectedType === "aisvs" ? "default" : "outline"}
+          onClick={() => setSelectedType("aisvs")}
+          className="whitespace-nowrap"
+        >
+          AISVS ({stats.aisvsRefs})
+        </Button>
+      </div>
 
-        {/* References Display */}
-        <Tabs defaultValue="list" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="list">List View</TabsTrigger>
-            <TabsTrigger value="grouped">Grouped by Source</TabsTrigger>
-          </TabsList>
+      {/* References Display */}
+      <Tabs defaultValue="list" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="list">List View</TabsTrigger>
+          <TabsTrigger value="grouped">Grouped by Source</TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="list" className="space-y-4">
-            {filteredReferences.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground">
-                    No references found matching your search criteria.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4">
-                {filteredReferences.map((ref, index) => (
-                  <Card key={index} className="hover:bg-muted/50 transition-colors">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-4">
+        <TabsContent value="list" className="space-y-4">
+          {filteredReferences.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <p className="text-muted-foreground">
+                  No references found matching your search criteria.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4">
+              {filteredReferences.map((ref, index) => (
+                <Card key={index} className="hover:bg-muted/50 transition-colors">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          {getSourceIcon(ref.sourceType)}
+                          <h3 className="font-semibold text-lg">{ref.title}</h3>
+                        </div>
+                        <p className="text-muted-foreground text-sm mb-2">
+                          Referenced by: {ref.sourceName}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Badge className={getSourceBadgeColor(ref.sourceType)}>
+                            {ref.sourceType.toUpperCase()}
+                          </Badge>
+                          <Badge variant="outline">{ref.source}</Badge>
+                        </div>
+                      </div>
+                      <Button variant="outline" size="sm" asChild className="shrink-0">
+                        <a
+                          href={ref.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Visit
+                        </a>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="grouped" className="space-y-6">
+          {Object.keys(groupedByDomain).length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <p className="text-muted-foreground">
+                  No references found matching your search criteria.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            Object.entries(groupedByDomain).map(([domain, refs]) => (
+              <Card key={domain}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ExternalLink className="h-5 w-5" />
+                    {domain} ({refs.length} references)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-3">
+                    {refs.map((ref, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 border rounded-lg"
+                      >
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
+                          <div className="flex items-center gap-2 mb-1">
                             {getSourceIcon(ref.sourceType)}
-                            <h3 className="font-semibold text-lg">{ref.title}</h3>
+                            <span className="font-medium">{ref.title}</span>
                           </div>
-                          <p className="text-muted-foreground text-sm mb-2">
-                            Referenced by: {ref.sourceName}
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <Badge className={getSourceBadgeColor(ref.sourceType)}>
-                              {ref.sourceType.toUpperCase()}
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <span>From: {ref.sourceName}</span>
+                            <Badge
+                              className={getSourceBadgeColor(ref.sourceType)}
+                              variant="outline"
+                            >
+                              {ref.sourceType}
                             </Badge>
-                            <Badge variant="outline">{ref.source}</Badge>
                           </div>
                         </div>
-                        <Button variant="outline" size="sm" asChild className="shrink-0">
+                        <Button variant="ghost" size="sm" asChild>
                           <a
                             href={ref.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-2"
+                            className="flex items-center gap-1"
                           >
                             <ExternalLink className="h-4 w-4" />
-                            Visit
                           </a>
                         </Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="grouped" className="space-y-6">
-            {Object.keys(groupedByDomain).length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground">
-                    No references found matching your search criteria.
-                  </p>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
-            ) : (
-              Object.entries(groupedByDomain).map(([domain, refs]) => (
-                <Card key={domain}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <ExternalLink className="h-5 w-5" />
-                      {domain} ({refs.length} references)
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-3">
-                      {refs.map((ref, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between p-3 border rounded-lg"
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              {getSourceIcon(ref.sourceType)}
-                              <span className="font-medium">{ref.title}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <span>From: {ref.sourceName}</span>
-                              <Badge
-                                className={getSourceBadgeColor(ref.sourceType)}
-                                variant="outline"
-                              >
-                                {ref.sourceType}
-                              </Badge>
-                            </div>
-                          </div>
-                          <Button variant="ghost" size="sm" asChild>
-                            <a
-                              href={ref.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1"
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </a>
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </TabsContent>
-        </Tabs>
-      </main>
-
-      <Footer />
-    </>
+            ))
+          )}
+        </TabsContent>
+      </Tabs>
+    </PageLayout>
   );
 };
 

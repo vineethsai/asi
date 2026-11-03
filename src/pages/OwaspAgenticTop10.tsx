@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Header } from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -249,17 +247,5 @@ export function OwaspAgenticTop10Content() {
         </div>
       )}
     </>
-  );
-}
-
-export default function OwaspAgenticTop10() {
-  return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
-        <OwaspAgenticTop10Content />
-      </main>
-      <Footer />
-    </div>
   );
 }
