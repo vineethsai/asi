@@ -313,6 +313,26 @@ export function getCiscoObjectivesByAsi(): Record<string, string[]> {
   return Object.fromEntries(Object.entries(out).map(([asi, set]) => [asi, [...set].sort()]));
 }
 
+/**
+ * OWASP Top 10 for LLM Applications id (e.g. "LLM01") → Cisco objectives whose techniques or
+ * sub-techniques carry an "OWASP: LLMxx:<edition>" mapping in Cisco's own data (sorted).
+ */
+export function getCiscoObjectivesByLlm(edition = "2026"): Record<string, string[]> {
+  const out: Record<string, Set<string>> = {};
+  const re = new RegExp(`^OWASP:\\s*(LLM\\d{2}):${edition}\\b`);
+  for (const og of ciscoTaxonomyData) {
+    for (const tech of og.ai_tech) {
+      for (const node of [tech, ...tech.ai_subtech]) {
+        for (const mapping of node.mappings) {
+          const m = mapping.match(re);
+          if (m) (out[m[1]] ??= new Set()).add(og.code);
+        }
+      }
+    }
+  }
+  return Object.fromEntries(Object.entries(out).map(([id, set]) => [id, [...set].sort()]));
+}
+
 export function parseMappingBadge(mapping: string): {
   framework: string;
   code: string;

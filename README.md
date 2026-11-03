@@ -39,6 +39,7 @@ Every dataset records its source, version and retrieval date (`src/data/sources.
 | [OWASP Agentic AI – Threats and Mitigations](https://genai.owasp.org/resource/agentic-ai-threats-and-mitigations/) | 1.1 (Dec 2025) | 17 threats (T1–T17) |
 | Controls (editorial, mapped to AISVS) | 2026.11 | 20 controls |
 | [OWASP Top 10 for Agentic Applications](https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/) | 2026 (Dec 2025) | 10 risks (ASI01–ASI10) |
+| [OWASP Top 10 for LLM Applications](https://genai.owasp.org/resource/owasp-genai-llm-top-10-2026/) | 2026 (v1.0, Aug 2026) | 10 risks (LLM01–LLM10), each with its 2025 id |
 | [OWASP AISVS](https://github.com/OWASP/AISVS/tree/main/1.01/en) | 1.01 | 12 chapters, 44 sections, 213 requirements (L1 57 / L2 110 / L3 46) |
 | [OWASP AIVSS](https://aivss.owasp.org/) | 0.8 | 10 core risks, 10 agentic risk factors |
 | [Cisco AI Security and Safety Taxonomy](https://blogs.cisco.com/ai/security-framework-v2) | 2.0.0 | 19 objectives, 44 techniques, 130 sub-techniques |

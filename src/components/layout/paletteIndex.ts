@@ -14,6 +14,7 @@ export type PaletteGroup =
   | "architectures"
   | "aisvs"
   | "asi"
+  | "llm"
   | "cisco"
   | "aiuc1"
   | "nist";
@@ -28,6 +29,7 @@ export const PALETTE_GROUP_LABELS: Record<PaletteGroup, string> = {
   architectures: "Architectures",
   aisvs: "AISVS",
   asi: "OWASP Agentic Top 10",
+  llm: "OWASP LLM Top 10",
   cisco: "Cisco AI Security Taxonomy",
   aiuc1: "AIUC-1",
   nist: "NIST AI RMF",
@@ -38,7 +40,7 @@ export interface PaletteEntry {
   id: string;
   group: PaletteGroup;
   title: string;
-  /** Display code (T7, M3, C5, 1.2.3, ASI01, OB-004, A001, GOVERN.1.1). */
+  /** Display code (T7, M3, C5, 1.2.3, ASI01, LLM01, OB-004, A001, GOVERN.1.1). */
   code?: string;
   subtitle?: string;
   /** Router path to navigate to; actions use `action` instead. */
@@ -130,7 +132,7 @@ export function staticEntries(): PaletteEntry[] {
 
 let dataIndex: Promise<PaletteEntry[]> | null = null;
 
-/** Threats, controls, components, architectures, AISVS, ASI, Cisco and AIUC-1 entries. */
+/** Threats, controls, components, architectures, AISVS, ASI, LLM Top 10, Cisco and AIUC-1 entries. */
 export function loadDataIndex(): Promise<PaletteEntry[]> {
   if (!dataIndex) {
     dataIndex = buildDataIndex().catch((err) => {
@@ -142,11 +144,12 @@ export function loadDataIndex(): Promise<PaletteEntry[]> {
 }
 
 async function buildDataIndex(): Promise<PaletteEntry[]> {
-  const [security, framework, architectures, asi, cisco, aiuc1] = await Promise.all([
+  const [security, framework, architectures, asi, llm, cisco, aiuc1] = await Promise.all([
     import("@/components/components/securityData"),
     import("@/components/components/frameworkData"),
     import("@/components/components/architecturesData"),
     import("@/components/components/owaspAgenticTop10Data"),
+    import("@/components/components/owaspLlmTop10Data"),
     import("@/components/components/ciscoTaxonomyData"),
     import("@/components/components/aiuc1Data"),
   ]);
@@ -274,6 +277,26 @@ async function buildDataIndex(): Promise<PaletteEntry[]> {
         path: `/taxonomy?tab=owasp-agentic&entry=${encodeURIComponent(e.code)}`,
         aliases: paddedVariants(e.code),
         keywords: clip(e.description),
+      }),
+    );
+  }
+
+  // OWASP LLM Top 10 (2026). The 2025 code is an alias too ("LLM06:2025" finds LLM03 Excessive
+  // Agency); a bare "LLM06" is an exact match only for the 2026 LLM06, so it still ranks first.
+  for (const e of llm.llmTop10Data) {
+    const renumbered = e.previous.id !== e.id;
+    out.push(
+      entry({
+        id: `llm:${e.id}`,
+        group: "llm",
+        code: e.id,
+        title: e.name,
+        subtitle: renumbered
+          ? `${e.code} · was ${e.previous.code}${e.previous.name !== e.name ? ` ${e.previous.name}` : ""}`
+          : e.code,
+        path: `/taxonomy?tab=llm-top10&entry=${encodeURIComponent(e.id)}`,
+        aliases: [...paddedVariants(e.id), e.code, e.previous.code],
+        keywords: [clip(e.summary), e.previous.name].join(" "),
       }),
     );
   }

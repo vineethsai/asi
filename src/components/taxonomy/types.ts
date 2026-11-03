@@ -1,11 +1,20 @@
 /**
  * Contract between the Taxonomy page (src/pages/Taxonomy.tsx) and its tab components
- * (OWASP Agentic Top 10, Cisco, ATLAS, AIVSS, AIUC-1) for deep links (IMPROVEMENT_PLAN P1-11).
+ * (OWASP Agentic Top 10, OWASP LLM Top 10, Cisco, ATLAS, AIVSS, AIUC-1) for deep links
+ * (IMPROVEMENT_PLAN P1-11).
  *
- * URL: /taxonomy?tab=owasp-agentic|cisco|atlas|aivss|aiuc-1(alias aiuc1)&entry=<code>
- *   entry examples: ASI01 · OB-004 · AITech-1.1 · AISubtech-1.1.1 · A001 · AML.T0051
+ * URL: /taxonomy?tab=owasp-agentic|llm-top10|cisco|atlas|aivss|aiuc-1(alias aiuc1)&entry=<code>
+ *   entry examples: ASI01 · LLM01 (or LLM06:2025) · OB-004 · AITech-1.1 · AISubtech-1.1.1 · A001 ·
+ *   AML.T0051
  */
-export type TaxonomyTabId = "overview" | "owasp-agentic" | "cisco" | "atlas" | "aivss" | "aiuc-1";
+export type TaxonomyTabId =
+  | "overview"
+  | "owasp-agentic"
+  | "llm-top10"
+  | "cisco"
+  | "atlas"
+  | "aivss"
+  | "aiuc-1";
 
 export interface TaxonomyTabProps {
   /** Entry code from `?entry=` (decoded), or null. */

@@ -24,6 +24,7 @@ function buildBlock() {
   const security = loadTsModule("src/components/components/securityData.ts");
   const aisvs = loadTsModule("src/data/aisvs.ts");
   const top10 = loadTsModule("src/components/components/owaspAgenticTop10Data.ts");
+  const llm = loadTsModule("src/components/components/owaspLlmTop10Data.ts");
   const cisco = loadTsModule("src/components/components/ciscoTaxonomyData.ts");
   const aiuc1 = loadTsModule("src/components/components/aiuc1Data.ts");
   const aivss = loadTsModule("src/components/components/aivssCalcData.ts");
@@ -55,6 +56,11 @@ function buildBlock() {
       `[${SOURCES.top10.name}](${SOURCES.top10.url})`,
       SOURCES.top10.version,
       `${top10.agenticTop10Data.length} risks (ASI01–ASI10)`,
+    ],
+    [
+      `[${SOURCES.llmTop10.name}](${SOURCES.llmTop10.url})`,
+      SOURCES.llmTop10.version,
+      `${llm.llmTop10Data.length} risks (LLM01–LLM${String(llm.llmTop10Data.length).padStart(2, "0")}), each with its ${llm.OWASP_LLM_TOP10_EDITION.previousVersion} id`,
     ],
     [
       `[OWASP AISVS](${SOURCES.aisvs.url})`,

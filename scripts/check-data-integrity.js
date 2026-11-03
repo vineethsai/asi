@@ -545,6 +545,25 @@ const EXPECTED = {
   /** NIST AI RMF 1.0 Core: 4 functions, 19 categories, 72 subcategories. */
   nist: { functions: ["GOVERN", "MAP", "MEASURE", "MANAGE"], categories: 19 },
   nistSubcategories: 72,
+  /**
+   * OWASP Top 10 for LLM Applications 2026 (published 2026-08-04): LLM01–LLM10 and the 2025 id
+   * each one replaced (2026 renumbered the list and renamed LLM07:2025 System Prompt Leakage).
+   */
+  llmTop10: {
+    version: "2026",
+    names: {
+      LLM01: ["Prompt Injection", "LLM01"],
+      LLM02: ["Sensitive Information Disclosure", "LLM02"],
+      LLM03: ["Excessive Agency", "LLM06"],
+      LLM04: ["Supply Chain", "LLM03"],
+      LLM05: ["Data and Model Poisoning", "LLM04"],
+      LLM06: ["Unbounded Consumption", "LLM10"],
+      LLM07: ["Misinformation", "LLM09"],
+      LLM08: ["Hidden Context Exposure", "LLM07"],
+      LLM09: ["Vector and Embedding Weaknesses", "LLM08"],
+      LLM10: ["Improper Output Handling", "LLM05"],
+    },
+  },
 };
 
 const THREAT_MODULE = "src/components/components/securityData.ts";
@@ -552,6 +571,7 @@ const FRAMEWORK_MODULE = "src/components/components/frameworkData.ts";
 const ARCHITECTURE_MODULE = "src/components/components/architecturesData.ts";
 const COMPONENT_MAP_MODULE = "src/components/components/componentDataMap.ts";
 const TOP10_MODULE = "src/components/components/owaspAgenticTop10Data.ts";
+const LLM_TOP10_MODULE = "src/components/components/owaspLlmTop10Data.ts";
 const KC_MODULE = "src/data/kc.ts";
 const ICON_MODULE = "src/lib/icons.ts";
 
@@ -900,6 +920,7 @@ async function run() {
   const architectureModule = loadTsModule(ARCHITECTURE_MODULE);
   const componentMapModule = loadTsModule(COMPONENT_MAP_MODULE);
   const top10Module = loadTsModule(TOP10_MODULE);
+  const llmTop10Module = loadTsModule(LLM_TOP10_MODULE);
   const ciscoModule = loadTsModule("src/components/components/ciscoTaxonomyData.ts");
   const aivssModule = loadTsModule("src/components/components/aivssCalcData.ts");
   const aiuc1Module = loadTsModule("src/components/components/aiuc1Data.ts");
@@ -1373,6 +1394,122 @@ async function run() {
     );
   }
 
+  // ── OWASP Top 10 for LLM Applications (2026) ─────────────────────────────
+  const llmTop10Data = requireArray("llmTop10Data", llmTop10Module.llmTop10Data);
+  ensure(
+    llmTop10Module.OWASP_LLM_TOP10_EDITION?.version === EXPECTED.llmTop10.version,
+    `OWASP LLM Top 10 edition is ${llmTop10Module.OWASP_LLM_TOP10_EDITION?.version}; expected ${EXPECTED.llmTop10.version}`,
+  );
+  const expectedLlm = EXPECTED.llmTop10.names;
+  ensure(
+    llmTop10Data.map((e) => e?.id).join(",") === Object.keys(expectedLlm).join(","),
+    `llmTop10Data must list ${Object.keys(expectedLlm).join(", ")} in rank order`,
+  );
+  const llmCiscoDerived = ciscoModule.getCiscoObjectivesByLlm(EXPECTED.llmTop10.version);
+  // ASI → threats reachable through the official Agentic Top 10 Appendix A mapping (both directions).
+  const threatsByAsi = new Map();
+  for (const entry of agenticTop10Data) {
+    threatsByAsi.set(entry.code, new Set(safeArray(entry.relatedThreats)));
+  }
+  for (const [threatKey, threat] of threatEntries) {
+    for (const asi of safeArray(threat.asiMapping)) threatsByAsi.get(asi)?.add(threatKey);
+  }
+  const atlasTacticNames = safeObject(llmTop10Module.LLM_ATLAS_TACTICS);
+  const cweNames = safeObject(llmTop10Module.LLM_CWE_NAMES);
+  for (const entry of llmTop10Data) {
+    const owner = `OWASP LLM Top10 ${entry?.id}`;
+    if (!entry || typeof entry !== "object") {
+      addError(`${owner} is not an object`);
+      continue;
+    }
+    ensureIdFormat(owner, entry.id, /^LLM\d{2}$/, "id");
+    ensure(
+      entry.code === `${entry.id}:${EXPECTED.llmTop10.version}`,
+      `${owner} code must be ${entry.id}:${EXPECTED.llmTop10.version} (is ${entry.code})`,
+    );
+    const [expectedName, expectedPrevious] = expectedLlm[entry.id] ?? [];
+    ensure(entry.name === expectedName, `${owner} name "${entry.name}" is not "${expectedName}"`);
+    ensure(
+      entry.previous?.id === expectedPrevious &&
+        entry.previous?.code === `${expectedPrevious}:2025` &&
+        isValidHttpUrl(String(entry.previous?.url || "")),
+      `${owner} previous must be ${expectedPrevious}:2025 with a URL`,
+    );
+    ensure(String(entry.summary || "").trim().length > 80, `${owner} is missing summary`);
+    ensure(safeArray(entry.examples).length >= 3, `${owner} needs at least 3 examples`);
+    ensure(!/\*\*/.test(String(entry.summary)), `${owner} summary contains markdown "**"`);
+
+    const relatedAsi = safeArray(entry.relatedAsi).map(String);
+    ensure(relatedAsi.length > 0, `${owner} has no relatedAsi`);
+    for (const code of relatedAsi) {
+      ensure(top10Codes.has(code), `${owner} references unknown ASI ${code}`);
+    }
+    const relatedThreats = safeArray(entry.relatedThreats).map(String);
+    ensure(relatedThreats.length > 0, `${owner} has no relatedThreats`);
+    for (const id of relatedThreats) {
+      ensure(threatSet.has(id), `${owner} references unknown threat ${id}`);
+    }
+    ensure(
+      relatedThreats.some((id) => relatedAsi.some((asi) => threatsByAsi.get(asi)?.has(id))),
+      `${owner} relatedThreats [${relatedThreats.join(", ")}] include none reached by its official ASI mappings [${relatedAsi.join(", ")}]`,
+    );
+    const relatedControls = safeArray(entry.relatedControls).map(String);
+    ensure(relatedControls.length > 0, `${owner} has no relatedControls`);
+    for (const id of relatedControls) {
+      ensure(mitigationSet.has(id), `${owner} references unknown control ${id}`);
+    }
+    ensure(String(entry.mappingNote || "").trim().length > 0, `${owner} is missing mappingNote`);
+    const primaryChapters = safeArray(entry.relatedAisvs).map(String);
+    const supportingChapters = safeArray(entry.supportingAisvs).map(String);
+    ensure(primaryChapters.length > 0, `${owner} has no relatedAisvs`);
+    for (const code of [...primaryChapters, ...supportingChapters]) {
+      ensure(aisvs.chapterSet.has(code), `${owner} references unknown AISVS chapter ${code}`);
+    }
+    ensure(
+      !primaryChapters.some((code) => supportingChapters.includes(code)),
+      `${owner} lists an AISVS chapter as both primary and supporting`,
+    );
+    for (const id of safeArray(entry.atlasTactics)) {
+      ensureIdFormat(owner, id, /^AML\.TA\d{4}$/, "atlasTactics");
+      ensure(
+        Boolean(atlasTacticNames[id]),
+        `${owner} ATLAS tactic ${id} has no name in LLM_ATLAS_TACTICS`,
+      );
+    }
+    for (const id of safeArray(entry.cwe)) {
+      ensureIdFormat(owner, id, /^CWE-\d+$/, "cwe");
+      ensure(Boolean(cweNames[id]), `${owner} ${id} has no name in LLM_CWE_NAMES`);
+    }
+    const cisco = safeArray(entry.relatedCiscoObjectives).map(String);
+    for (const code of cisco) {
+      ensure(ciscoObjectiveSet.has(code), `${owner} references unknown Cisco objective ${code}`);
+    }
+    const derived = safeArray(llmCiscoDerived[entry.id]);
+    warnIf(
+      derived.join(",") !== [...cisco].sort().join(","),
+      `${owner} relatedCiscoObjectives [${cisco.join(", ")}] differ from the Cisco taxonomy's own ${entry.id}:${EXPECTED.llmTop10.version} mappings [${derived.join(", ")}]`,
+    );
+    ensure(
+      llmTop10Module.findLlmTop10Entry(`${entry.previous?.id}:2025`) === entry &&
+        llmTop10Module.findLlmTop10Entry(entry.code) === entry,
+      `${owner} does not resolve through findLlmTop10Entry`,
+    );
+    validateReferences(owner, entry.references);
+  }
+  const llmDuplicates = listDuplicates(llmTop10Data.map((e) => String(e?.id)));
+  if (llmDuplicates.length > 0) {
+    addError(`Duplicate OWASP LLM Top 10 ids: ${formatDuplicates(llmDuplicates)}`);
+  }
+  // Agentic Top 10 entries cite the LLM Top 10 by 2025 id ("LLM06:2025 Excessive Agency").
+  for (const entry of agenticTop10Data) {
+    for (const ref of safeArray(entry.relatedLLMTop10)) {
+      ensure(
+        Boolean(llmTop10Module.findLlmTop10Entry(String(ref))),
+        `OWASP Agentic Top10 ${entry.code} relatedLLMTop10 "${ref}" does not resolve to an LLM Top 10 entry`,
+      );
+    }
+  }
+
   // ── AIVSS v0.8 worked examples recompute ─────────────────────────────────
   const maturityByThm = { 1: "A", 0.97: "P", 0.5: "U" };
   const strengthByMf = { 1: "none", 0.83: "partial", 0.67: "strong" };
@@ -1584,6 +1721,7 @@ async function run() {
     "threats",
     "controls",
     "top10",
+    "llmTop10",
     "cisco",
     "aiuc1",
     "aivss",
@@ -1614,6 +1752,7 @@ async function run() {
       [ARCHITECTURE_MODULE]: architectureModule,
       [COMPONENT_MAP_MODULE]: componentMapModule,
       [TOP10_MODULE]: top10Module,
+      [LLM_TOP10_MODULE]: llmTop10Module,
       "src/components/components/ciscoTaxonomyData.ts": ciscoModule,
       "src/components/components/aivssCalcData.ts": aivssModule,
       "src/components/components/aiuc1Data.ts": aiuc1Module,
@@ -1658,6 +1797,9 @@ async function run() {
   console.log(`Components: ${componentSet.size}`);
   console.log(`Architectures: ${architectureEntries.length}`);
   console.log(`OWASP Agentic Top 10 Entries: ${agenticTop10Data.length}`);
+  console.log(
+    `OWASP LLM Top 10 ${llmTop10Module.OWASP_LLM_TOP10_EDITION.version} Entries: ${llmTop10Data.length}`,
+  );
   console.log(
     `Cisco taxonomy ${ciscoModule.CISCO_TAXONOMY_VERSION}: ${ciscoStats.objectiveGroups} objectives / ${ciscoStats.techniques} techniques / ${ciscoStats.subTechniques} sub-techniques`,
   );

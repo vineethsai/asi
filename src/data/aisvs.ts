@@ -206,5 +206,7 @@ export const source = {
   name: "OWASP AI Security Verification Standard (AISVS)",
   version: aisvs.version,
   url: `https://github.com/OWASP/AISVS/tree/main/${aisvs.version}/en`,
+  /** The commit the generated data was parsed from (same 1.01/en tree as release tag v1.01). */
+  dataUrl: aisvs.sourceUrl,
   retrievedAt: aisvs.retrievedAt,
 };

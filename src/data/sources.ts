@@ -14,6 +14,7 @@ import {
   controlsSource as controls,
 } from "../components/components/securityData";
 import { source as top10 } from "../components/components/owaspAgenticTop10Data";
+import { source as llmTop10 } from "../components/components/owaspLlmTop10Data";
 import { source as cisco } from "../components/components/ciscoTaxonomyData";
 import { source as aiuc1 } from "../components/components/aiuc1Data";
 import { source as aivss } from "../components/components/aivssCalcData";
@@ -36,6 +37,7 @@ export type DataSourceKey =
   | "threats"
   | "controls"
   | "top10"
+  | "llmTop10"
   | "cisco"
   | "atlas"
   | "aiuc1"
@@ -50,6 +52,7 @@ export const SOURCES: Record<DataSourceKey, DataSource> = {
   threats,
   controls,
   top10,
+  llmTop10,
   cisco,
   atlas,
   aiuc1,

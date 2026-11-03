@@ -1,6 +1,14 @@
 import React, { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { Calculator, Layers, Map as MapIcon, Network, Shield, Target } from "lucide-react";
+import {
+  Calculator,
+  Layers,
+  ListOrdered,
+  Map as MapIcon,
+  Network,
+  Shield,
+  Target,
+} from "lucide-react";
 import PageLayout from "@/components/layout/PageLayout";
 import { PageHeader, type PageHeaderSource } from "@/components/layout/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,6 +39,11 @@ const AIVSSCalculatorContent = React.lazy(() =>
 );
 const AIUC1ContentLazy = React.lazy(() =>
   import("./AIUC1Content").then((m) => ({ default: m.AIUC1Content })),
+);
+const LlmTop10Content = React.lazy(() =>
+  import("@/components/taxonomy/tabs/LlmTop10Tab").then((m) => ({
+    default: m.LlmTop10Content,
+  })),
 );
 const AtlasCrosswalkContent = React.lazy(() =>
   import("@/components/taxonomy/tabs/AtlasCrosswalkTab").then((m) => ({
@@ -64,6 +77,15 @@ const TAB_META: Record<TaxonomyTabId, TabMeta> = {
     description:
       "The OWASP Top 10 for Agentic Applications (ASI01–ASI10) with examples, attack scenarios, prevention guidelines, related threats and controls.",
     source: SOURCES.top10,
+  },
+  "llm-top10": {
+    title: "OWASP Top 10 for LLM Applications",
+    label: "LLM Top 10",
+    short: "LLM",
+    icon: ListOrdered,
+    description:
+      "OWASP Top 10 for LLM Applications 2026 (LLM01–LLM10): examples, 2025 numbering, and links to agentic threats, controls, AISVS, Cisco, ATLAS and CWE.",
+    source: SOURCES.llmTop10,
   },
   cisco: {
     title: "Cisco AI Security Taxonomy",
@@ -106,6 +128,7 @@ const TAB_META: Record<TaxonomyTabId, TabMeta> = {
 const TAB_ORDER: TaxonomyTabId[] = [
   "overview",
   "owasp-agentic",
+  "llm-top10",
   "cisco",
   "atlas",
   "aivss",
@@ -118,6 +141,9 @@ const TAB_ALIASES: Record<string, TaxonomyTabId> = {
   agentic: "owasp-agentic",
   asi: "owasp-agentic",
   "mitre-atlas": "atlas",
+  llm: "llm-top10",
+  "owasp-llm": "llm-top10",
+  "llm-top-10": "llm-top10",
 };
 
 function resolveTab(raw: string | null): TaxonomyTabId {
@@ -285,6 +311,12 @@ export default function Taxonomy() {
         <TabsContent value="owasp-agentic" className="mt-0">
           <Suspense fallback={<TabLoader />}>
             <OwaspAgenticTop10Content {...tabProps} />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="llm-top10" className="mt-0">
+          <Suspense fallback={<TabLoader />}>
+            <LlmTop10Content {...tabProps} />
           </Suspense>
         </TabsContent>
 

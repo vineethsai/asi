@@ -67,12 +67,18 @@ export function parseCiscoMapping(raw: string): ParsedMapping | null {
   switch (fw) {
     case "OWASP": {
       const isAsi = /^ASI\d{2}$/.test(code);
+      // "LLM01:2026" → the LLM Top 10 tab (2025 ids resolve to their 2026 entry there).
+      const llm = code.match(/^(LLM\d{2})(?::\d{4})?$/);
       return {
         framework: "owasp",
         frameworkLabel: FRAMEWORK_LABEL.owasp,
         code,
         label,
-        to: isAsi ? taxonomyHref("owasp-agentic", code) : undefined,
+        to: isAsi
+          ? taxonomyHref("owasp-agentic", code)
+          : llm
+            ? taxonomyHref("llm-top10", code)
+            : undefined,
         tone: isAsi ? FRAMEWORK_PALETTE.asi : undefined,
       };
     }

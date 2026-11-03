@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.2.0] - 2026-11-03
+
+### Data
+
+- New dataset: OWASP Top 10 for LLM Applications, 2026 edition (v1.0, published 2026-08-04; `src/components/components/owaspLlmTop10Data.ts`). The 2026 list renumbered the 2025 one (Excessive Agency #6 → #3, Unbounded Consumption #10 → #6, Improper Output Handling #5 → #10) and renamed System Prompt Leakage to Hidden Context Exposure; every entry carries its 2025 id and `findLlmTop10Entry()` resolves both numberings. Agentic Top 10, ATLAS tactic and CWE links are the edition's Appendix A primary mappings, AISVS chapters come from its AISVS appendix, Cisco objectives are derived from Cisco's own `LLMxx:2026` mappings, and threat/control links are editorial with a per-entry note. Summaries and examples are paraphrased.
+- New Taxonomy tab `?tab=llm-top10` (aliases `llm`, `owasp-llm`; deep link `entry=LLM01`, also `entry=LLM06:2025`), command palette group "OWASP LLM Top 10" (2025 codes are aliases), and Cisco "OWASP: LLMxx:2026" mapping chips now link to it.
+- `npm run check:data` checks the LLM Top 10 ids, names and 2025 predecessors, that every mapping resolves (ASI, threats, controls, AISVS chapters, ATLAS tactics, CWEs, Cisco objectives), that each entry keeps a threat its official ASI mappings reach, that Cisco objectives match Cisco's data, and that every `relatedLLMTop10` citation in the Agentic Top 10 resolves.
+- Source versions re-verified on 2026-11-03, all unchanged: OWASP AISVS 1.01 (latest stable; release tag `v1.01`, `1.01/en` tree identical to the pinned commit; 1.02 is still `1.02-dev`), OWASP Top 10 for Agentic Applications 2026 (Dec 2025), Agentic AI Threats & Mitigations 1.1, NIST AI RMF 1.0 and AI 600-1 (revision announced, no draft; the Cyber AI Profile NIST IR 8596 is still a preliminary draft, so it is not added), Cisco AI Security and Safety Taxonomy 2.0.0, AIUC-1 Q4-2026 (next release 2027-01-15), MITRE ATLAS 2026.10. The NIST page footer now states this status from `NIST_RMF_STATUS`; the AISVS source records its pinned commit as `dataUrl`.
+
 ## [2.1.0] - 2026-11-03
 
 Site-wide release implementing `IMPROVEMENT_PLAN.md`: every dataset follows the current published version of its source, the pages share one layout/severity/icon/KC system with purpose-built visualizations and a motion system, the Threat Modeler engine was rebuilt around a rule catalog with principled risk scoring, and a learning layer (path, quizzes, scenarios, progress) was added.

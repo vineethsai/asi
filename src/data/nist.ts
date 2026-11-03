@@ -955,3 +955,22 @@ export const gaiSource = {
 
 /** NIST's AI RMF landing page (announces the AI RMF revision). */
 export const NIST_AI_RMF_HOME = "https://www.nist.gov/itl/ai-risk-management-framework";
+
+/**
+ * Status of NIST's AI RMF publications when last checked. Only final NIST publications become
+ * tag layers on this site (today: NIST AI 600-1); drafts are listed so the page can say why they
+ * are absent. Checked 2026-11-03 against NIST_AI_RMF_HOME, airc.nist.gov and csrc.nist.gov.
+ */
+export const NIST_RMF_STATUS = {
+  checkedAt: "2026-11-03",
+  revision:
+    "NIST has announced a revision of AI RMF 1.0 but has not published a draft or a new version.",
+  drafts: [
+    {
+      id: "NIST IR 8596",
+      name: "Cybersecurity Framework Profile for Artificial Intelligence (Cyber AI Profile)",
+      status: "initial preliminary draft, December 2025",
+      url: "https://csrc.nist.gov/pubs/ir/8596/iprd",
+    },
+  ],
+} as const;
