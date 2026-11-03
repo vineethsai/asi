@@ -20,7 +20,15 @@
  *   hiddenGroups? / defaultHiddenGroups? / onHiddenGroupsChange?; showGroupToggles? (default true)
  *   hideIsolated?: boolean (default true)
  *   rowHeight?: number (default 24); minHeight?: number (default 280); minWidth?: number (default 640)
- *   nodeWidth?: number (default 12); nodePadding?: number (default 10); valueLabel?: string ("mappings")
+ *   maxHeight?: number (default 900) — cap for the value-driven height (see below)
+ *   minUnitHeight?: number (default 2) — px per unit of value the height aims for, so a 1-mapping
+ *        node / ribbon stays visible; the busiest column (nodes × padding + value × unit) sets H
+ *   nodeWidth?: number (default 12); nodePadding?: number (default 10, raised to the label height
+ *        so labels in a column never overlap); valueLabel?: string ("mappings")
+ *
+ * Geometry: node rects, ribbon paths and ribbon widths all come from the same d3-sankey layout
+ * (node x0/x1/y0/y1, link y0/y1/width) and transition together. Ribbons draw in once, on enter,
+ * at the measured width (`drawInLinks`); every update clears the dash attributes.
  *
  * Usage:
  *   <Sankey ariaLabel="Mappings from OWASP ASI to threats to Cisco objectives"
@@ -41,7 +49,7 @@ import { ChartFrame, ChartLegend } from "./ChartFrame";
 import { ChartTooltip } from "./ChartTooltip";
 import { useChartTooltip } from "./useChartTooltip";
 import { useResizeObserver } from "./useResizeObserver";
-import { CHART_MOTION, usePrefersReducedMotion } from "./motion";
+import { CHART_MOTION, clearLinkDraw, drawInLinks, usePrefersReducedMotion } from "./motion";
 import {
   approxTextWidth,
   connectedClosure,
@@ -90,6 +98,8 @@ export interface SankeyProps {
   hideIsolated?: boolean;
   rowHeight?: number;
   minHeight?: number;
+  maxHeight?: number;
+  minUnitHeight?: number;
   minWidth?: number;
   nodeWidth?: number;
   nodePadding?: number;
@@ -101,10 +111,12 @@ type NExtra = SankeyNodeDatum & { dummy?: boolean; order: number; col: number; c
 type LExtra = { key: string; label?: string; dummy?: boolean };
 type SNode = SankeyNode<NExtra, LExtra>;
 type SLink = SankeyLink<NExtra, LExtra>;
-type PathEl = SVGPathElement & { __drawn?: boolean };
+type PathEl = SVGPathElement;
 
 const FONT = 12;
 const HEADER = 28;
+/** Minimum gap between neighbouring nodes in a column: one 12 px label line plus breathing room. */
+const LABEL_GAP = FONT + 4;
 const GROUP_FALLBACK = FRAMEWORK_ORDER.map((k) => FRAMEWORK_PALETTE[k].css);
 
 export function Sankey({
@@ -128,6 +140,8 @@ export function Sankey({
   hideIsolated = true,
   rowHeight = 24,
   minHeight = 280,
+  maxHeight = 900,
+  minUnitHeight = 2,
   minWidth = 640,
   nodeWidth = 12,
   nodePadding = 10,
@@ -135,7 +149,7 @@ export function Sankey({
   className,
 }: SankeyProps) {
   const reduced = usePrefersReducedMotion();
-  const { ref: boxRef, width } = useResizeObserver<HTMLDivElement>({ initialWidth: 960 });
+  const { ref: boxRef, width, measured } = useResizeObserver<HTMLDivElement>({ initialWidth: 960 });
   const svgRef = useRef<SVGSVGElement>(null);
   const [innerPinned, setInnerPinned] = useState<string | null>(defaultPinnedId);
   const pinned = pinnedId !== undefined ? pinnedId : innerPinned;
@@ -193,14 +207,34 @@ export function Sankey({
     return { col, nodes: kept, links: [...sums.entries()].map(([key, l]) => ({ ...l, key })) };
   }, [nodes, links, visibleGroups, hideIsolated]);
 
-  const perColumn = useMemo(() => {
-    const counts = visibleGroups.map(() => 0);
-    graph.nodes.forEach((n) => counts[graph.col.get(n.group) ?? 0]++);
-    return counts;
+  // Per column: node count and total node value (d3-sankey node value = max(in, out)).
+  const columnStats = useMemo(() => {
+    const stats = visibleGroups.map(() => ({ n: 0, value: 0 }));
+    const inSum = new Map<string, number>();
+    const outSum = new Map<string, number>();
+    graph.links.forEach((l) => {
+      outSum.set(l.source, (outSum.get(l.source) ?? 0) + l.value);
+      inSum.set(l.target, (inSum.get(l.target) ?? 0) + l.value);
+    });
+    graph.nodes.forEach((n) => {
+      const s = stats[graph.col.get(n.group) ?? 0];
+      s.n += 1;
+      s.value += Math.max(inSum.get(n.id) ?? 0, outSum.get(n.id) ?? 0);
+    });
+    return stats;
   }, [graph, visibleGroups]);
 
+  const pad = Math.max(nodePadding, LABEL_GAP);
   const W = Math.max(minWidth, width || 960);
-  const H = Math.max(minHeight, Math.max(1, ...perColumn) * rowHeight + HEADER + 12);
+  // Height: a label row per node in the densest column, and enough room in the busiest column
+  // (its paddings, incl. the zero-height dummy, plus value × minUnitHeight) that small nodes and
+  // their ribbons stay visible; the value-driven part is capped at maxHeight.
+  const demand = Math.max(0, ...columnStats.map((c) => c.n * pad + c.value * minUnitHeight));
+  const H = Math.max(
+    minHeight,
+    Math.max(1, ...columnStats.map((c) => c.n)) * rowHeight + HEADER + 12,
+    Math.min(maxHeight, Math.ceil(demand) + HEADER + 6),
+  );
 
   // Label budgets: first column labels sit left, the rest sit right of their node.
   const firstLabels = graph.nodes.filter((n) => graph.col.get(n.group) === 0).map((n) => n.label);
@@ -253,7 +287,7 @@ export function Sankey({
       .nodeSort((a, b) => a.order - b.order)
       .linkSort(null)
       .nodeWidth(nodeWidth)
-      .nodePadding(nodePadding)
+      .nodePadding(pad)
       .extent([
         [leftPad, HEADER],
         [W - rightPad, H - 6],
@@ -275,7 +309,7 @@ export function Sankey({
     } catch {
       return null;
     }
-  }, [graph, visibleGroups, groupColor, nodeWidth, nodePadding, leftPad, rightPad, W, H]);
+  }, [graph, visibleGroups, groupColor, nodeWidth, pad, leftPad, rightPad, W, H]);
 
   const active = pinned ?? hovered;
   const closure = useMemo(
@@ -326,18 +360,29 @@ export function Sankey({
 
   useEffect(() => {
     const svg = svgRef.current;
-    if (!svg) return;
+    // Wait for the container width so the first (animated) draw happens at the final geometry.
+    if (!svg || !measured) return;
     const sel = d3.select(svg);
     const dur = reduced ? 0 : CHART_MOTION.updateMs;
+    // Nodes and ribbons share one duration so they never drift apart during a re-layout.
+    const geomMs = reduced ? 0 : CHART_MOTION.nodeMs;
     const realNodes = layout ? (layout.nodes as SNode[]).filter((n) => !n.dummy) : [];
-    const realLinks = layout ? (layout.links as SLink[]).filter((l) => !l.dummy) : [];
+    // Paint order: ribbons that skip columns first, so they sit under the ribbons that end in the
+    // column they cross (a small node there is never hidden behind a wide pass-through ribbon).
+    const span = (l: SLink) => (l.target as SNode).col - (l.source as SNode).col;
+    const realLinks = layout
+      ? (layout.links as SLink[]).filter((l) => !l.dummy).sort((a, b) => span(b) - span(a))
+      : [];
     const path = sankeyLinkHorizontal<NExtra, LExtra>();
     const colorOfLink = (l: SLink) =>
       ((colorBy === "source" ? l.source : l.target) as SNode).color ?? "hsl(var(--primary))";
     const linkOn = (l: SLink) =>
       !closure || (closure.has((l.source as SNode).id) && closure.has((l.target as SNode).id));
+    const linkWidth = (l: SLink) => Math.max(1.5, l.width ?? 1);
+    const linkOpacity = (l: SLink) => (closure ? (linkOn(l) ? 0.7 : 0.06) : 0.32);
 
-    // Ribbons
+    // Ribbons. The draw-in runs once, on enter, from the final path; any update / re-join
+    // (re-layout, resize, highlight) or exit clears it, so no path is ever left part-dashed.
     const linkSel = sel
       .select<SVGGElement>("g[data-layer=links]")
       .selectAll<PathEl, SLink>("path")
@@ -348,41 +393,25 @@ export function Sankey({
             .append<PathEl>("path")
             .attr("fill", "none")
             .attr("d", (d) => path(d) ?? "")
-            .each(function () {
-              if (reduced || typeof this.getTotalLength !== "function") return;
-              let len = 0;
-              try {
-                len = this.getTotalLength();
-              } catch {
-                len = 0;
-              }
-              if (!len) return;
-              d3.select(this)
-                .attr("stroke-dasharray", `${len} ${len}`)
-                .attr("stroke-dashoffset", len)
-                .transition()
-                .duration(CHART_MOTION.linkMs)
-                .ease(CHART_MOTION.d3Ease)
-                .attr("stroke-dashoffset", 0)
-                .on("end", function () {
-                  d3.select(this).attr("stroke-dasharray", null).attr("stroke-dashoffset", null);
-                });
-            }),
-        (update) => update,
-        (exit) => exit.transition().duration(dur).style("opacity", 0).remove(),
+            .attr("stroke-width", linkWidth)
+            .style("stroke-opacity", linkOpacity)
+            .call((s) => drawInLinks(s, reduced)),
+        (update) => clearLinkDraw(update.interrupt().style("opacity", null)),
+        (exit) => clearLinkDraw(exit).transition().duration(dur).style("opacity", 0).remove(),
       );
     linkSel
+      .order()
       .style("stroke", (d) => colorOfLink(d))
       .style("mix-blend-mode", "normal")
       .on("mousemove", (e: MouseEvent, d) => handlers.current.show(e, { kind: "link", link: d }))
       .on("mouseleave", () => handlers.current.hide());
     linkSel
       .transition()
-      .duration(dur)
+      .duration(geomMs)
       .ease(CHART_MOTION.d3Ease)
       .attr("d", (d) => path(d) ?? "")
-      .attr("stroke-width", (d) => Math.max(1.5, d.width ?? 1))
-      .style("stroke-opacity", (d) => (closure ? (linkOn(d) ? 0.7 : 0.06) : 0.32));
+      .attr("stroke-width", linkWidth)
+      .style("stroke-opacity", linkOpacity);
 
     // Nodes
     const nodeSel = sel
@@ -408,7 +437,8 @@ export function Sankey({
           g.append("title");
           return g;
         },
-        (update) => update,
+        // interrupt(): a node re-joined while fading out must not finish its exit (remove()).
+        (update) => update.interrupt(),
         (exit) => exit.transition().duration(dur).style("opacity", 0).remove(),
       );
 
@@ -455,7 +485,7 @@ export function Sankey({
 
     nodeSel
       .transition()
-      .duration(reduced ? 0 : CHART_MOTION.nodeMs)
+      .duration(geomMs)
       .ease(CHART_MOTION.d3Ease)
       .attrTween(
         "transform",
@@ -466,7 +496,8 @@ export function Sankey({
       .select("rect")
       .style("fill", (d) => d.color)
       .transition()
-      .duration(reduced ? 0 : CHART_MOTION.nodeMs)
+      .duration(geomMs)
+      .ease(CHART_MOTION.d3Ease)
       .attr("width", (d) => (d.x1 ?? 0) - (d.x0 ?? 0))
       .attr("height", (d) => Math.max(2, (d.y1 ?? 0) - (d.y0 ?? 0)));
     nodeSel
@@ -513,6 +544,7 @@ export function Sankey({
       .text((d) => d.g.label);
   }, [
     layout,
+    measured,
     closure,
     active,
     pinned,

@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactElement } from "react";
 import {
@@ -339,5 +339,89 @@ describe("Bipartite", () => {
     expect(onSelect).toHaveBeenCalledWith("GOVERN");
     expect(screen.getByRole("button", { name: "Zoom in" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
+  });
+});
+
+describe("link draw-in end state (Sankey, Bipartite)", () => {
+  // jsdom has no SVG geometry: give every SVG element a length so the draw-in actually runs.
+  const proto = SVGElement.prototype as unknown as { getTotalLength?: () => number };
+  beforeEach(() => {
+    proto.getTotalLength = () => 100;
+  });
+  afterEach(() => {
+    delete proto.getTotalLength;
+  });
+  const dashedLinks = () =>
+    [...document.querySelectorAll("g[data-layer=links] path")].filter(
+      (p) => p.hasAttribute("stroke-dasharray") || p.hasAttribute("stroke-dashoffset"),
+    );
+
+  it("Sankey: draws in on enter, any update clears the dash, labels in a column stay apart", async () => {
+    wrap(
+      <Sankey
+        ariaLabel="Flow"
+        groups={[
+          { id: "a", label: "A" },
+          { id: "b", label: "B" },
+          { id: "c", label: "C" },
+        ]}
+        nodes={[
+          { id: "a1", label: "Big source", group: "a" },
+          ...Array.from({ length: 8 }, (_, i) => ({ id: `b${i}`, label: `Mid ${i}`, group: "b" })),
+          { id: "c1", label: "Sink", group: "c" },
+        ]}
+        links={[
+          ...Array.from({ length: 8 }, (_, i) => ({ source: "a1", target: `b${i}`, value: 1 })),
+          { source: "a1", target: "c1", value: 40 },
+          { source: "b0", target: "c1", value: 1 },
+        ]}
+      />,
+    );
+    await waitFor(() => expect(dashedLinks().length).toBeGreaterThan(0));
+    fireEvent.mouseEnter(screen.getByRole("button", { name: /^Mid 3/ }));
+    expect(dashedLinks()).toHaveLength(0);
+    await new Promise((r) => setTimeout(r, 40));
+    expect(dashedLinks()).toHaveLength(0);
+
+    // Node rects come from the layout, and neighbours in a column are at least a label apart.
+    type N = { col: number; y0: number; y1: number };
+    const groups = new Map<number, { el: Element; d: N }[]>();
+    document.querySelectorAll("g[data-layer=nodes] g.node").forEach((el) => {
+      const d = (el as unknown as { __data__: N }).__data__;
+      groups.set(d.col, [...(groups.get(d.col) ?? []), { el, d }]);
+    });
+    for (const list of groups.values()) {
+      list.sort((x, y) => x.d.y0 - y.d.y0);
+      for (let i = 1; i < list.length; i++) {
+        expect(list[i].d.y0 - list[i - 1].d.y1).toBeGreaterThanOrEqual(16 - 1e-6);
+      }
+    }
+  });
+
+  it("Bipartite: draws in on enter and any update clears the dash", async () => {
+    wrap(
+      <Bipartite
+        ariaLabel="Graph"
+        columns={[
+          { id: "fn", label: "Function" },
+          { id: "ctl", label: "Control" },
+        ]}
+        nodes={[
+          { id: "GOVERN", label: "Govern", column: "fn", group: "GOVERN" },
+          { id: "m1", label: "M1", column: "ctl" },
+          { id: "m2", label: "M2", column: "ctl" },
+        ]}
+        links={[
+          { source: "GOVERN", target: "m1" },
+          { source: "GOVERN", target: "m2", weight: 2 },
+        ]}
+      />,
+    );
+    await waitFor(() => expect(dashedLinks().length).toBe(2));
+    fireEvent.mouseEnter(screen.getByRole("button", { name: /^Govern/ }));
+    expect(dashedLinks()).toHaveLength(0);
+    document.querySelectorAll("g[data-layer=links] path").forEach((p) => {
+      expect(Number(p.getAttribute("stroke-width"))).toBeGreaterThan(0);
+    });
   });
 });

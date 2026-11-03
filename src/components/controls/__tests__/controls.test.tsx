@@ -80,6 +80,21 @@ describe("ControlDetail", () => {
   });
 });
 
+describe("ControlDetail AISVS footprint", () => {
+  it("lists all 12 chapters as bars, zero rows included, instead of a radar", async () => {
+    const control = CONTROL_LIST.find((m) => controlChapters(m).length > 0)!;
+    const { container } = renderAt(`/controls/${control.id}`);
+    const heading = await screen.findByRole("heading", { name: "AISVS footprint" });
+    const figure = heading.closest("figure")!;
+    const rows = figure.querySelectorAll("li[data-chapter]");
+    expect([...rows].map((r) => r.getAttribute("data-chapter"))).toEqual(Object.keys(aisvsData));
+    expect([...rows].some((r) => r.textContent?.endsWith("0"))).toBe(true);
+    expect(within(figure).getByRole("table")).toHaveTextContent("AISVS chapter");
+    expect(container.querySelector(".recharts-wrapper")).toBeNull();
+    expect(screen.getByRole("list", { name: "Mapped chapters" })).toBeInTheDocument();
+  });
+});
+
 describe("SecurityChecklist", () => {
   it("links valid AISVS 1.01 references and renders without DOM nesting warnings", () => {
     const err = vi.spyOn(console, "error").mockImplementation(() => {});

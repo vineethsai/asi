@@ -20,6 +20,9 @@
  *   bundling?: number (0–1, default 0.85); showZoomControls?: boolean (default true)
  *   labelWidth?: number (default 170); valueLabel?: string (default "links")
  *
+ * Links draw in once, on enter, at the measured width (`drawInLinks`); every update / resize clears
+ * the dash attributes so each link always rests fully stroked from source to target.
+ *
  * Usage:
  *   <Bipartite ariaLabel="NIST AI RMF subcategories mapped to controls"
  *     columns={[{ id: "fn", label: "Function" }, { id: "sub", label: "Subcategory" }, { id: "ctl", label: "Control" }]}
@@ -34,7 +37,7 @@ import { ChartFrame } from "./ChartFrame";
 import { ChartTooltip } from "./ChartTooltip";
 import { useChartTooltip } from "./useChartTooltip";
 import { useResizeObserver } from "./useResizeObserver";
-import { CHART_MOTION, usePrefersReducedMotion } from "./motion";
+import { CHART_MOTION, clearLinkDraw, drawInLinks, usePrefersReducedMotion } from "./motion";
 import { connectedClosure, cssEscape, truncate, translateTween } from "./chartUtils";
 
 export interface BipartiteColumn {
@@ -108,7 +111,7 @@ export function Bipartite({
   className,
 }: BipartiteProps) {
   const reduced = usePrefersReducedMotion();
-  const { ref: boxRef, width } = useResizeObserver<HTMLDivElement>({ initialWidth: 900 });
+  const { ref: boxRef, width, measured } = useResizeObserver<HTMLDivElement>({ initialWidth: 900 });
   const svgRef = useRef<SVGSVGElement>(null);
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
   const transformRef = useRef<d3.ZoomTransform>(d3.zoomIdentity);
@@ -277,10 +280,11 @@ export function Bipartite({
       .call(zoomRef.current.transform, d3.zoomIdentity);
   };
 
-  // Marks (incremental joins)
+  // Marks (incremental joins). Waits for the container width so the first (animated) draw
+  // happens at the final geometry.
   useEffect(() => {
     const svg = svgRef.current;
-    if (!svg) return;
+    if (!svg || !measured) return;
     const sel = d3.select(svg);
     const vp = sel.select<SVGGElement>("g[data-layer=viewport]");
     vp.attr("transform", transformRef.current.toString());
@@ -302,7 +306,11 @@ export function Bipartite({
       );
     };
     const on = (l: PLink) => !closure || (closure.has(l.s.id) && closure.has(l.t.id));
+    const strokeWidth = (l: PLink) => 1 + (l.weight / layout.maxW) * 3;
+    const strokeOpacity = (l: PLink) => (closure ? (on(l) ? 0.75 : 0.05) : 0.28);
 
+    // The draw-in runs once, on enter, from the final path; any update / re-join (re-layout,
+    // resize, highlight) or exit clears it, so no link is ever left part-dashed.
     const linkSel = vp
       .select<SVGGElement>("g[data-layer=links]")
       .selectAll<LinkEl, PLink>("path")
@@ -313,28 +321,11 @@ export function Bipartite({
             .append("path")
             .attr("fill", "none")
             .attr("d", pathOf)
-            .each(function () {
-              if (reduced || typeof this.getTotalLength !== "function") return;
-              let len = 0;
-              try {
-                len = this.getTotalLength();
-              } catch {
-                len = 0;
-              }
-              if (!len) return;
-              d3.select(this)
-                .attr("stroke-dasharray", `${len} ${len}`)
-                .attr("stroke-dashoffset", len)
-                .transition()
-                .duration(CHART_MOTION.linkMs)
-                .ease(CHART_MOTION.d3Ease)
-                .attr("stroke-dashoffset", 0)
-                .on("end", function () {
-                  d3.select(this).attr("stroke-dasharray", null).attr("stroke-dashoffset", null);
-                });
-            }),
-        (update) => update,
-        (exit) => exit.transition().duration(dur).style("opacity", 0).remove(),
+            .attr("stroke-width", strokeWidth)
+            .style("stroke-opacity", strokeOpacity)
+            .call((s) => drawInLinks(s, reduced)),
+        (update) => clearLinkDraw(update.interrupt().style("opacity", null)),
+        (exit) => clearLinkDraw(exit).transition().duration(dur).style("opacity", 0).remove(),
       );
     linkSel
       .style("stroke", (d) => d.s.color)
@@ -343,8 +334,8 @@ export function Bipartite({
       .duration(dur)
       .ease(CHART_MOTION.d3Ease)
       .attr("d", pathOf)
-      .attr("stroke-width", (d) => 1 + (d.weight / layout.maxW) * 3)
-      .style("stroke-opacity", (d) => (closure ? (on(d) ? 0.75 : 0.05) : 0.28));
+      .attr("stroke-width", strokeWidth)
+      .style("stroke-opacity", strokeOpacity);
 
     const nodesArr = [...layout.pos.values()];
     const nodeSel = vp
@@ -366,7 +357,8 @@ export function Bipartite({
           g.append("title");
           return g;
         },
-        (update) => update,
+        // interrupt(): a node re-joined while fading out must not finish its exit (remove()).
+        (update) => update.interrupt(),
         (exit) => exit.transition().duration(dur).style("opacity", 0).remove(),
       );
     nodeSel
@@ -469,7 +461,18 @@ export function Bipartite({
       .style("text-transform", "uppercase")
       .style("fill", (d, i) => d.color ?? FALLBACK[i % FALLBACK.length])
       .text((d) => d.label);
-  }, [layout, closure, active, selected, reduced, bundling, columns, labelWidth, valueLabel]);
+  }, [
+    layout,
+    measured,
+    closure,
+    active,
+    selected,
+    reduced,
+    bundling,
+    columns,
+    labelWidth,
+    valueLabel,
+  ]);
 
   const zoomControls = showZoomControls ? (
     <div role="group" aria-label="Zoom" className="inline-flex rounded-md border p-0.5">

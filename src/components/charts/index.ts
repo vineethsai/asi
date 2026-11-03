@@ -13,7 +13,14 @@ export type { TooltipState } from "./useChartTooltip";
 export { useChartTheme, readChartTheme } from "./useChartTheme";
 export type { ChartTheme } from "./useChartTheme";
 export { useResizeObserver } from "./useResizeObserver";
-export { CHART_MOTION, usePrefersReducedMotion, prefersReducedMotion } from "./motion";
+export {
+  CHART_MOTION,
+  usePrefersReducedMotion,
+  prefersReducedMotion,
+  drawInLinks,
+  clearLinkDraw,
+  LINK_DRAW_TRANSITION,
+} from "./motion";
 export { progressBand, percent, connectedClosure, defaultAggregate } from "./chartUtils";
 
 export { Ring } from "./Ring";

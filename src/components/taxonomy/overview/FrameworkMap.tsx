@@ -71,12 +71,23 @@ export function FrameworkMap({ onOpen }: FrameworkMapProps) {
   const [pinned, setPinned] = useState<CrosswalkFramework | null>(null);
   const active = hovered ?? pinned;
   const [drawn, setDrawn] = useState(reduced);
+  /** Draw-in finished: the edges drop their dash attributes and rest as plain strokes. */
+  const [settled, setSettled] = useState(reduced);
   const lastPointer = useRef<string>("mouse");
 
   useEffect(() => {
-    if (reduced) return setDrawn(true);
+    if (reduced) {
+      setDrawn(true);
+      setSettled(true);
+      return;
+    }
     const id = requestAnimationFrame(() => setDrawn(true));
-    return () => cancelAnimationFrame(id);
+    // Longest edge: 700 ms draw + its stagger delay (see `transitionDelay` below).
+    const done = window.setTimeout(() => setSettled(true), 700 + EDGES.length * 40 + 50);
+    return () => {
+      cancelAnimationFrame(id);
+      window.clearTimeout(done);
+    };
   }, [reduced]);
 
   const connections = useMemo(
@@ -140,9 +151,9 @@ export function FrameworkMap({ onOpen }: FrameworkMapProps) {
                 stroke={color}
                 strokeOpacity={on ? 0.85 : 0.35}
                 strokeLinecap="round"
-                pathLength={1}
-                strokeDasharray="1"
-                strokeDashoffset={drawn ? 0 : 1}
+                pathLength={settled ? undefined : 1}
+                strokeDasharray={settled ? undefined : "1"}
+                strokeDashoffset={settled ? undefined : drawn ? 0 : 1}
                 strokeWidth={drawn ? width(e.count) : 0}
                 style={{ transition, transitionDelay: reduced ? undefined : `${i * 40}ms` }}
               >

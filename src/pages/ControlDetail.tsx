@@ -56,7 +56,7 @@ import {
   threatLabel,
 } from "@/components/threats/threatIndex";
 
-const ControlRadar = lazy(() => import("@/components/controls/ControlRadar"));
+const ControlFootprint = lazy(() => import("@/components/controls/ControlFootprint"));
 
 type TabKey = "overview" | Phase | "tools";
 const TAB_KEYS: readonly TabKey[] = ["overview", ...PHASE_ORDER, "tools"];
@@ -321,7 +321,7 @@ export const ControlDetail = () => {
                 <Suspense
                   fallback={<div className="h-[300px] animate-pulse rounded-md bg-muted/40" />}
                 >
-                  <ControlRadar control={control} />
+                  <ControlFootprint control={control} />
                 </Suspense>
                 <ul className="mt-4 flex flex-wrap gap-1.5" aria-label="Mapped chapters">
                   {chapters.map((c) => (
