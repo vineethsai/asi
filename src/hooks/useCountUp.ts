@@ -29,7 +29,7 @@ export function useCountUp(
     const t0 = performance.now();
     const tick = (now: number) => {
       const t = Math.min(1, (now - t0) / ms);
-      const next = Math.round(from + (value - from) * easeOutExpo(t));
+      const next = Math.round(from + (value - from) * easeOutExpo(t)) || 0; // `|| 0` folds -0
       displayRef.current = next;
       setDisplay(next);
       if (t < 1) frame = requestAnimationFrame(tick);
