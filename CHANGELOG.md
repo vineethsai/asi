@@ -9,6 +9,22 @@
 - `npm run check:data` checks the LLM Top 10 ids, names and 2025 predecessors, that every mapping resolves (ASI, threats, controls, AISVS chapters, ATLAS tactics, CWEs, Cisco objectives), that each entry keeps a threat its official ASI mappings reach, that Cisco objectives match Cisco's data, and that every `relatedLLMTop10` citation in the Agentic Top 10 resolves.
 - Source versions re-verified on 2026-11-03, all unchanged: OWASP AISVS 1.01 (latest stable; release tag `v1.01`, `1.01/en` tree identical to the pinned commit; 1.02 is still `1.02-dev`), OWASP Top 10 for Agentic Applications 2026 (Dec 2025), Agentic AI Threats & Mitigations 1.1, NIST AI RMF 1.0 and AI 600-1 (revision announced, no draft; the Cyber AI Profile NIST IR 8596 is still a preliminary draft, so it is not added), Cisco AI Security and Safety Taxonomy 2.0.0, AIUC-1 Q4-2026 (next release 2027-01-15), MITRE ATLAS 2026.10. The NIST page footer now states this status from `NIST_RMF_STATUS`; the AISVS source records its pinned commit as `dataUrl`.
 
+### SEO
+
+- Every route is pre-rendered at build time (`scripts/seo-model.mjs`, `scripts/prerender.mjs`): `docs/<path>.html` carries the page's title, description, canonical, Open Graph/Twitter tags with its own card, `article:modified_time`, JSON-LD (Organization, BreadcrumbList, CollectionPage, TechArticle, SoftwareApplication) and the page's real content, so deep links return HTTP 200 with crawlable text instead of the 404 shell.
+- Sitemap rebuilt from the same model: 160 canonical URLs with lastmod, changefreq and priority; `/progress` and the 404 shell excluded.
+- Parity tests guarantee react-helmet's head matches the prerendered head on every page kind.
+
+### Fixed
+
+- Cross-framework Sankey and NIST bipartite links rendered as short stubs: the stroke-dash draw-in was interrupted by the chart's own update and left its dash attributes behind, measured at a placeholder width. The draw-in is now named, measured when it starts, cleared on end/interrupt/update/resize, and waits for the measured width.
+- Control detail "AISVS footprint" radar collapsed to a star for sparse data; replaced by a 12-row chapter bar list.
+- Architecture-derived scenario titles include the pattern name so titles are unique.
+
+### Deployment
+
+- GitHub Pages publishes from the Actions workflow; `docs/` is no longer committed. CI runs on Node 24.
+
 ## [2.1.0] - 2026-11-03
 
 Site-wide release implementing `IMPROVEMENT_PLAN.md`: every dataset follows the current published version of its source, the pages share one layout/severity/icon/KC system with purpose-built visualizations and a motion system, the Threat Modeler engine was rebuilt around a rule catalog with principled risk scoring, and a learning layer (path, quizzes, scenarios, progress) was added.
