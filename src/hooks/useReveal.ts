@@ -37,6 +37,14 @@ export function useReveal<T extends Element = HTMLDivElement>(options: RevealOpt
       reveal();
       return;
     }
+    // Elements already inside the viewport at mount reveal at once: some embedded
+    // and emulated viewports deliver the first IntersectionObserver callback late.
+    const rect = node.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    if (rect.height > 0 && rect.top < viewportHeight && rect.bottom > 0) {
+      reveal();
+      return;
+    }
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) {
@@ -47,7 +55,15 @@ export function useReveal<T extends Element = HTMLDivElement>(options: RevealOpt
       { rootMargin, threshold },
     );
     observer.observe(node);
-    return () => observer.disconnect();
+    // Safety net: never leave content invisible if the observer never fires.
+    const timer = window.setTimeout(() => {
+      reveal();
+      observer.disconnect();
+    }, 2500);
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(timer);
+    };
   }, [node, isVisible, rootMargin, threshold]);
 
   return { ref, isVisible };
