@@ -126,7 +126,7 @@ export const NAV_ITEMS: NavItem[] = [
     showIn: ALL,
   },
   {
-    label: "Implementation",
+    label: "Lifecycle view",
     path: "/implementation",
     icon: Hammer,
     group: "tools",

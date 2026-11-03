@@ -93,8 +93,8 @@ describe("scenarios", () => {
   });
 
   it("picks a stable featured scenario per day and wraps neighbours", () => {
-    const d = new Date(2026, 10, 3);
-    expect(featuredScenario(d)).toBe(featuredScenario(new Date(2026, 10, 3, 23, 59)));
+    const d = new Date(Date.UTC(2026, 10, 3));
+    expect(featuredScenario(d)).toBe(featuredScenario(new Date(Date.UTC(2026, 10, 3, 23, 59))));
     const first = SCENARIOS[0];
     const adj = adjacentScenarios(first.id);
     expect(adj?.prev).toBe(SCENARIOS[SCENARIOS.length - 1]);

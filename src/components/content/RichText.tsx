@@ -75,11 +75,11 @@ const INLINE_BASE = [
   /\[([^\]\n]+)\]\(([^)\s]+)\)/.source, // 3,4 markdown link
   /\bAISVS[\s-]+([CV]\d{1,2}(?:\.\d{1,2}){0,2})\b/.source, // 5 AISVS-prefixed code
   /\b([CV]\d{1,2}\.\d{1,2}(?:\.\d{1,2})?)\b/.source, // 6 dotted AISVS code
-  /\b(C(?:1[0-3]|[1-9]))\b(?!\s+(?:server|servers|channel|channels|infrastructure|traffic|beacon))/
+  /\b(C(?:1[0-2]|[1-9]))\b(?!\s+(?:server|servers|channel|channels|infrastructure|traffic|beacon))/
     .source, // 7 bare chapter
   /\b(ASI(?:0[1-9]|10))\b/.source, // 8 ASI entry
-  /\b(T(?:1[0-5]|[1-9]))\b/.source, // 9 threat
-  /\b(M(?:1[0-8]|[1-9]))\b/.source, // 10 control
+  /\b(T(?:1[0-7]|[1-9]))\b/.source, // 9 threat
+  /\b(M(?:20|1[0-9]|[1-9]))\b/.source, // 10 control
 ];
 const GLOSSARY_GROUP = 11;
 
