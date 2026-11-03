@@ -1,92 +1,261 @@
+import type { ComponentType } from "react";
 import { Link } from "react-router-dom";
-import PageLayout from "@/components/layout/PageLayout";
-import { threatsData, mitigationsData, aisvsData } from "@/components/components/securityData";
-import { frameworkData } from "@/components/components/frameworkData";
-import { architecturesData } from "@/components/components/architecturesData";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
-  Shield,
-  BookOpen,
-  GitBranch,
-  Users,
-  ExternalLink,
   ArrowRight,
-  Target,
-  Layers,
+  BookOpen,
   CheckCircle2,
+  Crosshair,
+  ExternalLink,
+  GitBranch,
+  GraduationCap,
+  Layers,
+  ListChecks,
+  Network,
+  Scale,
+  Shield,
+  ShieldAlert,
+  Target,
+  Users,
 } from "lucide-react";
+import PageLayout from "@/components/layout/PageLayout";
+import PageHeader from "@/components/layout/PageHeader";
+import { SITE_STATS } from "@/components/home/siteStats";
+import { SourceNote } from "@/components/content/SourceNote";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SOURCES, DATA_RETRIEVED_AT, type DataSourceKey } from "@/data/sources";
+import { useReveal } from "@/hooks/useReveal";
+import { stagger } from "@/lib/motion";
 
-// Every number in this page's copy is computed from the data modules.
-const counts = {
-  components: frameworkData.length,
-  architectures: Object.keys(architecturesData).length,
-  threats: Object.keys(threatsData).length,
-  attackVectors: Object.values(threatsData).reduce(
-    (sum, t) => sum + (t.attackVectors?.length ?? 0),
-    0,
-  ),
-  controls: Object.keys(mitigationsData).length,
-  aisvsChapters: Object.keys(aisvsData).length,
-};
+const GITHUB_URL = "https://github.com/vineethsai/asi";
+const OWASP_URL = "https://owasp.org/www-project-securing-agentic-applications/";
 
-const methodology = [
+// Every number on this page is computed from the data modules (via SITE_STATS).
+const S = SITE_STATS;
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+interface Step {
+  title: string;
+  description: string;
+  path: string;
+  cta: string;
+  icon: ComponentType<{ className?: string }>;
+}
+
+const METHODOLOGY: Step[] = [
   {
-    step: "1",
-    title: "Component Analysis",
-    description: `Identify the ${counts.components} key components of agentic AI systems and their security boundaries.`,
-    link: "/components",
+    title: "Understand the components",
+    description: `Break the system into the ${S.keyComponents} key components (${S.componentNodes} nodes in the full tree) and their security boundaries.`,
+    path: "/components",
+    cta: "Components",
+    icon: Layers,
   },
   {
-    step: "2",
-    title: "Threat Modeling",
-    description: `Map threats to each component using the catalog of ${counts.threats} threats and ${counts.attackVectors} attack vectors.`,
-    link: "/threats",
+    title: "Map the threats",
+    description: `Match each component to the catalog of ${plural(S.threats, "threat")} and ${plural(S.attackVectors, "attack vector")}, using the ${plural(S.patterns, "architecture pattern")} as reference designs.`,
+    path: "/threats",
+    cta: "Threats",
+    icon: ShieldAlert,
   },
   {
-    step: "3",
-    title: "Control Selection",
-    description: `Select appropriate security controls from ${counts.controls} mitigations organized by lifecycle phase.`,
-    link: "/controls",
+    title: "Select controls",
+    description: `Pick from ${plural(S.controls, "control")} organised by lifecycle phase (design, build, operations), each linked to the threats it addresses.`,
+    path: "/controls",
+    cta: "Controls",
+    icon: Shield,
   },
   {
-    step: "4",
-    title: "AISVS Verification",
-    description: `Verify implementation against the AI Security Verification Standard's ${counts.aisvsChapters} chapters.`,
-    link: "/aisvs",
+    title: "Verify with AISVS",
+    description: `Check the implementation against ${plural(S.aisvsRequirements, "requirement")} in ${plural(S.aisvsChapters, "chapter")} of the AI Security Verification Standard ${S.aisvsVersion}.`,
+    path: "/aisvs",
+    cta: "AISVS",
+    icon: ListChecks,
   },
   {
-    step: "5",
-    title: "NIST Alignment",
-    description:
-      "Map security posture to the NIST AI Risk Management Framework for governance compliance.",
-    link: "/nist-mapping",
+    title: "Align with NIST AI RMF",
+    description: `Trace the result to governance: ${plural(S.nistSubcategories, "NIST AI RMF subcategory", "NIST AI RMF subcategories")} mapped to AISVS chapters.`,
+    path: "/nist-mapping",
+    cta: "NIST mapping",
+    icon: Scale,
+  },
+  {
+    title: "Model your system",
+    description: `Put it together in the threat modeler: start from one of ${plural(S.modelerTemplates, "template")}, place components and see the threats and controls that apply.`,
+    path: "/threat-modeler",
+    cta: "Threat Modeler",
+    icon: Crosshair,
   },
 ];
 
+/** What each data source feeds on this site (keys of SOURCES). */
+const SOURCE_LABELS: Record<DataSourceKey, string> = {
+  aisvs: "AISVS requirements",
+  threats: "Threat catalog",
+  controls: "Controls",
+  top10: "Agentic Top 10",
+  cisco: "Cisco AI taxonomy",
+  atlas: "MITRE ATLAS",
+  aiuc1: "AIUC-1",
+  aivss: "AIVSS scores",
+  kc: "Key components",
+  components: "Component details",
+  architectures: "Architecture patterns",
+  nist: "NIST AI RMF",
+};
+const SOURCE_ENTRIES = (Object.keys(SOURCES) as DataSourceKey[]).map((key) => ({
+  key,
+  label: SOURCE_LABELS[key] ?? key,
+  source: SOURCES[key],
+}));
+
+const CONTRIBUTE = [
+  "Report vulnerabilities via GitHub issue templates",
+  "Submit pull requests for new controls or threats",
+  "Improve documentation and implementation guides",
+  "Share feedback on the interactive assessment tools",
+  "Help expand AISVS verification requirements",
+];
+
+function MethodologyStepper() {
+  const { ref } = useReveal<HTMLOListElement>();
+  return (
+    <section aria-labelledby="methodology" className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="max-w-2xl">
+          <h2 id="methodology" className="text-2xl font-bold tracking-tight">
+            Methodology
+          </h2>
+          <p className="mt-1 text-muted-foreground">
+            A structured path from system analysis through implementation to governance. Each step
+            has its own page; the learning path walks all {METHODOLOGY.length} in order.
+          </p>
+        </div>
+        <Button asChild variant="outline" size="sm" className="self-start sm:self-auto">
+          <Link to="/learn">
+            <GraduationCap className="mr-2 h-4 w-4" aria-hidden="true" />
+            Start the learning path
+          </Link>
+        </Button>
+      </div>
+
+      <ol ref={ref} className="relative space-y-3">
+        {METHODOLOGY.map((step, i) => {
+          const Icon = step.icon;
+          const last = i === METHODOLOGY.length - 1;
+          return (
+            <li key={step.path} className="enter relative flex gap-4" style={stagger(i)}>
+              {/* Rail: number badge + connector to the next step */}
+              <div className="flex flex-col items-center" aria-hidden="true">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-primary/40 bg-background font-mono text-sm font-semibold text-primary">
+                  {i + 1}
+                </span>
+                {!last && <span className="mt-1 w-px flex-1 bg-border" />}
+              </div>
+              <article className="card-hover relative mb-1 flex flex-1 flex-col gap-2 rounded-lg border bg-card p-4 focus-within:ring-2 focus-within:ring-ring sm:flex-row sm:items-center sm:gap-4">
+                <Icon className="hidden h-5 w-5 shrink-0 text-muted-foreground sm:block" />
+                <div className="flex-1">
+                  <h3 className="font-semibold">
+                    <span className="sr-only">
+                      Step {i + 1} of {METHODOLOGY.length}:{" "}
+                    </span>
+                    {step.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">{step.description}</p>
+                </div>
+                <Link
+                  to={step.path}
+                  className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary after:absolute after:inset-0 after:content-[''] focus-visible:outline-none"
+                >
+                  {step.cta}
+                  <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                </Link>
+              </article>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
+function SourcesList() {
+  return (
+    <section aria-labelledby="sources" className="space-y-4">
+      <div>
+        <h2 id="sources" className="text-2xl font-bold tracking-tight">
+          Data sources
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          The {SOURCE_ENTRIES.length} datasets behind every page, with the version used and when it
+          was last retrieved (most recent:{" "}
+          <time dateTime={DATA_RETRIEVED_AT}>{DATA_RETRIEVED_AT}</time>).
+        </p>
+      </div>
+      <ul className="grid gap-x-6 gap-y-2 rounded-lg border bg-card p-4 md:grid-cols-2">
+        {SOURCE_ENTRIES.map(({ key, label, source }) => (
+          <li key={key}>
+            <SourceNote source={source} prefix={label} className="text-sm" />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export default function About() {
+  const { ref: cardsRef } = useReveal<HTMLDivElement>();
   return (
     <PageLayout
       title="About"
       description="Learn about the OWASP Securing Agentic Applications project, our methodology, framework, and how to contribute to improving AI agent security."
       canonicalPath="/about"
-      className="space-y-10"
+      className="space-y-12"
     >
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight">About</h1>
-        <p className="mt-1 text-muted-foreground">
-          An interactive companion to the OWASP Securing Agentic Applications guide, providing
-          security practitioners with actionable tools, frameworks, and verification standards for
-          building secure AI agent systems.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="About"
+        title="About the Agentic Security Hub"
+        description="An interactive companion to the OWASP Securing Agentic Applications guide, providing security practitioners with actionable tools, frameworks, and verification standards for building secure AI agent systems."
+        stats={[
+          { label: "threats", value: S.threats, hint: `${S.attackVectors} attack vectors` },
+          { label: "controls", value: S.controls },
+          {
+            label: "AISVS requirements",
+            value: S.aisvsRequirements,
+            hint: `AISVS ${S.aisvsVersion}, ${S.aisvsChapters} chapters`,
+          },
+          { label: "architecture patterns", value: S.patterns },
+          {
+            label: "frameworks mapped",
+            value: S.taxonomyFrameworks,
+            hint: "Taxonomy crosswalk tabs",
+          },
+        ]}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline" size="sm">
+              <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
+                <GitBranch className="mr-2 h-4 w-4" aria-hidden="true" />
+                GitHub
+                <span className="sr-only"> (opens in a new tab)</span>
+              </a>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <a href={OWASP_URL} target="_blank" rel="noopener noreferrer">
+                <BookOpen className="mr-2 h-4 w-4" aria-hidden="true" />
+                OWASP project
+                <span className="sr-only"> (opens in a new tab)</span>
+              </a>
+            </Button>
+          </div>
+        }
+      />
 
-      {/* Project Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-card">
+      {/* Project overview */}
+      <div ref={cardsRef} className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <Card className="enter bg-card" style={stagger(0)}>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Target className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
               Mission
             </CardTitle>
           </CardHeader>
@@ -98,10 +267,10 @@ export default function About() {
             </p>
           </CardContent>
         </Card>
-        <Card className="bg-card">
+        <Card className="enter bg-card" style={stagger(1)}>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Network className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
               Scope
             </CardTitle>
           </CardHeader>
@@ -113,57 +282,36 @@ export default function About() {
             </p>
           </CardContent>
         </Card>
-        <Card className="bg-card">
+        <Card className="enter bg-card" style={stagger(2)}>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Layers className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
               Framework
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">
-              Built on {counts.components} key components, {counts.architectures} architecture
-              patterns, {counts.threats} threat categories, {counts.controls} security controls, and{" "}
-              {counts.aisvsChapters} AISVS verification chapters mapped to the NIST AI RMF.
+              Built on {S.keyComponents} key components ({S.componentNodes} nodes), {S.patterns}{" "}
+              architecture patterns, {S.threats} threats with {S.attackVectors} attack vectors,{" "}
+              {S.controls} controls, and {S.aisvsRequirements} AISVS {S.aisvsVersion} requirements
+              across {S.aisvsChapters} chapters, mapped to {S.nistSubcategories} NIST AI RMF
+              subcategories and {S.taxonomyFrameworks} external frameworks.
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Methodology */}
-      <section className="space-y-6">
-        <h2 className="text-3xl font-bold tracking-tight text-center">Methodology</h2>
-        <p className="text-center text-muted-foreground max-w-2xl mx-auto">
-          Our security framework follows a structured approach that guides practitioners from system
-          analysis through implementation and governance verification.
-        </p>
-        <div className="grid gap-4">
-          {methodology.map((step) => (
-            <Card key={step.step} className="hover:bg-muted/50 transition-colors">
-              <CardContent className="p-6 flex items-center gap-6">
-                <span className="flex-shrink-0 text-muted-foreground font-medium">{step.step}</span>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg">{step.title}</h3>
-                  <p className="text-sm text-muted-foreground">{step.description}</p>
-                </div>
-                <Link to={step.link}>
-                  <Button variant="ghost" size="sm">
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
+      <MethodologyStepper />
 
       {/* Contributing */}
-      <section className="space-y-6">
-        <h2 className="text-3xl font-bold tracking-tight text-center">Contributing</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <section aria-labelledby="contributing" className="space-y-6">
+        <h2 id="contributing" className="text-2xl font-bold tracking-tight">
+          Contributing
+        </h2>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <Card className="bg-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <GitBranch className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
                 Open Source
               </CardTitle>
@@ -174,18 +322,19 @@ export default function About() {
                 research, control recommendations, vulnerability disclosures, and documentation
                 improvements.
               </p>
-              <a href="https://github.com/vineethsai/asi" target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" className="w-full">
-                  <GitBranch className="h-4 w-4 mr-2" />
+              <Button asChild variant="outline" className="w-full">
+                <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
+                  <GitBranch className="mr-2 h-4 w-4" aria-hidden="true" />
                   View on GitHub
-                  <ExternalLink className="h-3 w-3 ml-2" />
-                </Button>
-              </a>
+                  <ExternalLink className="ml-2 h-3 w-3" aria-hidden="true" />
+                  <span className="sr-only"> (opens in a new tab)</span>
+                </a>
+              </Button>
             </CardContent>
           </Card>
           <Card className="bg-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <Users className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
                 OWASP Community
               </CardTitle>
@@ -196,45 +345,37 @@ export default function About() {
                 collaborate on securing AI systems and share knowledge with security professionals
                 worldwide.
               </p>
-              <a
-                href="https://owasp.org/www-project-securing-agentic-applications/"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Button variant="outline" className="w-full">
-                  <BookOpen className="h-4 w-4 mr-2" />
+              <Button asChild variant="outline" className="w-full">
+                <a href={OWASP_URL} target="_blank" rel="noopener noreferrer">
+                  <BookOpen className="mr-2 h-4 w-4" aria-hidden="true" />
                   OWASP Project Page
-                  <ExternalLink className="h-3 w-3 ml-2" />
-                </Button>
-              </a>
+                  <ExternalLink className="ml-2 h-3 w-3" aria-hidden="true" />
+                  <span className="sr-only"> (opens in a new tab)</span>
+                </a>
+              </Button>
             </CardContent>
           </Card>
         </div>
+
+        <Card className="bg-card">
+          <CardContent className="space-y-4 p-6 md:p-8">
+            <h3 className="text-lg font-semibold">How to Contribute</h3>
+            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {CONTRIBUTE.map((item) => (
+                <li key={item} className="flex items-start gap-2">
+                  <CheckCircle2
+                    className="mt-0.5 h-5 w-5 flex-shrink-0 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  <span className="text-sm text-muted-foreground">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       </section>
 
-      {/* How to Contribute */}
-      <Card className="bg-card">
-        <CardContent className="p-8 space-y-4">
-          <h3 className="text-xl font-semibold">How to Contribute</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {[
-              "Report vulnerabilities via GitHub issue templates",
-              "Submit pull requests for new controls or threats",
-              "Improve documentation and implementation guides",
-              "Share feedback on the interactive assessment tools",
-              "Help expand AISVS verification requirements",
-            ].map((item) => (
-              <div key={item} className="flex items-start gap-2">
-                <CheckCircle2
-                  className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5"
-                  aria-hidden="true"
-                />
-                <span className="text-sm text-muted-foreground">{item}</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <SourcesList />
     </PageLayout>
   );
 }

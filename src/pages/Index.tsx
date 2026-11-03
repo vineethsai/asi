@@ -1,11 +1,33 @@
 import HeroSection from "@/components/home/HeroSection";
 import ArchitectureGraphSection from "@/components/home/ArchitectureGraphSection";
 import ArchitectureShowcase from "@/components/home/ArchitectureShowcase";
+import FeaturedThreatCard from "@/components/home/FeaturedThreatCard";
+import HowToUseStrip from "@/components/home/HowToUseStrip";
+import ProgressCard from "@/components/home/ProgressCard";
 import PageLayout from "@/components/layout/PageLayout";
 import { usePageTracking } from "@/hooks/useAnalytics";
+import { useReveal } from "@/hooks/useReveal";
+import { stagger } from "@/lib/motion";
 
 const DESCRIPTION =
   "Interactive guide to securing agentic AI applications: OWASP agentic threats and mitigations, AISVS verification requirements, NIST AI RMF mapping, a framework taxonomy and a threat modeler.";
+
+/** Featured threat + progress, two columns on desktop (6.1 item 6). */
+function TodaySection() {
+  const { ref } = useReveal<HTMLDivElement>();
+  return (
+    <section className="py-6" aria-label="Today">
+      <div ref={ref} className="container grid gap-4 px-4 md:px-6 lg:grid-cols-2">
+        <div className="enter" style={stagger(0)}>
+          <FeaturedThreatCard />
+        </div>
+        <div className="enter" style={stagger(1)}>
+          <ProgressCard />
+        </div>
+      </div>
+    </section>
+  );
+}
 
 const Index = () => {
   usePageTracking("Homepage - AI Agents Security Guide", {
@@ -39,8 +61,10 @@ const Index = () => {
       }}
     >
       <HeroSection />
+      <TodaySection />
       <ArchitectureShowcase />
       <ArchitectureGraphSection />
+      <HowToUseStrip />
     </PageLayout>
   );
 };
