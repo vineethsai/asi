@@ -1,19 +1,13 @@
-import type { ComponentType } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
   BookOpen,
   CheckCircle2,
-  Crosshair,
   ExternalLink,
   GitBranch,
   GraduationCap,
   Layers,
-  ListChecks,
   Network,
-  Scale,
-  Shield,
-  ShieldAlert,
   Target,
   Users,
 } from "lucide-react";
@@ -24,6 +18,8 @@ import { SourceNote } from "@/components/content/SourceNote";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SOURCES, DATA_RETRIEVED_AT, type DataSourceKey } from "@/data/sources";
+import { LEARNING_STEPS, learningStepPath } from "@/data/learningPath";
+import { getIcon } from "@/lib/icons";
 import { useReveal } from "@/hooks/useReveal";
 import { stagger } from "@/lib/motion";
 
@@ -32,60 +28,6 @@ const OWASP_URL = "https://owasp.org/www-project-securing-agentic-applications/"
 
 // Every number on this page is computed from the data modules (via SITE_STATS).
 const S = SITE_STATS;
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
-
-interface Step {
-  title: string;
-  description: string;
-  path: string;
-  cta: string;
-  icon: ComponentType<{ className?: string }>;
-}
-
-const METHODOLOGY: Step[] = [
-  {
-    title: "Understand the components",
-    description: `Break the system into the ${S.keyComponents} key components (${S.componentNodes} nodes in the full tree) and their security boundaries.`,
-    path: "/components",
-    cta: "Components",
-    icon: Layers,
-  },
-  {
-    title: "Map the threats",
-    description: `Match each component to the catalog of ${plural(S.threats, "threat")} and ${plural(S.attackVectors, "attack vector")}, using the ${plural(S.patterns, "architecture pattern")} as reference designs.`,
-    path: "/threats",
-    cta: "Threats",
-    icon: ShieldAlert,
-  },
-  {
-    title: "Select controls",
-    description: `Pick from ${plural(S.controls, "control")} organised by lifecycle phase (design, build, operations), each linked to the threats it addresses.`,
-    path: "/controls",
-    cta: "Controls",
-    icon: Shield,
-  },
-  {
-    title: "Verify with AISVS",
-    description: `Check the implementation against ${plural(S.aisvsRequirements, "requirement")} in ${plural(S.aisvsChapters, "chapter")} of the AI Security Verification Standard ${S.aisvsVersion}.`,
-    path: "/aisvs",
-    cta: "AISVS",
-    icon: ListChecks,
-  },
-  {
-    title: "Align with NIST AI RMF",
-    description: `Trace the result to governance: ${plural(S.nistSubcategories, "NIST AI RMF subcategory", "NIST AI RMF subcategories")} mapped to AISVS chapters.`,
-    path: "/nist-mapping",
-    cta: "NIST mapping",
-    icon: Scale,
-  },
-  {
-    title: "Model your system",
-    description: `Put it together in the threat modeler: start from one of ${plural(S.modelerTemplates, "template")}, place components and see the threats and controls that apply.`,
-    path: "/threat-modeler",
-    cta: "Threat Modeler",
-    icon: Crosshair,
-  },
-];
 
 /** What each data source feeds on this site (keys of SOURCES). */
 const SOURCE_LABELS: Record<DataSourceKey, string> = {
@@ -116,8 +58,10 @@ const CONTRIBUTE = [
   "Help expand AISVS verification requirements",
 ];
 
+/** Methodology = the learning path's steps (LEARNING_STEPS), so About and /learn cannot drift. */
 function MethodologyStepper() {
   const { ref } = useReveal<HTMLOListElement>();
+  const total = LEARNING_STEPS.length;
   return (
     <section aria-labelledby="methodology" className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -126,8 +70,8 @@ function MethodologyStepper() {
             Methodology
           </h2>
           <p className="mt-1 text-muted-foreground">
-            A structured path from system analysis through implementation to governance. Each step
-            has its own page; the learning path walks all {METHODOLOGY.length} in order.
+            A structured path from system analysis through implementation to governance. Each of the{" "}
+            {total} steps has its own reference page and a short quiz on the learning path.
           </p>
         </div>
         <Button asChild variant="outline" size="sm" className="self-start sm:self-auto">
@@ -139,36 +83,51 @@ function MethodologyStepper() {
       </div>
 
       <ol ref={ref} className="relative space-y-3">
-        {METHODOLOGY.map((step, i) => {
-          const Icon = step.icon;
-          const last = i === METHODOLOGY.length - 1;
+        {LEARNING_STEPS.map((step, i) => {
+          const Icon = getIcon(step.icon);
+          const page = step.readings[0];
+          const last = i === total - 1;
           return (
-            <li key={step.path} className="enter relative flex gap-4" style={stagger(i)}>
+            <li key={step.id} className="enter relative flex gap-4" style={stagger(i)}>
               {/* Rail: number badge + connector to the next step */}
               <div className="flex flex-col items-center" aria-hidden="true">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-primary/40 bg-background font-mono text-sm font-semibold text-primary">
-                  {i + 1}
+                  {step.number}
                 </span>
                 {!last && <span className="mt-1 w-px flex-1 bg-border" />}
               </div>
-              <article className="card-hover relative mb-1 flex flex-1 flex-col gap-2 rounded-lg border bg-card p-4 focus-within:ring-2 focus-within:ring-ring sm:flex-row sm:items-center sm:gap-4">
-                <Icon className="hidden h-5 w-5 shrink-0 text-muted-foreground sm:block" />
+              <article className="card-hover mb-1 flex flex-1 flex-col gap-3 rounded-lg border bg-card p-4 sm:flex-row sm:items-center sm:gap-4">
+                <Icon
+                  className="hidden h-5 w-5 shrink-0 text-muted-foreground sm:block"
+                  aria-hidden="true"
+                />
                 <div className="flex-1">
                   <h3 className="font-semibold">
                     <span className="sr-only">
-                      Step {i + 1} of {METHODOLOGY.length}:{" "}
+                      Step {step.number} of {total}:{" "}
                     </span>
                     {step.title}
                   </h3>
-                  <p className="text-sm text-muted-foreground">{step.description}</p>
+                  <p className="text-sm text-muted-foreground">{step.summary}</p>
                 </div>
-                <Link
-                  to={step.path}
-                  className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary after:absolute after:inset-0 after:content-[''] focus-visible:outline-none"
-                >
-                  {step.cta}
-                  <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-                </Link>
+                <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                  {page && (
+                    <Link
+                      to={page.path}
+                      className="inline-flex items-center gap-1 font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      {page.label}
+                      <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                    </Link>
+                  )}
+                  <Link
+                    to={learningStepPath(step.id)}
+                    className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <GraduationCap className="h-3.5 w-3.5" aria-hidden="true" />
+                    Learn<span className="sr-only">: {step.title}</span>
+                  </Link>
+                </div>
               </article>
             </li>
           );

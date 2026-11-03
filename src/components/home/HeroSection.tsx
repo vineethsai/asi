@@ -18,6 +18,15 @@ import { stagger } from "@/lib/motion";
 import { useCommandPalette } from "@/components/layout/commandPaletteContext";
 import { SITE_STATS } from "./siteStats";
 
+/** Apple platforms use ⌘, everything else Ctrl (prefers User-Agent Client Hints when present). */
+function isApplePlatform(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const uaData = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData;
+  const platform = uaData?.platform || navigator.platform || navigator.userAgent || "";
+  return /mac|iphone|ipad|ipod|ios/i.test(platform);
+}
+const PALETTE_SHORTCUT = isApplePlatform() ? "⌘K" : "Ctrl K";
+
 interface InsideItem {
   icon: LucideIcon;
   title: string;
@@ -177,7 +186,9 @@ export const HeroSection = () => {
           >
             <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
             <span className="flex-1">Search threats, controls, AISVS…</span>
-            <kbd className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px]">⌘K</kbd>
+            <kbd className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px]">
+              {PALETTE_SHORTCUT}
+            </kbd>
           </button>
         </div>
 

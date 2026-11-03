@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Architectures from "@/pages/Architectures";
 import ArchitectureDetail from "@/pages/ArchitectureDetail";
 import { architecturesData } from "@/components/components/architecturesData";
+import { scenarioPath, scenariosForArchitecture } from "@/data/scenarios";
 
 beforeAll(() => {
   class RO {
@@ -97,6 +98,13 @@ describe("ArchitectureDetail", () => {
       ).toBe(true);
     });
   }
+
+  it.each(ARCHS.map((a) => a.id))("%s: threats tab links its scenario walkthroughs", (id) => {
+    renderAt(`/architectures/${id}?tab=threats`, detailRoutes);
+    const expected = scenariosForArchitecture(id);
+    const hrefs = screen.getAllByRole("link").map((l) => l.getAttribute("href"));
+    expected.forEach((s) => expect(hrefs).toContain(scenarioPath(s.id)));
+  });
 
   it("gives Knowledge-Intensive its real-world examples", () => {
     renderAt("/architectures/knowledge_intensive", detailRoutes);

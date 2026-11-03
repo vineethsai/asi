@@ -24,6 +24,8 @@ import { EmptyState } from "@/components/content/EmptyState";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SOURCES } from "@/data/sources";
 import { KC, kcByCode, type KcId } from "@/data/kc";
+import { scenariosForArchitecture } from "@/data/scenarios";
+import { ScenarioLinks } from "@/components/scenarios/ScenarioLinks";
 import { BANDS, riskBand, severityColor, severityLabel } from "@/lib/severity";
 import { stagger } from "@/lib/motion";
 import { useReveal } from "@/hooks/useReveal";
@@ -460,6 +462,7 @@ function ThreatsTab({ arch }: { arch: Architecture }) {
     };
   };
   const scenarios = arch.relevantThreats ?? [];
+  const walkthroughs = useMemo(() => scenariosForArchitecture(arch.id), [arch.id]);
 
   return (
     <div className="space-y-6">
@@ -469,8 +472,8 @@ function ThreatsTab({ arch }: { arch: Architecture }) {
             How this pattern gets attacked
           </h2>
           <p className="mb-3 text-sm text-muted-foreground">
-            {scenarios.length} scenarios specific to this architecture; walk each one on the Diagram
-            tab.
+            {scenarios.length} scenarios specific to this architecture. Animate each one on the
+            Diagram tab, or open a step-by-step walkthrough below.
           </p>
           <ul className="grid gap-3 md:grid-cols-2">
             {scenarios.map((s) => {
@@ -501,6 +504,14 @@ function ThreatsTab({ arch }: { arch: Architecture }) {
             })}
           </ul>
         </section>
+      )}
+
+      {walkthroughs.length > 0 && (
+        <ScenarioLinks
+          scenarios={walkthroughs}
+          title="Step-by-step attack walkthroughs"
+          max={walkthroughs.length}
+        />
       )}
 
       {threats.length > 0 && columns.length > 0 && (

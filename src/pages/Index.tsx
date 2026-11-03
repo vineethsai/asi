@@ -1,6 +1,7 @@
 import HeroSection from "@/components/home/HeroSection";
 import ArchitectureGraphSection from "@/components/home/ArchitectureGraphSection";
 import ArchitectureShowcase from "@/components/home/ArchitectureShowcase";
+import ChallengeSection from "@/components/home/ChallengeSection";
 import FeaturedThreatCard from "@/components/home/FeaturedThreatCard";
 import HowToUseStrip from "@/components/home/HowToUseStrip";
 import ProgressCard from "@/components/home/ProgressCard";
@@ -65,6 +66,7 @@ const Index = () => {
       <ArchitectureShowcase />
       <ArchitectureGraphSection />
       <HowToUseStrip />
+      <ChallengeSection />
     </PageLayout>
   );
 };

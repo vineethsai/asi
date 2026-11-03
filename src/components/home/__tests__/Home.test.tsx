@@ -1,10 +1,13 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import Index from "@/pages/Index";
 import { SITE_STATS } from "@/components/home/siteStats";
 import { featuredThreatFor } from "@/lib/featured";
 import { architecturesData } from "@/components/components/architecturesData";
+import { featuredScenario, scenarioPath } from "@/data/scenarios";
+import { LEARNING_STEPS } from "@/data/learningPath";
+import { useProgressStore } from "@/lib/progress";
 
 beforeAll(() => {
   class RO {
@@ -52,6 +55,7 @@ beforeAll(() => {
 
 afterEach(() => {
   cleanup();
+  act(() => useProgressStore.getState().resetPath());
   localStorage.clear();
 });
 
@@ -108,5 +112,39 @@ describe("Home page", () => {
         .getAllByRole("link")
         .some((a) => a.getAttribute("href") === "/architectures?view=graph"),
     ).toBe(true);
+  });
+
+  it("links today's featured scenario next to the threat of the day", () => {
+    renderHome();
+    const s = featuredScenario(new Date());
+    const link = screen.getByRole("link", {
+      name: new RegExp(s.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+    });
+    expect(link).toHaveAttribute("href", scenarioPath(s.id));
+  });
+
+  it("shows 'Step N of total' once the learning path has started", () => {
+    act(() => useProgressStore.getState().setPathStep(LEARNING_STEPS[0].id, true));
+    renderHome();
+    expect(
+      screen.getByText(`Step ${LEARNING_STEPS[1].number} of ${LEARNING_STEPS.length}`),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a platform-appropriate palette shortcut", () => {
+    renderHome();
+    const mac = /mac|iphone|ipad|ipod/i.test(navigator.platform || navigator.userAgent);
+    expect(screen.getByText(mac ? "⌘K" : "Ctrl K")).toBeInTheDocument();
+  });
+
+  it("loads the challenge quiz only after 'Start the challenge'", async () => {
+    renderHome();
+    expect(
+      screen.getByRole("heading", { name: /agentic security challenge/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("radiogroup")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /start the challenge/i }));
+    expect(await screen.findByText(/questions\./i, {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /start the challenge/i })).toBeNull();
   });
 });

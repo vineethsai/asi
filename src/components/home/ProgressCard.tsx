@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { ArrowRight, GraduationCap } from "lucide-react";
 import { Ring } from "@/components/charts/Ring";
 import { useProgress, useProgressSummary } from "@/hooks/useProgress";
+import { useLearningProgress } from "@/components/learn/useLearningProgress";
+import { getLearningStep, learningStepPath } from "@/data/learningPath";
 import { SITE_STATS } from "./siteStats";
 
 function formatDate(iso: string): string {
@@ -18,6 +20,9 @@ function formatDate(iso: string): string {
  */
 export function ProgressCard() {
   const summary = useProgressSummary();
+  const path = useLearningProgress();
+  const pathStarted = path.completed > 0;
+  const currentStep = getLearningStep(path.currentStepId);
   const quizzes = useProgress((s) => s.quizzes);
   const lastQuiz = useMemo(
     () =>
@@ -78,13 +83,6 @@ export function ProgressCard() {
     { label: "Control tasks done", value: String(summary.controlTasksDone), to: "/controls" },
     { label: "Checklist items done", value: String(summary.checklistDone), to: "/interactive" },
   ];
-  if (summary.pathStepsDone > 0) {
-    rows.push({
-      label: "Learning-path steps",
-      value: String(summary.pathStepsDone),
-      to: "/learn",
-    });
-  }
   if (lastQuiz) {
     rows.push({
       label: "Last quiz",
@@ -102,6 +100,36 @@ export function ProgressCard() {
       <h3 id="progress-title" className="sr-only">
         Your progress
       </h3>
+      {pathStarted && (
+        <Link
+          to={path.done ? "/learn" : learningStepPath(path.currentStepId)}
+          className="mt-3 flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-2 text-sm transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <GraduationCap className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+          <span className="min-w-0 flex-1">
+            <span className="block font-medium">
+              {path.done
+                ? `Learning path complete: ${path.completed} of ${path.total} steps`
+                : `Step ${path.currentStep} of ${path.total}`}
+            </span>
+            {!path.done && currentStep && (
+              <span className="block truncate text-xs text-muted-foreground">
+                Next: {currentStep.title} · {path.completed} done
+              </span>
+            )}
+          </span>
+          <span
+            className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-muted"
+            aria-hidden="true"
+          >
+            <span
+              className="block h-full rounded-full bg-primary"
+              style={{ width: `${path.percent}%` }}
+            />
+          </span>
+          <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+        </Link>
+      )}
       <div className="mt-3 flex items-center gap-4">
         <Ring
           value={summary.aisvsChecked}

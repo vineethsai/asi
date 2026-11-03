@@ -394,8 +394,9 @@ export function scenariosForThreat(threatId: string): Scenario[] {
 
 /** Deterministic pick for a day (Home "featured scenario"). */
 export function featuredScenario(date: Date = new Date()): Scenario {
+  // UTC day, matching featuredThreatFor() so both rotate together.
   const day = Math.floor(
-    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86_400_000,
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / 86_400_000,
   );
   return SCENARIOS[((day % SCENARIOS.length) + SCENARIOS.length) % SCENARIOS.length];
 }

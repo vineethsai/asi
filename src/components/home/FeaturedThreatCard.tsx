@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Check, Minus } from "lucide-react";
 import { Ring } from "@/components/charts/Ring";
 import { SeverityBadge } from "@/components/content/SeverityBadge";
+import { featuredScenario, scenarioPath } from "@/data/scenarios";
 import { featuredThreatFor } from "@/lib/featured";
 import { impactBand, riskBand, severityLabel } from "@/lib/severity";
 import { cn } from "@/lib/utils";
@@ -39,6 +40,7 @@ export function FeaturedThreatCard({ date }: { date?: Date }) {
   const impact = impactBand(threat.impactLevel);
   const vectors = threat.attackVectors?.length ?? 0;
   const controls = threat.mitigationIds?.length ?? 0;
+  const scenario = useMemo(() => featuredScenario(today), [today]);
 
   return (
     <article
@@ -126,6 +128,20 @@ export function FeaturedThreatCard({ date }: { date?: Date }) {
           </p>
         </div>
       </div>
+
+      {scenario && (
+        <p className="relative z-10 mt-4 border-t pt-3 text-sm">
+          <span className="text-muted-foreground">Try a scenario: </span>
+          <Link
+            to={scenarioPath(scenario.id)}
+            className="inline-flex items-center gap-1 font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {scenario.title}
+            <ArrowRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          </Link>
+          <span className="text-muted-foreground"> · {scenario.steps.length} steps</span>
+        </p>
+      )}
     </article>
   );
 }
