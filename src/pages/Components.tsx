@@ -1,158 +1,208 @@
-import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { frameworkData } from "@/components/components/frameworkData";
-import SidebarNav from "@/components/layout/SidebarNav";
-import { Icon } from "@/components/ui/icon";
-import { Helmet } from "react-helmet";
+import { useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Search, X } from "lucide-react";
+import PageLayout from "@/components/layout/PageLayout";
+import PageHeader from "@/components/layout/PageHeader";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { EmptyState } from "@/components/content/EmptyState";
+import { SOURCES } from "@/data/sources";
+import { KC, KC_ORDER, type KcId } from "@/data/kc";
+import { stagger } from "@/lib/motion";
+import { useReveal } from "@/hooks/useReveal";
+import { SegmentedControl } from "@/components/threats/SegmentedControl";
+import { THREAT_LIST, threatLabel } from "@/components/threats/threatIndex";
+import { ComponentCard } from "@/components/kc-components/ComponentCard";
+import { ComponentHierarchy } from "@/components/kc-components/ComponentHierarchy";
+import {
+  COMPONENT_ENTRIES,
+  componentEntry,
+  entriesInKc,
+  threatIdsInKc,
+} from "@/components/kc-components/componentIndex";
+
+type SortKey = "kc" | "threats";
+const SORTS: { value: SortKey; label: string }[] = [
+  { value: "kc", label: "KC order" },
+  { value: "threats", label: "Threats" },
+];
+
+const THREATS_BY_KC = Object.fromEntries(
+  KC_ORDER.map((k) => [k, new Set(threatIdsInKc(k))]),
+) as Record<KcId, Set<string>>;
+const MAPPED_THREATS = new Set(COMPONENT_ENTRIES.flatMap((e) => e.threatIds)).size;
 
 const Components = () => {
-  const [tagFilter] = useState("");
-  const [sortBy] = useState("name");
-  const [searchQuery] = useState("");
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const q = params.get("q") ?? "";
+  const threatParam = (params.get("threat") ?? "").toLowerCase();
+  const threat = THREAT_LIST.find((t) => t.id === threatParam) ?? null;
+  const sort: SortKey = params.get("sort") === "threats" ? "threats" : "kc";
 
-  const filtered = useMemo(() => {
-    let comps = frameworkData;
-    if (tagFilter) {
-      comps = comps.filter(
-        (c) =>
-          (c.threatCategories && c.threatCategories.includes(tagFilter)) ||
-          (c.children &&
-            c.children.some(
-              (sc) => sc.threatCategories && sc.threatCategories.includes(tagFilter),
-            )),
-      );
-    }
-    if (searchQuery) {
-      comps = comps.filter(
-        (c) =>
-          c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (c.description && c.description.toLowerCase().includes(searchQuery.toLowerCase())),
-      );
-    }
-    if (sortBy === "name") {
-      comps = [...comps].sort((a, b) => a.title.localeCompare(b.title));
-    } else if (sortBy === "threats") {
-      comps = [...comps].sort(
-        (a, b) => (b.threatCategories?.length || 0) - (a.threatCategories?.length || 0),
-      );
-    }
-    return comps;
-  }, [tagFilter, sortBy, searchQuery]);
-
-  const handleMobileMenuToggle = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
+  const update = (key: string, value: string | null) => {
+    const next = new URLSearchParams(params);
+    if (value === null || value === "" || value === "all") next.delete(key);
+    else next.set(key, value);
+    setParams(next, { replace: true });
   };
-
-  const handleMobileMenuClose = () => {
-    setIsMobileMenuOpen(false);
+  const clearFilters = () => {
+    const next = new URLSearchParams(params);
+    ["q", "threat"].forEach((k) => next.delete(k));
+    setParams(next, { replace: true });
   };
+  const filtersActive = !!q || !!threat;
+
+  const kcs = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    const list = KC_ORDER.filter((k) => {
+      if (threat && !THREATS_BY_KC[k].has(threat.id)) return false;
+      if (!needle) return true;
+      return entriesInKc(k).some((e) =>
+        [e.code, e.title, e.description, KC[k].name, KC[k].short].some((s) =>
+          s.toLowerCase().includes(needle),
+        ),
+      );
+    });
+    return sort === "threats"
+      ? [...list].sort(
+          (a, b) =>
+            THREATS_BY_KC[b].size - THREATS_BY_KC[a].size ||
+            KC_ORDER.indexOf(a) - KC_ORDER.indexOf(b),
+        )
+      : list;
+  }, [q, threat, sort]);
+
+  const { ref: gridRef } = useReveal<HTMLDivElement>();
+  const roots = KC_ORDER.map((k) => componentEntry(k)).filter(Boolean);
 
   return (
-    <>
-      <Helmet>
-        <title>AI Agent Components & Security Architecture | Secure AI Development</title>
-        <meta
-          name="description"
-          content="Comprehensive guide to AI agent components and security architecture for agentic systems. Explore Language Models, Orchestration, Reasoning/Planning, Memory, Tool Integration, and Operational Environment with security best practices for secure AI development."
-        />
-        <meta
-          name="keywords"
-          content="AI agent components, AI security architecture, agent architectures, secure AI development, AI components security, agentic systems components, LLM security, AI orchestration security, memory modules security, tool integration security, AI agent design"
-        />
-        <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://agenticsecurity.info/components" />
-        <meta property="og:title" content="AI Security Components | OWASP Guide" />
-        <meta
-          property="og:description"
-          content="Explore the 6 key components of agentic AI systems and learn security best practices for each component."
-        />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://agenticsecurity.info/components" />
-        <meta property="og:site_name" content="OWASP Securing Agentic Applications Guide" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="AI Security Components | OWASP Guide" />
-        <meta
-          name="twitter:description"
-          content="Explore the 6 key components of agentic AI systems and learn security best practices for each component."
-        />
-        <meta name="twitter:url" content="https://agenticsecurity.info/components" />
-        <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "ItemList",
-            name: "AI Security Components",
-            description: "Key components of agentic AI systems and their security considerations",
-            url: "https://agenticsecurity.info/components",
-            numberOfItems: frameworkData.length,
-            itemListElement: frameworkData.map((component, index) => ({
-              "@type": "ListItem",
-              position: index + 1,
-              item: {
-                "@type": "TechArticle",
-                name: component.title,
-                description: component.description,
-                url: `https://agenticsecurity.info/components/${component.id}`,
-                about: "AI Security",
-              },
-            })),
-          })}
-        </script>
-      </Helmet>
-      <Header onMobileMenuToggle={handleMobileMenuToggle} isMobileMenuOpen={isMobileMenuOpen} />
-
-      {/* Mobile Navigation Sidebar */}
-      <SidebarNav type="components" isOpen={isMobileMenuOpen} onClose={handleMobileMenuClose} />
-
-      <main id="main-content" className="py-16 bg-background">
-        <div className="container px-4 md:px-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="mb-8">
-              <h1 className="text-2xl font-bold tracking-tight">Agent Components</h1>
-              <p className="mt-1 text-muted-foreground">
-                Explore the 6 key components of agentic AI systems and learn security best practices
-                for each component.
-              </p>
+    <PageLayout
+      title="Agent Components"
+      description={`Guide to the ${KC_ORDER.length} key components of agentic AI systems — language models, orchestration, reasoning and planning, memory, tool integration and the operational environment — with the threats that affect each.`}
+      canonicalPath="/components"
+      keywords="AI agent components, AI security architecture, agent architectures, agentic systems components, LLM security, AI orchestration security, memory modules security, tool integration security"
+      jsonLd={{
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        name: "Key components of agentic AI systems",
+        description: "Key components of agentic AI systems and their security considerations",
+        url: "https://agenticsecurity.info/components",
+        numberOfItems: roots.length,
+        itemListElement: roots.map((c, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          item: {
+            "@type": "TechArticle",
+            name: KC[c!.kc].name,
+            description: c!.description,
+            url: `https://agenticsecurity.info/components/${c!.id}`,
+          },
+        })),
+      }}
+    >
+      <PageHeader
+        eyebrow="Architecture"
+        title="Key components"
+        description="The six key components (KC1–KC6) of an agentic AI system from the OWASP Agentic Security guide, their sub-components and the threats that affect each."
+        source={SOURCES.kc}
+        stats={[
+          { label: "key components", value: KC_ORDER.length },
+          {
+            label: "components in all",
+            value: COMPONENT_ENTRIES.length,
+            hint: "The six key components plus every sub-component.",
+          },
+          {
+            label: "threats mapped",
+            value: MAPPED_THREATS,
+            hint: "Distinct threats mapped to at least one component.",
+          },
+        ]}
+        filters={
+          <>
+            <div className="relative w-full sm:w-64">
+              <label htmlFor="component-search" className="sr-only">
+                Search components
+              </label>
+              <Search
+                aria-hidden
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                id="component-search"
+                type="search"
+                placeholder="Search components…"
+                value={q}
+                onChange={(e) => update("q", e.target.value)}
+                className="h-9 pl-9"
+              />
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-0">
-              {filtered.map((component) => (
-                <Link to={`/components/${component.id}`} key={component.id}>
-                  <Card className="h-full border hover:bg-muted/50 transition-colors">
-                    <CardContent className="p-6">
-                      <div className="flex items-center gap-3 mb-2">
-                        {component.icon && (
-                          <Icon name={component.icon} className="text-muted-foreground" size={32} />
-                        )}
-                        <h3 className="text-xl font-bold text-foreground">{component.title}</h3>
-                      </div>
-                      <p className="text-muted-foreground mb-2">{component.description}</p>
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {(component.threatCategories || []).map((tag) => (
-                          <Badge key={tag} variant="secondary">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                      {component.children && component.children.length > 0 && (
-                        <div className="text-xs mt-2">
-                          <span className="font-medium">Subcomponents: </span>
-                          <span>{component.children.map((sc) => sc.title).join(", ")}</span>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
+            <div className="flex items-center gap-2">
+              <label htmlFor="component-threat" className="text-xs text-muted-foreground">
+                Threat
+              </label>
+              <Select value={threat?.id ?? "all"} onValueChange={(v) => update("threat", v)}>
+                <SelectTrigger id="component-threat" className="h-9 w-[12rem]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All threats</SelectItem>
+                  {THREAT_LIST.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.code} · {threatLabel(t)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+            <SegmentedControl
+              label="Sort"
+              value={sort}
+              onValueChange={(v) => update("sort", v === "kc" ? null : v)}
+              options={SORTS}
+            />
+            {filtersActive && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
+                <X aria-hidden className="mr-1 h-4 w-4" />
+                Clear
+              </Button>
+            )}
+          </>
+        }
+      />
+
+      <p className="mb-4 text-sm text-muted-foreground" aria-live="polite">
+        Showing {kcs.length} of {KC_ORDER.length} key components
+      </p>
+
+      {kcs.length === 0 ? (
+        <EmptyState
+          icon="filter"
+          title="No components match these filters"
+          description="Try a different search term or threat."
+          action={{ label: "Clear filters", onClick: clearFilters }}
+        />
+      ) : (
+        <>
+          <div ref={gridRef} className="mb-10 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {kcs.map((k, i) => {
+              const entry = componentEntry(k);
+              return entry ? (
+                <ComponentCard key={k} entry={entry} className="enter" style={stagger(i)} />
+              ) : null;
+            })}
           </div>
-        </div>
-      </main>
-      <Footer />
-    </>
+          <ComponentHierarchy kcs={kcs} />
+        </>
+      )}
+    </PageLayout>
   );
 };
 

@@ -1,265 +1,435 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Header } from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  BookOpen,
+  CircleAlert,
+  CircleCheck,
+  ExternalLink,
+  Link2,
+  Search,
+  Target,
+} from "lucide-react";
+import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Input } from "@/components/ui/input";
+import { EmptyState } from "@/components/content/EmptyState";
 import {
-  Search,
-  Shield,
-  Target,
-  Wrench,
-  Users,
-  GitBranch,
-  Code,
-  Database,
-  Network,
-  Zap,
-  User,
-  ShieldCheck,
-  ExternalLink,
-  CircleAlert,
-  CircleCheck,
-  BookOpen,
-} from "lucide-react";
-import { agenticTop10Data } from "@/components/components/owaspAgenticTop10Data";
+  AGENTIC_TOP10_EDITION,
+  agenticTop10Data,
+  type AgenticTop10Entry,
+} from "@/components/components/owaspAgenticTop10Data";
+import { mitigationsData, threatsData } from "@/components/components/securityData";
+import { coreRiskScores } from "@/components/components/aivssCalcData";
+import { findCiscoNode } from "@/components/components/ciscoTaxonomyData";
+import { ATLAS_NAMES, getAtlasForAsi } from "@/data/atlasCrosswalk";
+import { scenariosForAsi } from "@/data/scenarios";
+import { ScenarioLinks } from "@/components/scenarios/ScenarioLinks";
+import { getIcon } from "@/lib/icons";
+import { FRAMEWORK_PALETTE, withAlpha } from "@/lib/palette";
+import { stagger } from "@/lib/motion";
+import { useReveal } from "@/hooks/useReveal";
+import { cn } from "@/lib/utils";
+import type { TaxonomyTabProps } from "@/components/taxonomy/types";
+import { entryDomId, focusEntry } from "@/components/taxonomy/deepLink";
+import { Chip, ChipRow } from "@/components/taxonomy/tabs/Chip";
+import { TabHeading } from "@/components/taxonomy/tabs/TabHeading";
+import { copyText, formatYearMonth, taxonomyHref } from "@/components/taxonomy/tabs/links";
 
-const iconMap: Record<string, React.ReactNode> = {
-  target: <Target className="h-5 w-5" />,
-  wrench: <Wrench className="h-5 w-5" />,
-  users: <Users className="h-5 w-5" />,
-  "git-branch": <GitBranch className="h-5 w-5" />,
-  code: <Code className="h-5 w-5" />,
-  database: <Database className="h-5 w-5" />,
-  network: <Network className="h-5 w-5" />,
-  zap: <Zap className="h-5 w-5" />,
-  user: <User className="h-5 w-5" />,
-  "shield-check": <ShieldCheck className="h-5 w-5" />,
-};
+const findCode = (code: string | null | undefined) =>
+  code
+    ? agenticTop10Data.find((e) => e.code.toLowerCase() === code.trim().toLowerCase())?.code
+    : undefined;
 
-export function OwaspAgenticTop10Content() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+const aivssRiskByName = new Map(coreRiskScores.map((r) => [r.name, r]));
 
-  const filteredEntries = searchQuery.trim()
-    ? agenticTop10Data.filter(
-        (e) =>
-          e.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          e.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          e.description.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
-    : agenticTop10Data;
+function matches(e: AgenticTop10Entry, q: string) {
+  return (
+    e.code.toLowerCase().includes(q) ||
+    e.name.toLowerCase().includes(q) ||
+    e.description.toLowerCase().includes(q) ||
+    e.attackScenarios.some((s) => s.title.toLowerCase().includes(q))
+  );
+}
+
+function EntryCrossRefs({ entry }: { entry: AgenticTop10Entry }) {
+  const threats = entry.relatedThreats.map((id) => threatsData[id]).filter(Boolean);
+  const controlIds = [...new Set(threats.flatMap((t) => t.mitigationIds ?? []))].filter(
+    (id) => mitigationsData[id],
+  );
+  const atlas = getAtlasForAsi(entry.code);
+  const aivss = [entry.relatedAIVSSRisk, ...(entry.relatedAIVSSSecondary ?? [])];
 
   return (
-    <>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight">OWASP Agentic AI Top 10</h1>
-        <p className="mt-1 text-muted-foreground">
-          The definitive guide to the most critical security risks in AI agentic systems. Each entry
-          provides descriptions, common vulnerabilities, attack scenarios, and actionable
-          mitigations for securing autonomous AI agents.
-        </p>
-      </div>
+    <div className="space-y-2.5">
+      {threats.length > 0 && (
+        <ChipRow label="Threats (T&M v1.1)">
+          {threats.map((t) => (
+            <Chip
+              key={t.id}
+              to={`/threats/${t.id}`}
+              tone={FRAMEWORK_PALETTE.tm}
+              title={`${t.code}: ${t.name}`}
+            >
+              <span className="font-mono">{t.code}</span> {t.shortName ?? t.name}
+            </Chip>
+          ))}
+        </ChipRow>
+      )}
+      {controlIds.length > 0 && (
+        <ChipRow label="Controls">
+          {controlIds.map((id) => (
+            <Chip key={id} to={`/controls/${id}`} title={mitigationsData[id].name}>
+              <span className="font-mono text-muted-foreground">{id.toUpperCase()}</span>{" "}
+              {mitigationsData[id].name}
+            </Chip>
+          ))}
+        </ChipRow>
+      )}
+      <ChipRow label="AIVSS v0.8">
+        {aivss.map((name, i) => {
+          const risk = aivssRiskByName.get(name);
+          return (
+            <Chip
+              key={name}
+              to={taxonomyHref("aivss", risk?.id)}
+              tone={FRAMEWORK_PALETTE.aivss}
+              title={i === 0 ? `${name} (primary)` : `${name} (secondary)`}
+            >
+              {i === 0 ? "" : "2nd: "}
+              {name}
+            </Chip>
+          );
+        })}
+      </ChipRow>
+      {entry.relatedCiscoObjectives.length > 0 && (
+        <ChipRow label="Cisco v2">
+          {entry.relatedCiscoObjectives.map((code) => {
+            const node = findCiscoNode(code);
+            return (
+              <Chip
+                key={code}
+                to={taxonomyHref("cisco", code)}
+                tone={FRAMEWORK_PALETTE.cisco}
+                title={node ? `${code}: ${node.description}` : code}
+              >
+                <span className="font-mono">{code}</span>
+                {node ? ` ${node.description}` : ""}
+              </Chip>
+            );
+          })}
+        </ChipRow>
+      )}
+      {atlas.length > 0 && (
+        <ChipRow label="MITRE ATLAS">
+          {atlas.map((row) => (
+            <Chip
+              key={row.atlasId}
+              to={taxonomyHref("atlas", row.atlasId)}
+              tone={FRAMEWORK_PALETTE.nist}
+              title={`${row.atlasId}: ${ATLAS_NAMES[row.atlasId] ?? row.atlasName}`}
+              mono
+            >
+              {row.atlasId}
+            </Chip>
+          ))}
+        </ChipRow>
+      )}
+      {entry.relatedLLMTop10.length > 0 && (
+        <ChipRow label="LLM Top 10">
+          {entry.relatedLLMTop10.map((ref) => (
+            <Chip key={ref}>{ref}</Chip>
+          ))}
+        </ChipRow>
+      )}
+    </div>
+  );
+}
 
-      <div className="flex flex-wrap gap-6 text-sm text-muted-foreground mb-6">
-        {agenticTop10Data.map((entry) => (
-          <span
-            key={entry.id}
-            className="cursor-pointer hover:text-foreground"
-            onClick={() => {
-              setExpandedId(expandedId === entry.id ? null : entry.id);
-              const el = document.getElementById(`entry-${entry.id}`);
-              if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-            }}
-          >
-            <strong className="text-foreground">{entry.code}</strong> {entry.name}
+/** Step-by-step attack walkthroughs (P4-03) that exercise this ASI entry. */
+function EntryWalkthroughs({ code }: { code: string }) {
+  const scenarios = scenariosForAsi(code);
+  if (!scenarios.length) return null;
+  return (
+    <div className="mt-3 space-y-2">
+      <p className="text-xs font-medium text-muted-foreground">Walk through it step by step</p>
+      <ScenarioLinks scenarios={scenarios} title={null} />
+    </div>
+  );
+}
+
+function EntryBody({ entry }: { entry: AgenticTop10Entry }) {
+  return (
+    <div className="space-y-6">
+      <p className="leading-relaxed text-muted-foreground">{entry.description}</p>
+
+      <section>
+        <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+          <CircleAlert aria-hidden className="h-4 w-4 text-muted-foreground" />
+          Common examples
+        </h4>
+        <ol className="list-decimal space-y-2 pl-5 text-muted-foreground marker:text-muted-foreground/60">
+          {entry.commonExamples.map((ex) => (
+            <li key={ex}>{ex}</li>
+          ))}
+        </ol>
+      </section>
+
+      <section>
+        <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+          <Target aria-hidden className="h-4 w-4 text-muted-foreground" />
+          Attack scenarios
+          <span className="font-normal text-muted-foreground">
+            ({entry.attackScenarios.length})
           </span>
-        ))}
-      </div>
+        </h4>
+        <Accordion type="multiple" className="rounded-md border px-3">
+          {entry.attackScenarios.map((sc, i) => (
+            <AccordionItem
+              key={sc.title}
+              value={`${entry.code}-sc-${i}`}
+              className="last:border-b-0"
+            >
+              <AccordionTrigger
+                headingLevel={5}
+                className="py-3 text-left text-sm hover:no-underline"
+              >
+                {sc.title}
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground">
+                {sc.description}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+        <EntryWalkthroughs code={entry.code} />
+      </section>
 
-      {/* Search */}
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <section>
+        <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+          <CircleCheck aria-hidden className="h-4 w-4 text-muted-foreground" />
+          Prevention and mitigation guidelines
+        </h4>
+        <ul className="space-y-2">
+          {entry.preventionGuidelines.map((g) => (
+            <li key={g} className="flex gap-2 text-muted-foreground">
+              <CircleCheck
+                aria-hidden
+                className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground"
+              />
+              {g}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section>
+        <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+          <BookOpen aria-hidden className="h-4 w-4 text-muted-foreground" />
+          Cross references
+        </h4>
+        <EntryCrossRefs entry={entry} />
+      </section>
+
+      {entry.references.length > 0 && (
+        <section>
+          <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+            <ExternalLink aria-hidden className="h-4 w-4 text-muted-foreground" />
+            References
+          </h4>
+          <ul className="space-y-1">
+            {entry.references.map((ref) => (
+              <li key={ref.url}>
+                <a
+                  href={ref.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  <ExternalLink aria-hidden className="h-3 w-3" />
+                  {ref.title}
+                  <span className="sr-only">(opens in a new tab)</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+  );
+}
+
+/** OWASP Top 10 for Agentic Applications tab (`/taxonomy?tab=owasp-agentic&entry=ASI01`). */
+export function OwaspAgenticTop10Content({ entry, focusKey, onEntryChange }: TaxonomyTabProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [expanded, setExpanded] = useState<string | null>(() => findCode(entry) ?? null);
+  const { ref: listRef } = useReveal<HTMLDivElement>();
+
+  // Keep expansion in sync with ?entry= (palette, back/forward).
+  const entryCode = findCode(entry);
+  useEffect(() => {
+    if (entryCode) setExpanded(entryCode);
+  }, [entryCode]);
+
+  // Bring the entry into view on deep-link requests only (not on our own URL writes).
+  const entryRef = useRef(entryCode);
+  useEffect(() => {
+    entryRef.current = entryCode;
+  });
+  useEffect(() => {
+    const code = entryRef.current;
+    if (!focusKey || !code) return;
+    const target = agenticTop10Data.find((e) => e.code === code);
+    setExpanded(code);
+    // Clear a search that would hide the requested entry.
+    setSearchQuery((q) =>
+      q.trim() && target && !matches(target, q.trim().toLowerCase()) ? "" : q,
+    );
+    void focusEntry(entryDomId(code));
+  }, [focusKey]);
+
+  const q = searchQuery.trim().toLowerCase();
+  const filteredEntries = useMemo(
+    () => (q ? agenticTop10Data.filter((e) => matches(e, q)) : agenticTop10Data),
+    [q],
+  );
+
+  const select = (code: string | null) => {
+    setExpanded(code);
+    onEntryChange?.(code);
+  };
+
+  const jumpTo = (code: string) => {
+    if (q && !filteredEntries.some((e) => e.code === code)) setSearchQuery("");
+    select(code);
+    void focusEntry(entryDomId(code), { highlight: false });
+  };
+
+  return (
+    <section aria-labelledby="owasp-agentic-heading">
+      <TabHeading
+        id="owasp-agentic-heading"
+        title="OWASP Top 10 for Agentic Applications"
+        version={`${AGENTIC_TOP10_EDITION.version} · ${formatYearMonth(AGENTIC_TOP10_EDITION.published)}`}
+        description="The most critical security risks for autonomous AI agents, with examples, attack scenarios, prevention guidance and cross-references to threats, controls, AIVSS, Cisco and MITRE ATLAS."
+      />
+
+      <nav aria-label="Jump to an entry" className="mb-5">
+        <ul className="flex flex-wrap gap-1.5">
+          {agenticTop10Data.map((e) => (
+            <li key={e.code}>
+              <button
+                type="button"
+                onClick={() => jumpTo(e.code)}
+                aria-current={expanded === e.code ? "true" : undefined}
+                title={e.name}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors",
+                  "hover:border-primary/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  expanded === e.code
+                    ? "border-primary/60 bg-primary/10 text-foreground"
+                    : "text-muted-foreground",
+                )}
+              >
+                <span className="font-mono font-semibold text-foreground">{e.code}</span>
+                <span className="hidden max-w-[12rem] truncate sm:inline">{e.name}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      <div className="relative mb-5">
+        <label htmlFor="asi-search" className="sr-only">
+          Search ASI entries
+        </label>
+        <Search
+          aria-hidden
+          className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+        />
         <Input
-          placeholder="Search ASI entries..."
+          id="asi-search"
+          type="search"
+          placeholder="Search ASI entries, descriptions, scenarios…"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-10"
         />
       </div>
 
-      {/* Detail Entries */}
-      <div className="space-y-4">
-        {filteredEntries.map((entry) => (
-          <Card
-            key={entry.id}
-            id={`entry-${entry.id}`}
-            className="border-l-4"
-            style={{ borderLeftColor: entry.color }}
+      {filteredEntries.length === 0 ? (
+        <EmptyState
+          title={`No entries match “${searchQuery}”`}
+          description="Try a code such as ASI03 or a keyword from the description."
+          action={{ label: "Clear search", onClick: () => setSearchQuery("") }}
+        />
+      ) : (
+        <div ref={listRef}>
+          <Accordion
+            type="single"
+            collapsible
+            value={expanded ?? ""}
+            onValueChange={(v) => select(v || null)}
+            className="space-y-3"
           >
-            <Accordion
-              type="single"
-              collapsible
-              value={expandedId === entry.id ? entry.id : undefined}
-              onValueChange={(val) => setExpandedId(val || null)}
-            >
-              <AccordionItem value={entry.id} className="border-none">
-                <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                  <div className="flex items-center gap-3 text-left w-full">
-                    <span className="text-muted-foreground flex-shrink-0">
-                      {iconMap[entry.icon] || <Shield className="h-5 w-5" />}
+            {filteredEntries.map((e, i) => {
+              const EntryIcon = getIcon(e.icon);
+              const accent = withAlpha(FRAMEWORK_PALETTE.asi, 0.8);
+              return (
+                <AccordionItem
+                  key={e.code}
+                  value={e.code}
+                  id={entryDomId(e.code)}
+                  className="enter scroll-mt-24 rounded-lg border border-l-4 bg-card"
+                  style={{ ...stagger(i), borderLeftColor: accent }}
+                >
+                  <AccordionTrigger className="px-4 py-4 text-left hover:no-underline sm:px-6">
+                    <span className="flex w-full items-center gap-3">
+                      <EntryIcon
+                        aria-hidden
+                        className="h-5 w-5 flex-shrink-0 text-muted-foreground"
+                      />
+                      <span className="min-w-0">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="rounded border px-1.5 py-0.5 font-mono text-xs">
+                            {e.code}
+                          </span>
+                          <span className="text-base font-semibold sm:text-lg">{e.name}</span>
+                        </span>
+                        <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                          {e.relatedThreats.length} threats · {e.attackScenarios.length} attack
+                          scenarios · {e.preventionGuidelines.length} guidelines
+                        </span>
+                      </span>
                     </span>
-                    <div>
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <Badge variant="outline" className="font-mono text-xs">
-                          {entry.code}
-                        </Badge>
-                        <span className="font-semibold text-lg">{entry.name}</span>
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {entry.relatedLLMTop10.map((ref, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs">
-                            {ref}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-
-                <AccordionContent className="px-6 pb-6">
-                  <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-                    {entry.description}
-                  </p>
-
-                  {/* Common Examples */}
-                  <div className="mb-6">
-                    <h3 className="font-semibold text-sm flex items-center gap-2 mb-3">
-                      <CircleAlert className="h-4 w-4 text-muted-foreground" />
-                      Common Examples
-                    </h3>
-                    <ul className="space-y-2">
-                      {entry.commonExamples.map((ex, i) => (
-                        <li key={i} className="text-sm text-muted-foreground flex gap-2">
-                          <span className="text-muted-foreground/50 flex-shrink-0">{i + 1}.</span>
-                          {ex}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Attack Scenarios */}
-                  <div className="mb-6">
-                    <h3 className="font-semibold text-sm flex items-center gap-2 mb-3">
-                      <Target className="h-4 w-4 text-muted-foreground" />
-                      Attack Scenarios
-                    </h3>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      {entry.attackScenarios.map((sc, i) => (
-                        <Card key={i} className="bg-muted/30">
-                          <CardContent className="p-3">
-                            <div className="font-medium text-sm mb-1">{sc.title}</div>
-                            <p className="text-xs text-muted-foreground">{sc.description}</p>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Prevention Guidelines */}
-                  <div className="mb-6">
-                    <h3 className="font-semibold text-sm flex items-center gap-2 mb-3">
-                      <CircleCheck className="h-4 w-4 text-muted-foreground" />
-                      Prevention & Mitigation Guidelines
-                    </h3>
-                    <ul className="space-y-2">
-                      {entry.preventionGuidelines.map((g, i) => (
-                        <li key={i} className="text-sm text-muted-foreground flex gap-2">
-                          <CircleCheck className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                          {g}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Cross References */}
-                  <div className="mb-4">
-                    <h3 className="font-semibold text-sm flex items-center gap-2 mb-3">
-                      <BookOpen className="h-4 w-4 text-muted-foreground" />
-                      Cross References
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      <Badge variant="outline" className="text-xs">
-                        AIVSS: {entry.relatedAIVSSRisk}
-                      </Badge>
-                      {entry.relatedCiscoObjectives.map((co) => (
-                        <Link key={co} to="/cisco-taxonomy">
-                          <Badge
-                            variant="outline"
-                            className="text-xs bg-cyan-50 text-cyan-700 dark:bg-cyan-900/20 dark:text-cyan-300"
-                          >
-                            Cisco: {co}
-                          </Badge>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* References */}
-                  {entry.references.length > 0 && (
-                    <div>
-                      <h3 className="font-semibold text-sm flex items-center gap-2 mb-2">
-                        <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                        References
-                      </h3>
-                      <ul className="space-y-1">
-                        {entry.references.map((ref, i) => (
-                          <li key={i}>
-                            <a
-                              href={ref.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-primary hover:underline flex items-center gap-1"
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                              {ref.title}
-                            </a>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </Card>
-        ))}
-      </div>
-
-      {filteredEntries.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">
-          No results found for "{searchQuery}"
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pb-6 sm:px-6">
+                    <EntryBody entry={e} />
+                    <p className="mt-6">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          select(e.code);
+                          const url = `${window.location.origin}${taxonomyHref("owasp-agentic", e.code)}`;
+                          if (await copyText(url)) toast.success(`Link to ${e.code} copied`);
+                          else toast.error("Could not copy the link");
+                        }}
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        <Link2 aria-hidden className="h-3.5 w-3.5" />
+                        Copy link to {e.code}
+                      </button>
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
+          </Accordion>
         </div>
       )}
-    </>
-  );
-}
-
-export default function OwaspAgenticTop10() {
-  return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
-        <OwaspAgenticTop10Content />
-      </main>
-      <Footer />
-    </div>
+    </section>
   );
 }

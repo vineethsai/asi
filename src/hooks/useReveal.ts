@@ -1,0 +1,81 @@
+import { useCallback, useEffect, useState } from "react";
+
+export interface RevealOptions {
+  /** Passed to IntersectionObserver. Default "0px 0px -10% 0px" (reveal slightly before fully in view). */
+  rootMargin?: string;
+  /** Passed to IntersectionObserver. Default 0.1. */
+  threshold?: number;
+}
+
+/**
+ * Reveal-once hook for entrance animations (IMPROVEMENT_PLAN §8.1).
+ *
+ * Attach `ref` to a container; the first time it intersects the viewport the hook adds the
+ * `is-visible` class and a `data-visible` attribute to it (the attribute survives React
+ * re-writing `className`), and `isVisible` flips to true. Children with the `.enter` class
+ * then fade/rise in, staggered by their `--i` custom property (see `stagger()` in lib/motion).
+ *
+ * @example
+ * const { ref } = useReveal<HTMLDivElement>();
+ * <div ref={ref}>{items.map((x, i) => <Card key={x.id} className="enter" style={stagger(i)} />)}</div>
+ */
+export function useReveal<T extends Element = HTMLDivElement>(options: RevealOptions = {}) {
+  const { rootMargin = "0px 0px -10% 0px", threshold = 0.1 } = options;
+  const [node, setNode] = useState<T | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  const ref = useCallback((el: T | null) => setNode(el), []);
+
+  useEffect(() => {
+    if (!node || isVisible) return;
+    const reveal = () => {
+      node.classList.add("is-visible");
+      node.setAttribute("data-visible", "");
+      setIsVisible(true);
+    };
+    if (typeof IntersectionObserver === "undefined") {
+      reveal();
+      return;
+    }
+    // Elements already inside the viewport at mount reveal at once: some embedded
+    // and emulated viewports deliver the first IntersectionObserver callback late.
+    const rect = node.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    if (rect.height > 0 && rect.top < viewportHeight && rect.bottom > 0) {
+      reveal();
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          reveal();
+          observer.disconnect();
+        }
+      },
+      { rootMargin, threshold },
+    );
+    observer.observe(node);
+    // Safety net: never leave content invisible if the observer never fires.
+    const timer = window.setTimeout(() => {
+      reveal();
+      observer.disconnect();
+    }, 2500);
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(timer);
+    };
+  }, [node, isVisible, rootMargin, threshold]);
+
+  // After the stagger window, mark the container settled so the CSS drops the entrance
+  // animation entirely: content can never stay hidden if an animation never starts
+  // (throttled or embedded rendering), and hover transforms are free to apply.
+  useEffect(() => {
+    if (!node || !isVisible) return;
+    const settle = window.setTimeout(() => node.setAttribute("data-settled", ""), 1200);
+    return () => window.clearTimeout(settle);
+  }, [node, isVisible]);
+
+  return { ref, isVisible };
+}
+
+export default useReveal;

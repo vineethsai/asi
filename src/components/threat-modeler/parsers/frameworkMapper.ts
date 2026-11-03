@@ -182,7 +182,7 @@ export function mapToCanvas(
   for (const comp of result.components) {
     const mapping = TYPE_MAP[comp.type] ?? TYPE_MAP.other;
     const nodeId = genId("import");
-    nameToId.set(comp.name, nodeId);
+    nameToId.set(comp.key ?? comp.name, nodeId);
 
     const description =
       comp.metadata.description ??
@@ -205,15 +205,18 @@ export function mapToCanvas(
         color: mapping.color,
         threats: [],
         customMetadata: comp.metadata,
+        ...(comp.type === "guardrail"
+          ? { semantics: { kind: "guardrail", guardrail: { coverage: ["input", "output"] } } }
+          : {}),
       } as CanvasNodeData,
     });
   }
 
   // Connect user actor to any top-level agents (those that are not targets of other connections)
   if (addUserActor && nameToId.has("__user__")) {
-    const targetNames = new Set(result.connections.map((c) => c.target));
+    const targetKeys = new Set(result.connections.map((c) => c.targetKey ?? c.target));
     const topAgents = result.components.filter(
-      (c) => c.type === "agent" && !targetNames.has(c.name),
+      (c) => c.type === "agent" && !targetKeys.has(c.key ?? c.name),
     );
     // If no clear top-level agent, connect to the first agent found
     const agentsToConnect =
@@ -222,7 +225,7 @@ export function mapToCanvas(
         : result.components.filter((c) => c.type === "agent").slice(0, 1);
 
     for (const agent of agentsToConnect) {
-      const agentNodeId = nameToId.get(agent.name);
+      const agentNodeId = nameToId.get(agent.key ?? agent.name);
       if (agentNodeId) {
         edges.push({
           id: genId("import-edge"),
@@ -232,6 +235,7 @@ export function mapToCanvas(
           data: {
             ...DEFAULT_EDGE_METADATA,
             label: "User Request",
+            customMetadata: { postureUnverified: "true" },
             threats: [],
           } as CanvasEdgeData,
         });
@@ -241,8 +245,8 @@ export function mapToCanvas(
 
   // Create edges from parsed connections
   for (const conn of result.connections) {
-    const sourceId = nameToId.get(conn.source);
-    const targetId = nameToId.get(conn.target);
+    const sourceId = nameToId.get(conn.sourceKey ?? conn.source);
+    const targetId = nameToId.get(conn.targetKey ?? conn.target);
     if (!sourceId || !targetId) continue;
 
     edges.push({
@@ -253,6 +257,8 @@ export function mapToCanvas(
       data: {
         ...DEFAULT_EDGE_METADATA,
         label: formatLabel(conn.label),
+        // Imported flows carry no posture: the UI should prompt for it (P3-44).
+        customMetadata: { postureUnverified: "true" },
         threats: [],
       } as CanvasEdgeData,
     });

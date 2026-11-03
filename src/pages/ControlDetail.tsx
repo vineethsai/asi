@@ -1,990 +1,488 @@
-import { useParams, Link } from "react-router-dom";
+import { lazy, Suspense, useMemo } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ExternalLink,
+  Hammer,
+  Info,
+  ListChecks,
+  PencilRuler,
+  RotateCcw,
+  Settings,
+  Wrench,
+} from "lucide-react";
+import PageLayout from "@/components/layout/PageLayout";
+import PageHeader from "@/components/layout/PageHeader";
+import NotFoundEntity from "@/components/layout/NotFoundEntity";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   mitigationsData,
   threatsData,
-  Mitigation,
-  Threat,
-} from "../components/components/securityData";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
-import SidebarNav from "../components/layout/SidebarNav";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { duotoneLight, duotoneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { useEffect, useState } from "react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-
-import { Helmet } from "react-helmet";
-import { Checkbox } from "@/components/ui/checkbox";
+  type Mitigation,
+} from "@/components/components/securityData";
+import { RichText } from "@/components/content/RichText";
+import { RiskScore } from "@/components/content/RiskScore";
+import { SeverityBadge } from "@/components/content/SeverityBadge";
+import { PhaseBadge, type Phase } from "@/components/content/PhaseBadge";
+import { SourceNote } from "@/components/content/SourceNote";
+import { Ring } from "@/components/charts/Ring";
+import { SOURCES } from "@/data/sources";
+import { useControlProgress } from "@/hooks/useProgress";
+import { Icon } from "@/lib/icons";
+import { cn } from "@/lib/utils";
+import { PhaseChecklist } from "@/components/controls/PhaseChecklist";
+import { renderCodeBlock } from "@/components/controls/renderCode";
 import {
-  CheckCircle2,
-  Copy,
-  Check,
-  ExternalLink,
-  AlertTriangle,
-  Target,
-  Shield,
-  Hammer,
-  Settings,
-  Wrench,
-  ArrowRight,
-  Info,
-} from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+  PHASE_META,
+  PHASE_ORDER,
+  phaseApplies,
+  phaseDoneCount,
+  phaseTaskTotal,
+} from "@/components/controls/phaseTasks";
+import {
+  chapterOnlyMappings,
+  citedRequirements,
+  controlChapters,
+  relatedControls,
+} from "@/components/controls/controlIndex";
+import {
+  compareThreatCodes,
+  controlCode,
+  threatBand,
+  threatLabel,
+} from "@/components/threats/threatIndex";
+
+const ControlRadar = lazy(() => import("@/components/controls/ControlRadar"));
+
+type TabKey = "overview" | Phase | "tools";
+const TAB_KEYS: readonly TabKey[] = ["overview", ...PHASE_ORDER, "tools"];
+
+function PhaseRings({
+  control,
+  onSelect,
+}: {
+  control: Mitigation;
+  onSelect: (phase: Phase) => void;
+}) {
+  const { done, count, reset } = useControlProgress(control.id);
+  const phases = PHASE_ORDER.map((p) => ({
+    phase: p,
+    total: phaseTaskTotal(control, p),
+    done: phaseDoneCount(done, control, p),
+  }));
+  const total = phases.reduce((n, p) => n + p.total, 0);
+  if (!total) {
+    return (
+      <p className="mb-6 rounded-lg border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+        This control's guidance has no checklist items, so there is no progress to track.
+      </p>
+    );
+  }
+  return (
+    <section aria-labelledby="control-progress" className="mb-6 rounded-lg border bg-card p-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 id="control-progress" className="text-sm font-semibold">
+          Your progress
+          <span className="ml-2 font-normal text-muted-foreground">saved in this browser</span>
+        </h2>
+        {count > 0 && (
+          <Button variant="ghost" size="sm" onClick={reset} className="h-8">
+            <RotateCcw aria-hidden className="mr-1.5 h-3.5 w-3.5" />
+            Reset
+          </Button>
+        )}
+      </div>
+      <ul className="grid grid-cols-3 gap-3">
+        {phases.map((p) => (
+          <li key={p.phase}>
+            <button
+              type="button"
+              onClick={() => onSelect(p.phase)}
+              disabled={!p.total}
+              className="flex w-full flex-col items-center gap-2 rounded-md p-2 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 sm:flex-row sm:justify-center"
+            >
+              <Ring
+                value={p.done}
+                max={Math.max(1, p.total)}
+                size={56}
+                thickness={6}
+                tone="progress"
+                ariaLabel={`${PHASE_META[p.phase].label}: ${p.done} of ${p.total} tasks done`}
+              />
+              <span className="text-center sm:text-left">
+                <PhaseBadge phase={p.phase} size="xs" />
+                <span className="mt-1 block text-xs tabular-nums text-muted-foreground">
+                  {p.total ? `${p.done}/${p.total} tasks` : "no checklist"}
+                </span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 export const ControlDetail = () => {
   const { controlId } = useParams<{ controlId: string }>();
-  const mitigation: Mitigation | undefined = controlId ? mitigationsData[controlId] : undefined;
+  const [params, setParams] = useSearchParams();
+  const control: Mitigation | undefined = controlId
+    ? mitigationsData[controlId.toLowerCase()]
+    : undefined;
 
-  // Theme detection
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
-
-  // Interactive state management
-  const [checkedItems, setCheckedItems] = useState<{ [key: string]: boolean }>({});
-  const [copiedCode, setCopiedCode] = useState<{ [key: string]: boolean }>({});
-
-  // Mobile navigation state
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const handleMobileMenuToggle = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
-
-  const handleMobileMenuClose = () => {
-    setIsMobileMenuOpen(false);
-  };
-
-  useEffect(() => {
-    const checkTheme = () => {
-      const isDark = document.documentElement.classList.contains("dark");
-      setIsDarkMode(isDark);
+  const data = useMemo(() => {
+    if (!control) return null;
+    return {
+      threats: control.threatIds
+        .map((id) => threatsData[id])
+        .filter(Boolean)
+        .sort(compareThreatCodes),
+      cited: citedRequirements(control),
+      chapters: controlChapters(control),
+      chapterOnly: chapterOnlyMappings(control),
+      related: relatedControls(control, 4),
+      taskTotal: PHASE_ORDER.reduce((n, p) => n + phaseTaskTotal(control, p), 0),
     };
+  }, [control]);
 
-    checkTheme();
-
-    // Watch for theme changes
-    const observer = new MutationObserver(checkTheme);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
-  // Load saved progress from localStorage
-  useEffect(() => {
-    if (mitigation?.id) {
-      const saved = localStorage.getItem(`control-${mitigation.id}-progress`);
-      if (saved) {
-        setCheckedItems(JSON.parse(saved));
-      }
-    }
-  }, [mitigation?.id]);
-
-  // Save progress to localStorage
-  const updateProgress = (itemId: string, checked: boolean) => {
-    const newCheckedItems = { ...checkedItems, [itemId]: checked };
-    setCheckedItems(newCheckedItems);
-    if (mitigation?.id) {
-      localStorage.setItem(`control-${mitigation.id}-progress`, JSON.stringify(newCheckedItems));
-    }
-  };
-
-  // Handle code copy with feedback
-  const handleCodeCopy = (codeId: string, code: string) => {
-    navigator.clipboard.writeText(code);
-    setCopiedCode({ ...copiedCode, [codeId]: true });
-    setTimeout(() => {
-      setCopiedCode({ ...copiedCode, [codeId]: false });
-    }, 2000);
-  };
-
-  const threats: Threat[] = mitigation
-    ? mitigation.threatIds.map((id) => threatsData[id]).filter(Boolean)
-    : [];
-
-  // Helper to extract code blocks and prose from a section
-  function splitProseAndCode(content: string) {
-    const codeBlockRegex = /```([\w]*)\n([\s\S]*?)```/g;
-    const parts: { type: "code" | "prose"; value: string; lang?: string }[] = [];
-    let lastIndex = 0;
-    let match;
-    while ((match = codeBlockRegex.exec(content)) !== null) {
-      if (match.index > lastIndex) {
-        parts.push({ type: "prose", value: content.slice(lastIndex, match.index) });
-      }
-      const lang = match[1] || "";
-      const code = match[2];
-      parts.push({ type: "code", value: code.trim(), lang });
-      lastIndex = match.index + match[0].length;
-    }
-    if (lastIndex < content.length) {
-      parts.push({ type: "prose", value: content.slice(lastIndex) });
-    }
-    return parts.filter((p) => p.value.trim() !== "");
-  }
-
-  // Enhanced text processing with interactive elements
-  function enhanceTextWithInteractivity(text: string): JSX.Element {
-    if (!text || text.trim() === "") {
-      return <span>{text}</span>;
-    }
-
-    const technicalTerms: Record<string, { definition: string; icon: JSX.Element }> = {
-      containerization: {
-        definition:
-          "A lightweight form of virtualization that packages applications with their dependencies into containers",
-        icon: <Target className="h-3 w-3" />,
-      },
-      virtualization: {
-        definition:
-          "Technology that creates virtual versions of computing resources like servers, storage, or networks",
-        icon: <Target className="h-3 w-3" />,
-      },
-      Docker: {
-        definition:
-          "A platform for developing, shipping, and running applications using containerization technology",
-        icon: <ExternalLink className="h-3 w-3" />,
-      },
-      Podman: {
-        definition:
-          "A daemonless container engine for developing, managing, and running OCI containers",
-        icon: <ExternalLink className="h-3 w-3" />,
-      },
-      SELinux: {
-        definition: "Security-Enhanced Linux - a mandatory access control security mechanism",
-        icon: <AlertTriangle className="h-3 w-3" />,
-      },
-      AppArmor: {
-        definition:
-          "A Linux kernel security module that restricts programs capabilities with per-program profiles",
-        icon: <AlertTriangle className="h-3 w-3" />,
-      },
-      WASM: {
-        definition: "WebAssembly - a binary instruction format for a stack-based virtual machine",
-        icon: <Info className="h-3 w-3" />,
-      },
-      QEMU: {
-        definition: "Quick Emulator - a generic and open source machine emulator and virtualizer",
-        icon: <ExternalLink className="h-3 w-3" />,
-      },
-      KVM: {
-        definition: "Kernel-based Virtual Machine - a virtualization infrastructure for Linux",
-        icon: <ExternalLink className="h-3 w-3" />,
-      },
-      Firecracker: {
-        definition:
-          "A virtualization technology for creating and managing secure, multi-tenant container environments",
-        icon: <ExternalLink className="h-3 w-3" />,
-      },
-      microVM: {
-        definition: "Lightweight virtual machines optimized for serverless computing workloads",
-        icon: <Info className="h-3 w-3" />,
-      },
-      cgroups: {
-        definition:
-          "Control groups - a Linux kernel feature that limits and isolates resource usage",
-        icon: <Target className="h-3 w-3" />,
-      },
-      namespaces: {
-        definition:
-          "Linux kernel feature that partitions kernel resources so that one set of processes sees one set of resources",
-        icon: <Target className="h-3 w-3" />,
-      },
-      seccomp: {
-        definition:
-          "Secure computing mode - a computer security facility in Linux that restricts system calls",
-        icon: <AlertTriangle className="h-3 w-3" />,
-      },
-    };
-
-    const words = text.split(/(\s+)/);
-    const elements: JSX.Element[] = [];
-
-    words.forEach((word, index) => {
-      const cleanWord = word.replace(/[^\w]/g, "").toLowerCase();
-      const techTerm = Object.keys(technicalTerms).find((term) => term.toLowerCase() === cleanWord);
-
-      if (techTerm && word.toLowerCase().includes(techTerm.toLowerCase())) {
-        const termInfo = technicalTerms[techTerm];
-        elements.push(
-          <TooltipProvider key={`term-${index}`}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 mx-0.5 rounded bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 cursor-help hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors text-sm">
-                  {termInfo.icon}
-                  <span className="font-medium">{word.trim()}</span>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-xs">
-                <p className="text-sm">{termInfo.definition}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>,
-        );
-      } else {
-        elements.push(<span key={`text-${index}`}>{word}</span>);
-      }
-    });
-
-    return <span>{elements}</span>;
-  }
-
-  // Enhanced function to render interactive checklists
-  function renderInteractiveChecklist(content: string, sectionId: string) {
-    const lines = content.split("\n").filter((l) => l.trim() !== "");
-
-    if (lines.length > 1 && lines.every((l) => l.trim().startsWith("- "))) {
-      const items = lines.map((l) => l.replace(/^\s*-\s*/, "").trim());
-      const completedCount = items.filter((_, i) => checkedItems[`${sectionId}-${i}`]).length;
-      const progressPercentage = items.length > 0 ? (completedCount / items.length) * 100 : 0;
-
-      return (
-        <div className="space-y-4">
-          {items.length > 5 && (
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-muted-foreground">
-                Progress: {completedCount}/{items.length}
-              </span>
-              <span className="text-sm text-muted-foreground">
-                {Math.round(progressPercentage)}%
-              </span>
-            </div>
-          )}
-          {items.length > 5 && <Progress value={progressPercentage} className="h-2 mb-4" />}
-          <div className="space-y-3">
-            {items.map((item, i) => {
-              const itemId = `${sectionId}-${i}`;
-              const isChecked = checkedItems[itemId] || false;
-              return (
-                <div key={i} className="flex items-start space-x-3 group">
-                  <Checkbox
-                    id={itemId}
-                    checked={isChecked}
-                    onCheckedChange={(checked) => updateProgress(itemId, checked as boolean)}
-                    className="mt-0.5"
-                  />
-                  <label
-                    htmlFor={itemId}
-                    className={`text-sm cursor-pointer transition-all flex-1 ${
-                      isChecked ? "line-through text-muted-foreground" : "text-foreground"
-                    }`}
-                  >
-                    {enhanceTextWithInteractivity(item)}
-                  </label>
-                  {isChecked && (
-                    <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      );
-    }
-
-    return renderSectionContent(content, sectionId);
-  }
-
-  // Enhanced function to render code with better interactions
-  function renderEnhancedCode(code: string, language: string, codeId: string) {
-    const isCopied = copiedCode[codeId];
-
+  if (!control || !data) {
     return (
-      <div className="relative group">
-        <div className="absolute top-2 right-2 flex gap-2 z-10">
-          <button
-            onClick={() => handleCodeCopy(codeId, code)}
-            className="bg-muted px-3 py-1.5 rounded text-xs border hover:bg-accent transition-colors flex items-center gap-1"
-          >
-            {isCopied ? (
-              <>
-                <Check className="h-3 w-3" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <Copy className="h-3 w-3" />
-                Copy
-              </>
-            )}
-          </button>
-          {language && (
-            <span className="bg-muted px-2 py-1.5 rounded text-xs border text-muted-foreground">
-              {language.toUpperCase()}
-            </span>
-          )}
-        </div>
-        <SyntaxHighlighter
-          language={language}
-          style={isDarkMode ? duotoneDark : duotoneLight}
-          customStyle={{
-            borderRadius: 8,
-            fontSize: 13,
-            padding: 16,
-            paddingTop: 40,
-          }}
-        >
-          {code}
-        </SyntaxHighlighter>
-      </div>
+      <PageLayout
+        title="Control not found"
+        description="This security control does not exist in the controls catalog."
+        canonicalPath={`/controls/${controlId ?? ""}`}
+        noindex
+        section="controls"
+      >
+        <NotFoundEntity type="control" id={controlId} />
+      </PageLayout>
     );
   }
 
-  function renderSectionContent(content: string, sectionId: string) {
-    const lines = content.split("\n").filter((l) => l.trim() !== "");
-
-    if (lines.length > 1 && lines.every((l) => l.trim().startsWith("- "))) {
-      return renderInteractiveChecklist(content, sectionId);
-    }
-
-    if (lines.length === 1 && (content.match(/ - /g) || []).length > 1) {
-      const items = content
-        .split(/ - /)
-        .map((s) => s.trim())
-        .filter(Boolean);
-      return (
-        <div className="space-y-2">
-          {items.map((item, i) => (
-            <div
-              key={i}
-              className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group"
-            >
-              <div className="w-2 h-2 rounded-full bg-primary mt-2 group-hover:scale-125 transition-transform"></div>
-              <div className="flex-1 text-sm text-muted-foreground">
-                {enhanceTextWithInteractivity(item)}
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    const parts = splitProseAndCode(content);
-    if (parts.length === 1 && parts[0].type === "prose") {
-      return formatProseContent(parts[0].value, sectionId);
-    }
-
-    const codeBlocks = parts.filter((p) => p.type === "code");
-    if (codeBlocks.length > 1) {
-      return (
-        <Tabs defaultValue={codeBlocks[0].lang || "code"} className="w-full mt-2">
-          <TabsList>
-            {codeBlocks.map((block, i) => (
-              <TabsTrigger key={i} value={block.lang || `code${i}`}>
-                {block.lang ? block.lang.toUpperCase() : `Code ${i + 1}`}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          {codeBlocks.map((block, i) => (
-            <TabsContent key={i} value={block.lang || `code${i}`}>
-              {renderEnhancedCode(block.value, block.lang || "", `${sectionId}-code-${i}`)}
-            </TabsContent>
-          ))}
-        </Tabs>
-      );
-    }
-
-    return (
-      <div className="space-y-6">
-        {parts.map((part, i) =>
-          part.type === "prose" ? (
-            <div key={i}>{formatProseContent(part.value, `${sectionId}-${i}`)}</div>
-          ) : (
-            <div key={i}>
-              {renderEnhancedCode(part.value, part.lang || "", `${sectionId}-code-${i}`)}
-            </div>
-          ),
-        )}
-      </div>
-    );
-  }
-
-  // Enhanced prose formatting function
-  function formatProseContent(content: string, _sectionId: string): JSX.Element {
-    const lines = content.trim().split("\n");
-    const elements: JSX.Element[] = [];
-    let currentList: JSX.Element[] = [];
-    let currentListType: "bullet" | "numbered" | null = null;
-
-    const flushList = () => {
-      if (currentList.length > 0) {
-        if (currentListType === "bullet") {
-          elements.push(
-            <ul key={`list-${elements.length}`} className="space-y-2 ml-0 my-4">
-              {currentList}
-            </ul>,
-          );
-        } else if (currentListType === "numbered") {
-          elements.push(
-            <ol
-              key={`list-${elements.length}`}
-              className="space-y-2 ml-0 my-4 list-decimal list-inside"
-            >
-              {currentList}
-            </ol>,
-          );
-        }
-        currentList = [];
-        currentListType = null;
-      }
-    };
-
-    lines.forEach((line, index) => {
-      const trimmedLine = line.trim();
-
-      if (!trimmedLine) {
-        flushList();
-        return;
-      }
-
-      if (trimmedLine.match(/^\*\*([^*]+)\*\*:?\s*$/)) {
-        flushList();
-        const headingText = trimmedLine.replace(/^\*\*([^*]+)\*\*:?\s*$/, "$1");
-        elements.push(
-          <h3
-            key={`heading-${index}`}
-            className="text-lg font-semibold text-foreground mb-3 mt-6 flex items-center gap-3 pb-2 border-b border-border/50"
-          >
-            <div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full"></div>
-            <span>{headingText}</span>
-          </h3>,
-        );
-        return;
-      }
-
-      if (trimmedLine.startsWith("**") && trimmedLine.includes(":**")) {
-        flushList();
-        const headingMatch = trimmedLine.match(/^\*\*([^*]+)\*\*:\s*(.*)$/);
-        if (headingMatch) {
-          const [, heading, content] = headingMatch;
-          elements.push(
-            <div key={`subheading-${index}`} className="mt-4 mb-3">
-              <h4 className="text-base font-semibold text-foreground mb-2 flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-primary/70"></div>
-                {heading}
-              </h4>
-              {content.trim() && (
-                <p className="text-muted-foreground leading-relaxed ml-4 text-sm">
-                  {enhanceTextWithInteractivity(content)}
-                </p>
-              )}
-            </div>,
-          );
-          return;
-        }
-      }
-
-      if (trimmedLine.startsWith("- ")) {
-        const content = trimmedLine.substring(2).trim();
-        const isSubBullet = line.startsWith("  - ") || line.startsWith("    - ");
-
-        if (currentListType !== "bullet") {
-          flushList();
-          currentListType = "bullet";
-        }
-
-        const bulletContent = formatBulletContent(content);
-        currentList.push(
-          <li
-            key={`bullet-${index}`}
-            className={`flex items-start gap-3 ${isSubBullet ? "ml-6" : ""} p-2 rounded-lg hover:bg-muted/30 transition-colors group`}
-          >
-            <div
-              className={`w-2 h-2 rounded-full flex-shrink-0 mt-2 transition-all group-hover:scale-110 ${
-                isSubBullet ? "bg-blue-400 dark:bg-blue-500" : "bg-primary shadow-sm"
-              }`}
-            ></div>
-            <div className="flex-1 leading-relaxed text-muted-foreground text-sm">
-              {bulletContent}
-            </div>
-          </li>,
-        );
-        return;
-      }
-
-      if (trimmedLine.match(/^\d+\.\s/)) {
-        const content = trimmedLine.replace(/^\d+\.\s/, "");
-
-        if (currentListType !== "numbered") {
-          flushList();
-          currentListType = "numbered";
-        }
-
-        const bulletContent = formatBulletContent(content);
-        currentList.push(
-          <li
-            key={`numbered-${index}`}
-            className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors"
-          >
-            <div className="flex-1 leading-relaxed text-muted-foreground text-sm">
-              {bulletContent}
-            </div>
-          </li>,
-        );
-        return;
-      }
-
-      flushList();
-      elements.push(
-        <p
-          key={`paragraph-${index}`}
-          className="leading-relaxed text-muted-foreground mb-3 text-sm"
-        >
-          {enhanceTextWithInteractivity(trimmedLine)}
-        </p>,
-      );
-    });
-
-    flushList();
-    return <div className="space-y-2">{elements}</div>;
-  }
-
-  function formatBulletContent(content: string): JSX.Element {
-    const boldPattern = /\*\*([^*]+)\*\*/g;
-    const parts = content.split(boldPattern);
-
-    return (
-      <span className="text-sm">
-        {parts.map((part, index) => {
-          if (index % 2 === 1) {
-            return (
-              <span key={index} className="font-semibold text-foreground">
-                {enhanceTextWithInteractivity(part)}
-              </span>
-            );
-          } else {
-            return <span key={index}>{enhanceTextWithInteractivity(part)}</span>;
-          }
-        })}
-      </span>
-    );
-  }
-
-  if (!mitigation) {
-    return (
-      <div className="container py-12 text-center">
-        <h1 className="text-2xl font-bold mb-4">Control Not Found</h1>
-        <Link to="/controls">
-          <Button>Back to Controls</Button>
-        </Link>
-      </div>
-    );
-  }
-
-  // Calculate overall progress
-  const getAllChecklistItems = () => {
-    const sections = [
-      mitigation.implementationDetail.design,
-      mitigation.implementationDetail.build,
-      mitigation.implementationDetail.operations,
-      mitigation.implementationDetail.toolsAndFrameworks,
-    ].filter(Boolean);
-
-    return sections.reduce((total, section) => {
-      const lines = section.split("\n").filter((l) => l.trim().startsWith("- "));
-      return total + lines.length;
-    }, 0);
+  const { threats, cited, chapters, chapterOnly, related, taskTotal } = data;
+  const hasTools = !!control.implementationDetail.toolsAndFrameworks?.trim();
+  const tabParam = params.get("tab") ?? "";
+  const tab: TabKey =
+    TAB_KEYS.includes(tabParam as TabKey) && (tabParam !== "tools" || hasTools)
+      ? (tabParam as TabKey)
+      : "overview";
+  const setTab = (v: string) => {
+    const next = new URLSearchParams(params);
+    if (v === "overview") next.delete("tab");
+    else next.set("tab", v);
+    setParams(next, { replace: true });
   };
-
-  const getCompletedItems = () => {
-    return Object.values(checkedItems).filter(Boolean).length;
-  };
-
-  const totalItems = getAllChecklistItems();
-  const completedItems = getCompletedItems();
-  const overallProgress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
-
-  // Determine which phases are available
-  const hasDesign =
-    mitigation.implementationDetail.design && mitigation.implementationDetail.design.trim();
-  const hasBuild =
-    mitigation.implementationDetail.build && mitigation.implementationDetail.build.trim();
-  const hasOperations =
-    mitigation.implementationDetail.operations && mitigation.implementationDetail.operations.trim();
-  const hasTools =
-    mitigation.implementationDetail.toolsAndFrameworks &&
-    mitigation.implementationDetail.toolsAndFrameworks.trim();
+  const code = controlCode(control.id);
 
   return (
-    <>
-      <Helmet>
-        <title>{mitigation.name} | OWASP Securing Agentic Applications Guide</title>
-        <meta
-          name="description"
-          content={`${mitigation.description} Learn how to implement this AI security control to mitigate threats in agentic systems.`}
-        />
-      </Helmet>
-      <Header onMobileMenuToggle={handleMobileMenuToggle} isMobileMenuOpen={isMobileMenuOpen} />
+    <PageLayout
+      title={`${control.name} (${code})`}
+      description={`${control.description} How to implement this AI security control across design, build and operations.`}
+      canonicalPath={`/controls/${control.id}`}
+      ogType="article"
+      section="controls"
+      activeId={control.id}
+      jsonLd={{
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        headline: control.name,
+        description: control.description,
+        url: `https://agenticsecurity.info/controls/${control.id}`,
+        ...(control.lastUpdated ? { dateModified: control.lastUpdated } : {}),
+        isPartOf: {
+          "@type": "WebSite",
+          name: "Agentic Security Hub",
+          url: "https://agenticsecurity.info",
+        },
+      }}
+    >
+      <Link
+        to="/controls"
+        className="mb-6 inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft aria-hidden className="mr-2 h-4 w-4" />
+        All controls
+      </Link>
 
-      <SidebarNav
-        type="controls"
-        activeId={mitigation.id}
-        isOpen={isMobileMenuOpen}
-        onClose={handleMobileMenuClose}
-      />
+      <PageHeader
+        eyebrow={`Control ${code}`}
+        title={control.name}
+        description={control.description}
+        source={SOURCES.controls}
+        actions={
+          <Button asChild size="sm" variant="outline">
+            <Link to={`/implementation?control=${control.id}`}>
+              <ListChecks aria-hidden className="mr-1.5 h-4 w-4" />
+              See in lifecycle
+            </Link>
+          </Button>
+        }
+        stats={[
+          { label: "threats mitigated", value: threats.length },
+          {
+            label: "AISVS requirements cited",
+            value: cited.length,
+            hint: `Specific OWASP AISVS ${SOURCES.aisvs.version} requirements this control helps satisfy.`,
+          },
+          { label: "checklist tasks", value: taskTotal },
+          { label: "references", value: control.references?.length ?? 0 },
+        ]}
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          {typeof control.riskScore === "number" && (
+            <RiskScore score={control.riskScore} className="w-40" />
+          )}
+          <span className="flex flex-wrap gap-1.5">
+            {PHASE_ORDER.map((p) => (
+              <PhaseBadge key={p} phase={p} size="xs" active={phaseApplies(control, p)} />
+            ))}
+          </span>
+        </div>
+      </PageHeader>
 
-      <section id="main-content" className="py-8 bg-background min-h-screen">
-        <div className="container px-4 md:px-6 max-w-7xl">
-          {/* Breadcrumb */}
-          <Link
-            to="/controls"
-            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6"
-          >
-            <ArrowRight className="h-4 w-4 mr-2 rotate-180" />
-            Back to Controls
-          </Link>
+      <PhaseRings control={control} onSelect={setTab} />
 
-          {/* Header Section */}
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold tracking-tight">{mitigation.name}</h1>
-            <p className="mt-1 text-muted-foreground">
-              {enhanceTextWithInteractivity(mitigation.description)}
-            </p>
+      <Tabs value={tab} onValueChange={setTab} className="w-full">
+        <TabsList
+          className={cn("mb-6 grid h-auto w-full", hasTools ? "grid-cols-5" : "grid-cols-4")}
+        >
+          <TabsTrigger value="overview" className="gap-2">
+            <Info aria-hidden className="h-4 w-4" />
+            <span className="sr-only sm:not-sr-only">Overview</span>
+          </TabsTrigger>
+          <TabsTrigger value="design" className="gap-2">
+            <PencilRuler aria-hidden className="h-4 w-4" />
+            <span className="sr-only sm:not-sr-only">Design</span>
+          </TabsTrigger>
+          <TabsTrigger value="build" className="gap-2">
+            <Hammer aria-hidden className="h-4 w-4" />
+            <span className="sr-only sm:not-sr-only">Build</span>
+          </TabsTrigger>
+          <TabsTrigger value="operations" className="gap-2">
+            <Settings aria-hidden className="h-4 w-4" />
+            <span className="sr-only sm:not-sr-only">Operations</span>
+          </TabsTrigger>
+          {hasTools && (
+            <TabsTrigger value="tools" className="gap-2">
+              <Wrench aria-hidden className="h-4 w-4" />
+              <span className="sr-only sm:not-sr-only">Tools</span>
+            </TabsTrigger>
+          )}
+        </TabsList>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Mitigates</span>
-                  </div>
-                  <div className="text-2xl font-bold">{threats.length}</div>
-                  <div className="text-xs text-muted-foreground">Threats</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Shield className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Phases</span>
-                  </div>
-                  <div className="text-2xl font-bold">
-                    {[hasDesign, hasBuild, hasOperations].filter(Boolean).length}
-                  </div>
-                  <div className="text-xs text-muted-foreground">Active</div>
-                </CardContent>
-              </Card>
-              {totalItems > 0 && (
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      <span className="text-xs text-muted-foreground">Progress</span>
-                    </div>
-                    <div className="text-2xl font-bold">{Math.round(overallProgress)}%</div>
-                    <div className="text-xs text-muted-foreground">
-                      {completedItems}/{totalItems} tasks
-                    </div>
-                  </CardContent>
-                </Card>
+        <TabsContent value="overview" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Mitigates</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {threats.length ? (
+                <ul className="grid gap-3 md:grid-cols-2">
+                  {threats.map((t) => (
+                    <li key={t.id}>
+                      <Link
+                        to={`/threats/${t.id}`}
+                        className="group flex h-full items-start gap-3 rounded-lg border p-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="flex flex-wrap items-center gap-2">
+                            <span className="font-mono text-xs text-muted-foreground">
+                              {t.code}
+                            </span>
+                            <SeverityBadge band={threatBand(t)} size="xs" />
+                          </span>
+                          <span className="mt-1 block font-semibold group-hover:text-primary">
+                            {threatLabel(t)}
+                          </span>
+                          <span className="mt-0.5 line-clamp-2 block text-sm text-muted-foreground">
+                            {t.description}
+                          </span>
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-muted-foreground">No threats are mapped to this control.</p>
               )}
-              {mitigation.references && mitigation.references.length > 0 && (
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">References</span>
-                    </div>
-                    <div className="text-2xl font-bold">{mitigation.references.length}</div>
-                    <div className="text-xs text-muted-foreground">Resources</div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">AISVS {SOURCES.aisvs.version} mapping</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Suspense
+                  fallback={<div className="h-[300px] animate-pulse rounded-md bg-muted/40" />}
+                >
+                  <ControlRadar control={control} />
+                </Suspense>
+                <ul className="mt-4 flex flex-wrap gap-1.5" aria-label="Mapped chapters">
+                  {chapters.map((c) => (
+                    <li key={c}>
+                      <Link
+                        to={`/aisvs#${c}`}
+                        className="inline-flex h-6 items-center rounded border px-1.5 font-mono text-[11px] hover:bg-muted"
+                      >
+                        {c}
+                        {chapterOnly.includes(c) && (
+                          <span className="ml-1 text-muted-foreground">(chapter)</span>
+                        )}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Cited requirements ({cited.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {cited.length ? (
+                  <ul className="max-h-[26rem] space-y-2 overflow-y-auto pr-1">
+                    {cited.map((r) => (
+                      <li key={r.id} className="rounded-md border p-3">
+                        <div className="mb-1 flex items-center gap-2">
+                          <Link
+                            to={`/aisvs#${r.id}`}
+                            className="font-mono text-xs font-semibold hover:underline"
+                          >
+                            {r.id}
+                          </Link>
+                          <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+                            Level {r.level}
+                          </Badge>
+                        </div>
+                        <p className="line-clamp-3 text-sm text-muted-foreground">{r.text}</p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Mapped at chapter level only; no specific requirement is cited yet.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Main Content Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 mb-6">
-              <TabsTrigger value="overview" className="flex items-center gap-2">
-                <Info className="h-4 w-4" />
-                <span className="hidden sm:inline">Overview</span>
-              </TabsTrigger>
-              {hasDesign && (
-                <TabsTrigger value="design" className="flex items-center gap-2">
-                  <Shield className="h-4 w-4" />
-                  <span className="hidden sm:inline">Design</span>
-                </TabsTrigger>
-              )}
-              {hasBuild && (
-                <TabsTrigger value="build" className="flex items-center gap-2">
-                  <Hammer className="h-4 w-4" />
-                  <span className="hidden sm:inline">Build</span>
-                </TabsTrigger>
-              )}
-              {hasOperations && (
-                <TabsTrigger value="operations" className="flex items-center gap-2">
-                  <Settings className="h-4 w-4" />
-                  <span className="hidden sm:inline">Operations</span>
-                </TabsTrigger>
-              )}
-              {hasTools && (
-                <TabsTrigger value="tools" className="flex items-center gap-2">
-                  <Wrench className="h-4 w-4" />
-                  <span className="hidden sm:inline">Tools</span>
-                </TabsTrigger>
-              )}
-            </TabsList>
-
-            {/* Overview Tab */}
-            <TabsContent value="overview" className="space-y-6">
-              {/* Threats Section */}
-              {threats.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <AlertTriangle className="h-5 w-5 text-muted-foreground" />
-                      Mitigates Threats
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-3">
-                      {threats.map((threat) => (
-                        <Link
-                          key={threat.id}
-                          to={`/threats/${threat.id}`}
-                          className="flex items-start gap-4 p-4 rounded-lg border hover:bg-muted/50 transition-colors group"
-                        >
-                          <div className="w-2 h-2 rounded-full bg-red-500 mt-2 group-hover:scale-125 transition-transform flex-shrink-0"></div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-semibold text-foreground group-hover:text-primary transition-colors mb-1">
-                              {threat.code} - {threat.name}
-                            </div>
-                            <p className="text-sm text-muted-foreground line-clamp-2">
-                              {threat.description}
-                            </p>
-                            {threat.impactLevel && (
-                              <Badge
-                                variant={
-                                  threat.impactLevel === "high"
-                                    ? "destructive"
-                                    : threat.impactLevel === "medium"
-                                      ? "secondary"
-                                      : "outline"
-                                }
-                                className="mt-2 text-xs"
-                              >
-                                {threat.impactLevel} impact
-                              </Badge>
-                            )}
-                          </div>
-                          <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 mt-1" />
-                        </Link>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* References */}
-              {mitigation.references && mitigation.references.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <ExternalLink className="h-5 w-5 text-muted-foreground" />
-                      References & Resources
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {mitigation.references.map((ref, index) => (
-                        <a
-                          key={index}
-                          href={ref.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted/50 transition-colors group"
-                        >
-                          <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                          <span className="text-sm font-medium group-hover:text-primary transition-colors">
-                            {ref.title}
+          {related.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Related controls</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="grid gap-3 md:grid-cols-2">
+                  {related.map(({ control: o, sharedThreatIds }) => (
+                    <li key={o.id}>
+                      <Link
+                        to={`/controls/${o.id}`}
+                        className="group flex h-full items-start gap-3 rounded-lg border p-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <Icon
+                          name={o.icon ?? "shield"}
+                          className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {controlCode(o.id)}
                           </span>
-                        </a>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+                          <span className="block font-semibold group-hover:text-primary">
+                            {o.name}
+                          </span>
+                          <span className="mt-0.5 block text-xs text-muted-foreground">
+                            Shares {sharedThreatIds.length} threat
+                            {sharedThreatIds.length === 1 ? "" : "s"}:{" "}
+                            {sharedThreatIds.map((id) => threatsData[id]?.code ?? id).join(", ")}
+                          </span>
+                        </span>
+                        <ArrowRight
+                          aria-hidden
+                          className="mt-1 h-4 w-4 shrink-0 text-muted-foreground"
+                        />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
 
-              {/* Implementation Summary */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Implementation Summary</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {hasDesign && (
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
-                        <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                        <div className="flex-1">
-                          <div className="font-medium text-blue-900 dark:text-blue-100">
-                            Design Phase
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {
-                              mitigation.implementationDetail.design
-                                .split("\n")
-                                .filter((l) => l.trim().startsWith("- ")).length
-                            }{" "}
-                            tasks
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => setActiveTab("design")}>
-                          View <ArrowRight className="h-4 w-4 ml-1" />
-                        </Button>
-                      </div>
-                    )}
-                    {hasBuild && (
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-card border">
-                        <Hammer className="h-5 w-5 text-muted-foreground" />
-                        <div className="flex-1">
-                          <div className="font-medium">Build Phase</div>
-                          <div className="text-sm text-muted-foreground">
-                            {
-                              mitigation.implementationDetail.build
-                                .split("\n")
-                                .filter((l) => l.trim().startsWith("- ")).length
-                            }{" "}
-                            tasks
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => setActiveTab("build")}>
-                          View <ArrowRight className="h-4 w-4 ml-1" />
-                        </Button>
-                      </div>
-                    )}
-                    {hasOperations && (
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-card border">
-                        <Settings className="h-5 w-5 text-muted-foreground" />
-                        <div className="flex-1">
-                          <div className="font-medium">Operations Phase</div>
-                          <div className="text-sm text-muted-foreground">
-                            {
-                              mitigation.implementationDetail.operations
-                                .split("\n")
-                                .filter((l) => l.trim().startsWith("- ")).length
-                            }{" "}
-                            tasks
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setActiveTab("operations")}
-                        >
-                          View <ArrowRight className="h-4 w-4 ml-1" />
-                        </Button>
-                      </div>
-                    )}
-                    {hasTools && (
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-card border">
-                        <Wrench className="h-5 w-5 text-muted-foreground" />
-                        <div className="flex-1">
-                          <div className="font-medium">Tools & Frameworks</div>
-                          <div className="text-sm text-muted-foreground">
-                            {
-                              mitigation.implementationDetail.toolsAndFrameworks
-                                .split("\n")
-                                .filter((l) => l.trim().startsWith("- ")).length
-                            }{" "}
-                            items
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => setActiveTab("tools")}>
-                          View <ArrowRight className="h-4 w-4 ml-1" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+          {control.references?.length ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">References</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {control.references.map((ref) => (
+                    <li key={ref.url}>
+                      <a
+                        href={ref.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                      >
+                        <ExternalLink
+                          aria-hidden
+                          className="h-4 w-4 shrink-0 text-muted-foreground"
+                        />
+                        <span className="text-sm font-medium group-hover:text-primary">
+                          {ref.title}
+                        </span>
+                        <span className="sr-only">(opens in a new tab)</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          ) : null}
+        </TabsContent>
 
-            {/* Design Phase Tab */}
-            {hasDesign && (
-              <TabsContent value="design" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Shield className="h-5 w-5 text-muted-foreground" />
-                      Design Phase
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {renderSectionContent(mitigation.implementationDetail.design, "design-phase")}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
+        {PHASE_ORDER.map((p) => (
+          <TabsContent key={p} value={p}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  {PHASE_META[p].label} phase
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">{PHASE_META[p].blurb}</p>
+              </CardHeader>
+              <CardContent>
+                <PhaseChecklist control={control} phase={p} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        ))}
 
-            {/* Build Phase Tab */}
-            {hasBuild && (
-              <TabsContent value="build" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Hammer className="h-5 w-5 text-muted-foreground" />
-                      Build Phase
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {renderSectionContent(mitigation.implementationDetail.build, "build-phase")}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
+        {hasTools && (
+          <TabsContent value="tools">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Tools & frameworks</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RichText
+                  text={control.implementationDetail.toolsAndFrameworks}
+                  renderCode={renderCodeBlock}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+      </Tabs>
 
-            {/* Operations Phase Tab */}
-            {hasOperations && (
-              <TabsContent value="operations" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Settings className="h-5 w-5 text-muted-foreground" />
-                      Operations Phase
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {renderSectionContent(
-                      mitigation.implementationDetail.operations,
-                      "operation-phase",
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
-
-            {/* Tools & Frameworks Tab */}
-            {hasTools && (
-              <TabsContent value="tools" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Wrench className="h-5 w-5 text-muted-foreground" />
-                      Tools & Frameworks
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {renderSectionContent(
-                      mitigation.implementationDetail.toolsAndFrameworks,
-                      "tools-frameworks",
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
-          </Tabs>
-        </div>
-      </section>
-      <Footer />
-    </>
+      <SourceNote source={SOURCES.controls} className="mt-8" />
+    </PageLayout>
   );
 };
 

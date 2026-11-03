@@ -1,260 +1,136 @@
-import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
+/**
+ * ArchitectureNavigator — expandable graph explorer: architecture patterns → key components →
+ * threats → mitigations (IMPROVEMENT_PLAN P4-08). Lives in /architectures?view=graph (dialog).
+ *
+ * - D3 joins are incremental (keyed by id): expanding animates new nodes out of their parent and
+ *   collapsing pulls them back in; nothing is redrawn from scratch (§8.4, P1-09).
+ * - Colours come from useChartTheme() and update live on theme toggle: architectures = primary,
+ *   components = their KC colour, threats = risk band, mitigations = the "low" (safe) token.
+ *   Every node also carries a type letter, so colour is never the only cue.
+ * - Nodes are keyboard operable (Tab, Enter/Space to expand, focus shows the tooltip).
+ * - "Collapse others" keeps only the selected node's branch open.
+ * - Component names come from the shared componentDataMap.
+ */
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
-import { architecturesData, Architecture } from "../components/architecturesData";
-import { frameworkData, type ComponentNode } from "../components/frameworkData";
+import { Link } from "react-router-dom";
+import {
+  ChevronDown,
+  ChevronRight,
+  ExternalLink,
+  Maximize,
+  Minimize,
+  RotateCcw,
+  Search,
+  Shrink,
+  X,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react";
+import { architecturesData, type Architecture } from "../components/architecturesData";
+import { getComponentById } from "../components/frameworkData";
+import { componentDataMap } from "../components/componentDataMap";
 import { threatsData, mitigationsData } from "../components/securityData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Search,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw,
-  Maximize,
-  Minimize,
-  X,
-  ExternalLink,
-  ChevronDown,
-  ChevronRight,
-} from "lucide-react";
-import { Link } from "react-router-dom";
+import { RiskScore } from "@/components/content/RiskScore";
+import { useChartTheme, type ChartTheme } from "@/components/charts/useChartTheme";
+import { useResizeObserver } from "@/components/charts/useResizeObserver";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { kcByCode } from "@/data/kc";
+import { riskBand } from "@/lib/severity";
 import { cn } from "@/lib/utils";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-interface GraphNode extends d3.SimulationNodeDatum {
+type NodeType = "architecture" | "component" | "threat" | "mitigation";
+
+interface GraphNode {
   id: string;
   name: string;
-  type: "architecture" | "component" | "threat" | "mitigation";
+  type: NodeType;
   description: string;
-  color: string;
   size: number;
   riskScore?: number;
   tags?: string[];
   parentArchId?: string;
   parentCompId?: string;
+  /** Node this one grows out of when it appears (and retracts into when it goes). */
+  originId?: string;
 }
 
-interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
-  source: string | GraphNode;
-  target: string | GraphNode;
+interface GraphLink {
+  id: string;
+  source: string;
+  target: string;
   type: "arch-comp" | "comp-threat" | "threat-mitigation";
 }
 
-// ── Component data map ─────────────────────────────────────────────────────
+type Pos = { x: number; y: number };
 
-const componentDataMap: Record<string, { title: string; description: string }> = {
-  "kc1.1": {
-    title: "Large Language Models (LLMs)",
-    description:
-      "Core cognitive engine utilizing pre-trained foundation models for reasoning, planning, and generation.",
-  },
-  "kc1.2": {
-    title: "Multimodal LLMs (MLLMs)",
-    description:
-      "LLMs capable of processing and/or generating information across multiple data types beyond text.",
-  },
-  "kc1.3": {
-    title: "Small-Language Models (SLMs)",
-    description:
-      "Language models with fewer parameters, trained on smaller, focused datasets, designed for specific tasks.",
-  },
-  "kc1.4": {
-    title: "Fine-tuned Models",
-    description:
-      "Language models that undergo additional training on specific datasets to specialize their capabilities.",
-  },
-  "kc2.1": {
-    title: "Workflows",
-    description:
-      "Structured, pre-defined sequence of tasks or steps that agents follow to achieve a goal.",
-  },
-  "kc2.2": {
-    title: "Hierarchical Planning",
-    description:
-      "Multiple agents collaborating via an orchestrator that decomposes tasks and routes sub-tasks.",
-  },
-  "kc2.3": {
-    title: "Multi-agent Collaboration",
-    description:
-      "Multiple agents working together, communicating and coordinating actions to achieve a common goal.",
-  },
-  "kc3.1": {
-    title: "Structured Planning / Execution",
-    description:
-      "Focuses on decomposing tasks into a formal plan, defining sequences of actions and executing the plan.",
-  },
-  "kc3.2": {
-    title: "ReAct (Reason + Act)",
-    description:
-      "Dynamically interleaves reasoning steps with actions and updates reasoning based on feedback.",
-  },
-  "kc3.3": {
-    title: "Chain of Thought (CoT)",
-    description:
-      'Enhances reasoning quality by prompting step-by-step "thinking" before arriving at a final action.',
-  },
-  "kc3.4": {
-    title: "Tree of Thoughts (ToT)",
-    description: "Generalizes CoT by exploring multiple reasoning paths and plans in parallel.",
-  },
-  "kc4.1": {
-    title: "In-agent session memory",
-    description: "Memory limited to a single agent and a single session.",
-  },
-  "kc4.2": {
-    title: "Cross-agent session memory",
-    description: "Memory shared across multiple agents but limited to a single session.",
-  },
-  "kc4.3": {
-    title: "In-agent cross-session memory",
-    description: "Memory limited to a single agent but shared across multiple sessions.",
-  },
-  "kc4.4": {
-    title: "Cross-agent cross-session memory",
-    description: "Memory shared across multiple agents and sessions.",
-  },
-  "kc4.5": {
-    title: "In-agent cross-user memory",
-    description: "Memory limited to a single agent but shared across multiple users.",
-  },
-  "kc4.6": {
-    title: "Cross-agent cross-user memory",
-    description: "Memory shared across multiple agents and users.",
-  },
-  "kc5.1": {
-    title: "Flexible Libraries / SDK Features",
-    description: "Code-level building blocks (e.g., LangChain, CrewAI) offering high flexibility.",
-  },
-  "kc5.2": {
-    title: "Managed Platforms / Services",
-    description: "Vendor-provided solutions handling infrastructure and simplifying setup.",
-  },
-  "kc5.3": {
-    title: "Managed APIs",
-    description:
-      "Vendor-hosted services providing higher-level abstractions, managing state via API calls.",
-  },
-  "kc6.1": {
-    title: "API Access",
-    description: "Agents utilizing LLM capabilities to interact with APIs.",
-  },
-  "kc6.1.1": {
-    title: "Limited API Access",
-    description: "Agent generates some parameters for a predefined API call.",
-  },
-  "kc6.1.2": {
-    title: "Extensive API Access",
-    description: "Agent generates the entire API call.",
-  },
-  "kc6.2": {
-    title: "Code Execution",
-    description: "Agents utilizing LLM capabilities for code-related tasks.",
-  },
-  "kc6.2.1": {
-    title: "Limited Code Execution",
-    description: "Agent generates parameters for a predefined function.",
-  },
-  "kc6.2.2": {
-    title: "Extensive Code Execution",
-    description: "Agent runs LLM-generated code. Compromise can lead to arbitrary code execution.",
-  },
-  "kc6.3": {
-    title: "Database Execution",
-    description: "Agents utilizing LLM capabilities to interact with databases.",
-  },
-  "kc6.3.1": {
-    title: "Limited DB Execution",
-    description: "Agent runs specific queries with limited permissions.",
-  },
-  "kc6.3.2": {
-    title: "Extensive DB Execution",
-    description: "Agent generates and runs all CRUD operations.",
-  },
-  "kc6.3.3": {
-    title: "RAG Data Sources",
-    description: "Agent uses external datasources for context or updates records.",
-  },
-  "kc6.4": {
-    title: "Web Access (Web-Use)",
-    description: "Agent utilizing LLM for browser operations.",
-  },
-  "kc6.5": {
-    title: "PC Operations (PC-Use)",
-    description: "Agent utilizing LLM for OS operations, including file system.",
-  },
-  "kc6.6": {
-    title: "Operating Critical Systems",
-    description: "Agent utilizing LLM to operate critical systems (e.g., SCADA).",
-  },
-  "kc6.7": {
-    title: "Access to IoT Devices",
-    description: "Agent controlling IoT devices.",
-  },
-  kc1: {
-    title: "Language Models (LLMs)",
-    description:
-      'The core cognitive engine or "brain" of the agent, responsible for understanding, reasoning, planning, and generating responses.',
-  },
-  kc2: {
-    title: "Orchestration (Control Flow)",
-    description:
-      "Mechanisms that dictate the agent's overall behavior, information flow, and decision-making processes.",
-  },
-  kc3: {
-    title: "Reasoning / Planning Paradigm",
-    description:
-      "How agents utilize LLMs to solve complex tasks requiring multiple steps and strategic thinking.",
-  },
-  kc4: {
-    title: "Memory Modules",
-    description:
-      "Enable the agent to retain short-term and long-term information for coherent and personalized interactions.",
-  },
-  kc5: {
-    title: "Tool Integration Frameworks",
-    description:
-      "Allow agents to extend capabilities by using external tools to interact with the real world or other systems.",
-  },
-  kc6: {
-    title: "Operational Environment",
-    description: "API access, code execution, database operations.",
-  },
+const TYPES: NodeType[] = ["architecture", "component", "threat", "mitigation"];
+const TYPE_LETTER: Record<NodeType, string> = {
+  architecture: "A",
+  component: "C",
+  threat: "T",
+  mitigation: "M",
 };
+const LABEL_SIZE: Record<NodeType, number> = {
+  architecture: 12,
+  component: 10,
+  threat: 9,
+  mitigation: 8,
+};
+const LETTER_SIZE: Record<NodeType, number> = {
+  architecture: 16,
+  component: 11,
+  threat: 9,
+  mitigation: 8,
+};
+const DARK_TEXT = "hsl(240 10% 8%)";
 
-const getComponentDataById = (id: string) => {
-  const componentData = componentDataMap[id];
-  if (componentData) return componentData;
-  const searchInFramework = (nodes: ComponentNode[]): ComponentNode | null => {
-    for (const node of nodes) {
-      if (node.id === id || node.id.replace(/-/g, ".") === id) return node;
-      if (node.children) {
-        const found = searchInFramework(node.children);
-        if (found) return found;
-      }
-    }
-    return null;
+function componentInfo(id: string): { title: string; description: string; tags?: string[] } | null {
+  const shared = componentDataMap[id];
+  const node = getComponentById(id);
+  if (!shared && !node) return null;
+  return {
+    title: shared?.title ?? node?.title ?? id.toUpperCase(),
+    description: shared?.description ?? node?.description ?? "",
+    tags: node?.threatCategories,
   };
-  return searchInFramework(frameworkData);
-};
+}
 
-// ── Constants ──────────────────────────────────────────────────────────────
+function nodeColor(node: GraphNode, theme: ChartTheme): string {
+  switch (node.type) {
+    case "architecture":
+      return theme.primary;
+    case "component": {
+      const kc = kcByCode(node.id);
+      return kc ? theme.kc[kc.id] : theme.mutedForeground;
+    }
+    case "threat":
+      return theme.severity[riskBand(node.riskScore)];
+    case "mitigation":
+      return theme.severity.low;
+  }
+}
 
-const NODE_COLORS = {
-  architecture: "#3b82f6",
-  component: "#22c55e",
-  threat: "#ef4444",
-  mitigation: "#f59e0b",
-} as const;
+function legendColor(type: NodeType, theme: ChartTheme): string {
+  if (type === "architecture") return theme.primary;
+  if (type === "component") return theme.kc.kc2;
+  if (type === "threat") return theme.severity.high;
+  return theme.severity.low;
+}
 
-const LINK_COLORS = {
-  "arch-comp": "#3b82f680",
-  "comp-threat": "#ef444460",
-  "threat-mitigation": "#f59e0b60",
-} as const;
+function linkColor(type: GraphLink["type"], theme: ChartTheme): string {
+  if (type === "arch-comp") return theme.primary;
+  if (type === "comp-threat") return theme.severity.high;
+  return theme.severity.low;
+}
 
 function getDetailPath(node: GraphNode): string | null {
   switch (node.type) {
@@ -265,7 +141,7 @@ function getDetailPath(node: GraphNode): string | null {
     case "threat":
       return `/threats/${node.id}`;
     case "mitigation":
-      return `/controls`;
+      return `/controls/${node.id}`;
     default:
       return null;
   }
@@ -281,18 +157,204 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 function truncate(text: string, max: number): string {
-  return text.length > max ? text.substring(0, max) + "\u2026" : text;
+  return text.length > max ? text.substring(0, max) + "…" : text;
+}
+
+function threatAffects(threatId: string, compId: string): boolean {
+  const threat = threatsData[threatId];
+  const root = compId.split(".")[0];
+  return (threat?.componentIds ?? []).some((c) => {
+    const cid = c.replace(/-/g, ".");
+    return cid === compId || cid === root;
+  });
+}
+
+// ── Graph model (pure) ─────────────────────────────────────────────────────
+
+function buildGraph(
+  architectures: Architecture[],
+  expandedArchitectures: ReadonlySet<string>,
+  expandedComponents: ReadonlySet<string>,
+) {
+  const nodeMap = new Map<string, GraphNode>();
+  const links: GraphLink[] = [];
+  const add = (node: GraphNode) => {
+    if (!nodeMap.has(node.id)) nodeMap.set(node.id, node);
+  };
+  const link = (source: string, target: string, type: GraphLink["type"]) =>
+    links.push({ id: `${source}->${target}`, source, target, type });
+
+  architectures.forEach((arch) =>
+    add({
+      id: arch.id,
+      name: arch.name,
+      type: "architecture",
+      description: arch.description,
+      size: 45,
+      riskScore: arch.riskScore,
+      tags: arch.tags,
+    }),
+  );
+
+  expandedArchitectures.forEach((archId) => {
+    const arch = architecturesData[archId];
+    if (!arch) return;
+    arch.keyComponents.forEach((compId) => {
+      const comp = componentInfo(compId);
+      if (!comp) return;
+      add({
+        id: compId,
+        name: comp.title,
+        type: "component",
+        description: comp.description,
+        size: 30,
+        parentArchId: archId,
+        tags: comp.tags,
+        originId: archId,
+      });
+      link(archId, compId, "arch-comp");
+      if (!expandedComponents.has(compId)) return;
+
+      arch.threatIds.forEach((threatId) => {
+        const threat = threatsData[threatId];
+        if (!threat || !threatAffects(threatId, compId)) return;
+        add({
+          id: threatId,
+          name: threat.name,
+          type: "threat",
+          description: threat.description,
+          size: 20,
+          riskScore: threat.riskScore,
+          tags: threat.tags,
+          parentCompId: compId,
+          parentArchId: archId,
+          originId: compId,
+        });
+        link(compId, threatId, "comp-threat");
+        arch.mitigationIds.forEach((mitId) => {
+          const mit = mitigationsData[mitId];
+          if (!mit || !mit.threatIds?.includes(threatId)) return;
+          add({
+            id: mitId,
+            name: mit.name,
+            type: "mitigation",
+            description: mit.description,
+            size: 16,
+            tags: mit.tags,
+            parentCompId: compId,
+            parentArchId: archId,
+            originId: threatId,
+          });
+          link(threatId, mitId, "threat-mitigation");
+        });
+      });
+    });
+  });
+
+  // Links can only point at nodes that exist (a deduplicated node keeps its first parent).
+  const ids = new Set(nodeMap.keys());
+  const uniq = new Map(
+    links.filter((l) => ids.has(l.source) && ids.has(l.target)).map((l) => [l.id, l]),
+  );
+  return { nodes: Array.from(nodeMap.values()), links: Array.from(uniq.values()) };
+}
+
+/** Deterministic radial layout: patterns on a circle, children fanned out from their parent. */
+function layout(
+  nodes: GraphNode[],
+  links: GraphLink[],
+  width: number,
+  height: number,
+): Map<string, Pos> {
+  const pos = new Map<string, Pos>();
+  const cx = width / 2;
+  const cy = height / 2;
+  const scale = width < 768 ? 0.65 : 1;
+  const archs = nodes.filter((n) => n.type === "architecture");
+  const archRadius = Math.min(cx, cy) * 0.85;
+  archs.forEach((arch, i) => {
+    const angle = (2 * Math.PI * i) / Math.max(1, archs.length) - Math.PI / 2;
+    pos.set(arch.id, {
+      x: cx + archRadius * Math.cos(angle),
+      y: cy + archRadius * Math.sin(angle),
+    });
+  });
+
+  const fan = (
+    children: GraphNode[],
+    parent: Pos,
+    grand: Pos,
+    spreadMax: number,
+    per: number,
+    dist: number,
+  ) => {
+    const base = Math.atan2(parent.y - grand.y, parent.x - grand.x);
+    const spread = Math.min(spreadMax, children.length * per);
+    const start = base - spread / 2;
+    const step = children.length > 1 ? spread / (children.length - 1) : 0;
+    children.forEach((child, i) => {
+      if (pos.has(child.id)) return;
+      const a = start + step * i;
+      pos.set(child.id, { x: parent.x + dist * Math.cos(a), y: parent.y + dist * Math.sin(a) });
+    });
+  };
+
+  const centre = { x: cx, y: cy };
+  archs.forEach((arch) => {
+    const p = pos.get(arch.id);
+    if (!p) return;
+    const comps = nodes.filter((n) => n.type === "component" && n.parentArchId === arch.id);
+    fan(comps, p, centre, Math.PI * 1.2, 0.45, 240 * scale);
+  });
+  nodes
+    .filter((n) => n.type === "component")
+    .forEach((comp) => {
+      const p = pos.get(comp.id);
+      const gp = pos.get(comp.parentArchId ?? "");
+      if (!p || !gp) return;
+      const threats = nodes.filter((n) => n.type === "threat" && n.parentCompId === comp.id);
+      fan(threats, p, gp, Math.PI, 0.5, 160 * scale);
+    });
+  nodes
+    .filter((n) => n.type === "threat")
+    .forEach((threat) => {
+      const p = pos.get(threat.id);
+      const gp = pos.get(threat.parentCompId ?? "");
+      if (!p || !gp) return;
+      const mitIds = new Set(links.filter((l) => l.source === threat.id).map((l) => l.target));
+      const mits = nodes.filter((n) => n.type === "mitigation" && mitIds.has(n.id));
+      fan(mits, p, gp, Math.PI * 0.8, 0.5, 110 * scale);
+    });
+  return pos;
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────
 
 const ArchitectureNavigator: React.FC = () => {
   const svgRef = useRef<SVGSVGElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const explorerRef = useRef<HTMLDivElement>(null);
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+  const posRef = useRef<Map<string, Pos>>(new Map());
+  const fitKeyRef = useRef("");
+  const fitRef = useRef<() => void>(() => {});
+  const theme = useChartTheme();
+  const reduced = useReducedMotion();
+  const {
+    ref: containerRef,
+    width,
+    height,
+  } = useResizeObserver<HTMLDivElement>({
+    initialWidth: 800,
+    initialHeight: 600,
+  });
+  const dimensions = useMemo(
+    () => ({
+      width: Math.max(320, width),
+      height: Math.max(width < 768 ? 400 : 560, height),
+    }),
+    [width, height],
+  );
 
-  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 200);
@@ -300,13 +362,12 @@ const ArchitectureNavigator: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [expandedArchitectures, setExpandedArchitectures] = useState<Set<string>>(new Set());
   const [expandedComponents, setExpandedComponents] = useState<Set<string>>(new Set());
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<Record<NodeType, boolean>>({
     architecture: true,
     component: true,
     threat: true,
     mitigation: true,
   });
-
   const [tooltip, setTooltip] = useState<{
     x: number;
     y: number;
@@ -314,147 +375,57 @@ const ArchitectureNavigator: React.FC = () => {
     type: string;
   } | null>(null);
 
-  // ── All architectures ────────────────────────────────────────────────
-  const allArchitectures = useMemo(() => Object.values(architecturesData), []);
+  const allArchitectures = useMemo(
+    () =>
+      Object.values(architecturesData).sort(
+        (a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0),
+      ),
+    [],
+  );
 
-  // ── Build graph data based on expanded state ─────────────────────────
-  const { nodes, links } = useMemo(() => {
-    const nodeMap = new Map<string, GraphNode>();
-    const linkArray: GraphLink[] = [];
-
-    const addNode = (
-      id: string,
-      name: string,
-      type: GraphNode["type"],
-      description: string,
-      size: number,
-      extra?: Partial<GraphNode>,
-    ) => {
-      if (!nodeMap.has(id)) {
-        nodeMap.set(id, {
-          id,
-          name,
-          type,
-          description,
-          color: NODE_COLORS[type],
-          size,
-          ...extra,
-        });
-      }
-    };
-
-    // Always add architecture nodes
-    allArchitectures.forEach((arch: Architecture) => {
-      addNode(arch.id, arch.name, "architecture", arch.description, 45, {
-        riskScore: arch.riskScore,
-        tags: arch.tags,
-      });
-    });
-
-    // Add children for expanded architectures
-    expandedArchitectures.forEach((archId) => {
-      const arch = architecturesData[archId];
-      if (!arch) return;
-
-      (arch.keyComponents || []).forEach((compId) => {
-        const comp = getComponentDataById(compId);
-        if (!comp) return;
-        addNode(compId, comp.title, "component", comp.description || "", 30, {
-          parentArchId: archId,
-          tags: (comp as ComponentNode).threatCategories,
-        });
-        linkArray.push({ source: archId, target: compId, type: "arch-comp" });
-
-        // Add threats/mitigations for expanded components
-        if (expandedComponents.has(compId)) {
-          (arch.threatIds || []).forEach((threatId) => {
-            const threat = threatsData[threatId];
-            if (!threat) return;
-            const normalizedCompId = compId.replace(/\./g, "-");
-            const mainCompId = compId.includes(".") ? compId.split(".")[0] : compId;
-            const affects = threat.componentIds?.some(
-              (tCompId) =>
-                tCompId === compId ||
-                tCompId === normalizedCompId ||
-                tCompId === mainCompId ||
-                tCompId.replace(/-/g, ".") === compId,
-            );
-            if (!affects) return;
-
-            addNode(threatId, threat.name, "threat", threat.description, 20, {
-              riskScore: threat.riskScore,
-              tags: threat.tags,
-              parentCompId: compId,
-              parentArchId: archId,
-            });
-            linkArray.push({ source: compId, target: threatId, type: "comp-threat" });
-
-            (arch.mitigationIds || []).forEach((mitId) => {
-              const mit = mitigationsData[mitId];
-              if (mit && mit.threatIds?.includes(threatId)) {
-                addNode(mitId, mit.name, "mitigation", mit.description, 16, {
-                  tags: mit.tags,
-                  parentCompId: compId,
-                  parentArchId: archId,
-                });
-                linkArray.push({ source: threatId, target: mitId, type: "threat-mitigation" });
-              }
-            });
-          });
-        }
-      });
-    });
-
-    return { nodes: Array.from(nodeMap.values()), links: linkArray };
-  }, [allArchitectures, expandedArchitectures, expandedComponents]);
+  const { nodes, links } = useMemo(
+    () => buildGraph(allArchitectures, expandedArchitectures, expandedComponents),
+    [allArchitectures, expandedArchitectures, expandedComponents],
+  );
 
   // ── Filter by search & type toggles ──────────────────────────────────
   const filteredData = useMemo(() => {
+    const s = debouncedSearch.toLowerCase();
     const filteredNodes = nodes.filter((node) => {
       if (!filters[node.type]) return false;
-      if (debouncedSearch) {
-        const s = debouncedSearch.toLowerCase();
-        return (
-          node.name.toLowerCase().includes(s) ||
-          node.description.toLowerCase().includes(s) ||
-          node.tags?.some((tag) => tag.toLowerCase().includes(s))
-        );
-      }
-      return true;
+      if (!s) return true;
+      return (
+        node.name.toLowerCase().includes(s) ||
+        node.description.toLowerCase().includes(s) ||
+        (node.tags ?? []).some((tag) => tag.toLowerCase().includes(s))
+      );
     });
-    const nodeIds = new Set(filteredNodes.map((n) => n.id));
-    const filteredLinks = links.filter((link) => {
-      const sourceId = typeof link.source === "string" ? link.source : link.source.id;
-      const targetId = typeof link.target === "string" ? link.target : link.target.id;
-      return nodeIds.has(sourceId) && nodeIds.has(targetId);
-    });
-    return { nodes: filteredNodes, links: filteredLinks };
+    const ids = new Set(filteredNodes.map((n) => n.id));
+    return {
+      nodes: filteredNodes,
+      links: links.filter((l) => ids.has(l.source) && ids.has(l.target)),
+    };
   }, [nodes, links, filters, debouncedSearch]);
 
-  // ── Connected count for selected node ────────────────────────────────
   const connectedCount = useMemo(() => {
     if (!selectedNode) return 0;
     const ids = new Set<string>();
-    filteredData.links.forEach((link) => {
-      const src = typeof link.source === "string" ? link.source : link.source.id;
-      const tgt = typeof link.target === "string" ? link.target : link.target.id;
-      if (src === selectedNode.id) ids.add(tgt);
-      if (tgt === selectedNode.id) ids.add(src);
+    filteredData.links.forEach((l) => {
+      if (l.source === selectedNode.id) ids.add(l.target);
+      if (l.target === selectedNode.id) ids.add(l.source);
     });
     return ids.size;
   }, [selectedNode, filteredData.links]);
 
-  // ── Toggle expand/collapse ───────────────────────────────────────────
+  // ── Expand / collapse ────────────────────────────────────────────────
   const toggleArchitecture = useCallback((archId: string) => {
     setExpandedArchitectures((prev) => {
       const next = new Set(prev);
       if (next.has(archId)) {
         next.delete(archId);
-        // Also collapse any expanded components under this architecture
         setExpandedComponents((prevComps) => {
           const nextComps = new Set(prevComps);
-          const arch = architecturesData[archId];
-          if (arch) arch.keyComponents.forEach((c) => nextComps.delete(c));
+          architecturesData[archId]?.keyComponents.forEach((c) => nextComps.delete(c));
           return nextComps;
         });
       } else {
@@ -473,153 +444,45 @@ const ArchitectureNavigator: React.FC = () => {
     });
   }, []);
 
-  // ── Resize ───────────────────────────────────────────────────────────
-  useEffect(() => {
-    const update = () => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        const isMobile = window.innerWidth < 768;
-        setDimensions({
-          width: rect.width,
-          height: isMobile ? Math.max(400, rect.height) : Math.max(600, rect.height),
-        });
-      }
-    };
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
+  const activate = useCallback(
+    (d: GraphNode) => {
+      setSelectedNode(d);
+      if (d.type === "architecture") toggleArchitecture(d.id);
+      else if (d.type === "component") toggleComponent(d.id);
+    },
+    [toggleArchitecture, toggleComponent],
+  );
+
+  const collapseAll = useCallback(() => {
+    setExpandedArchitectures(new Set());
+    setExpandedComponents(new Set());
+    setSelectedNode(null);
   }, []);
 
-  // ── D3 Visualization ────────────────────────────────────────────────
+  /** Keep only the selected node's branch open. */
+  const focusArchId =
+    selectedNode?.type === "architecture" ? selectedNode.id : selectedNode?.parentArchId;
+  const focusCompId =
+    selectedNode?.type === "component" ? selectedNode.id : selectedNode?.parentCompId;
+  const canCollapseOthers =
+    !!focusArchId &&
+    (Array.from(expandedArchitectures).some((a) => a !== focusArchId) ||
+      Array.from(expandedComponents).some((c) => c !== focusCompId));
+  const collapseOthers = useCallback(() => {
+    if (!focusArchId) return;
+    setExpandedArchitectures(new Set([focusArchId]));
+    setExpandedComponents(focusCompId ? new Set([focusCompId]) : new Set());
+  }, [focusArchId, focusCompId]);
+
+  // ── D3: one-time scaffold (zoom, layers, markers) ────────────────────
   useEffect(() => {
-    if (!svgRef.current || !dimensions.width || !filteredData.nodes.length) return;
-
+    if (!svgRef.current) return;
     const svg = d3.select(svgRef.current);
-    svg.selectAll("*").remove();
-
-    const g = svg.append("g");
-    const isMobile = dimensions.width < 768;
-    const scale = isMobile ? 0.65 : 1;
-
-    // Zoom
-    const zoom = d3
-      .zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.15, 4])
-      .on("zoom", (event) => g.attr("transform", event.transform));
-    zoomRef.current = zoom;
-    svg.call(zoom);
-
-    // Click empty space to deselect
-    svg.on("click", () => {
-      setSelectedNode(null);
-      g.selectAll(".node-group").transition().duration(300).style("opacity", 1);
-      g.selectAll(".link-line").transition().duration(300).style("opacity", 0.5);
-    });
-
-    const cx = dimensions.width / 2;
-    const cy = dimensions.height / 2;
-
-    // ── Compute positions ────────────────────────────────────────────
-    const archNodes = filteredData.nodes.filter((n) => n.type === "architecture");
-    const archCount = archNodes.length;
-    const archRadius = Math.min(cx, cy) * 0.85;
-
-    // Architecture nodes in a circle
-    const archPositions = new Map<string, { x: number; y: number }>();
-    archNodes.forEach((arch, i) => {
-      const angle = (2 * Math.PI * i) / archCount - Math.PI / 2;
-      const x = cx + archRadius * Math.cos(angle);
-      const y = cy + archRadius * Math.sin(angle);
-      arch.x = x;
-      arch.y = y;
-      arch.fx = x;
-      arch.fy = y;
-      archPositions.set(arch.id, { x, y });
-    });
-
-    // Components fan out around their parent architecture
-    const compNodes = filteredData.nodes.filter((n) => n.type === "component");
-    compNodes.forEach((comp) => {
-      const parentPos = archPositions.get(comp.parentArchId || "");
-      if (!parentPos) return;
-      const siblings = compNodes.filter((c) => c.parentArchId === comp.parentArchId);
-      const idx = siblings.indexOf(comp);
-      const count = siblings.length;
-      // Fan outward from center, relative to parent
-      const baseAngle = Math.atan2(parentPos.y - cy, parentPos.x - cx);
-      const spread = Math.min(Math.PI * 1.2, count * 0.45);
-      const startAngle = baseAngle - spread / 2;
-      const angleStep = count > 1 ? spread / (count - 1) : 0;
-      const dist = 240 * scale;
-      const angle = startAngle + angleStep * idx;
-      comp.x = parentPos.x + dist * Math.cos(angle);
-      comp.y = parentPos.y + dist * Math.sin(angle);
-      comp.fx = comp.x;
-      comp.fy = comp.y;
-    });
-
-    // Threats and mitigations fan out around their parent component
-    const threatNodes = filteredData.nodes.filter((n) => n.type === "threat");
-    const mitNodes = filteredData.nodes.filter((n) => n.type === "mitigation");
-
-    threatNodes.forEach((threat) => {
-      const parentComp = compNodes.find((c) => c.id === threat.parentCompId);
-      if (!parentComp || parentComp.x == null || parentComp.y == null) return;
-      const parentArch = archPositions.get(threat.parentArchId || "");
-      if (!parentArch) return;
-      const siblings = threatNodes.filter((t) => t.parentCompId === threat.parentCompId);
-      const idx = siblings.indexOf(threat);
-      const count = siblings.length;
-      const baseAngle = Math.atan2(parentComp.y - parentArch.y, parentComp.x - parentArch.x);
-      const spread = Math.min(Math.PI * 1.0, count * 0.5);
-      const startAngle = baseAngle - spread / 2;
-      const angleStep = count > 1 ? spread / (count - 1) : 0;
-      const dist = 160 * scale;
-      const angle = startAngle + angleStep * idx;
-      threat.x = parentComp.x + dist * Math.cos(angle);
-      threat.y = parentComp.y + dist * Math.sin(angle);
-      threat.fx = threat.x;
-      threat.fy = threat.y;
-    });
-
-    mitNodes.forEach((mit) => {
-      const parentThreat = threatNodes.find((t) =>
-        filteredData.links.some((l) => {
-          const src = typeof l.source === "string" ? l.source : l.source.id;
-          const tgt = typeof l.target === "string" ? l.target : l.target.id;
-          return src === t.id && tgt === mit.id;
-        }),
-      );
-      if (!parentThreat || parentThreat.x == null || parentThreat.y == null) return;
-      const parentComp = compNodes.find((c) => c.id === parentThreat.parentCompId);
-      if (!parentComp || parentComp.x == null) return;
-      const siblingMits = mitNodes.filter((m) =>
-        filteredData.links.some((l) => {
-          const src = typeof l.source === "string" ? l.source : l.source.id;
-          const tgt = typeof l.target === "string" ? l.target : l.target.id;
-          return src === parentThreat.id && tgt === m.id;
-        }),
-      );
-      const idx = siblingMits.indexOf(mit);
-      const count = siblingMits.length;
-      const baseAngle = Math.atan2(parentThreat.y - parentComp.y, parentThreat.x - parentComp.x);
-      const spread = Math.min(Math.PI * 0.8, count * 0.5);
-      const startAngle = baseAngle - spread / 2;
-      const angleStep = count > 1 ? spread / (count - 1) : 0;
-      const dist = 110 * scale;
-      const angle = startAngle + angleStep * idx;
-      mit.x = parentThreat.x + dist * Math.cos(angle);
-      mit.y = parentThreat.y + dist * Math.sin(angle);
-      mit.fx = mit.x;
-      mit.fy = mit.y;
-    });
-
-    // ── Arrow markers ────────────────────────────────────────────────
     const defs = svg.append("defs");
     (["arch-comp", "comp-threat", "threat-mitigation"] as const).forEach((type) => {
       defs
         .append("marker")
-        .attr("id", `arrow-${type}`)
+        .attr("id", `nav-arrow-${type}`)
         .attr("viewBox", "0 -4 8 8")
         .attr("refX", 8)
         .attr("refY", 0)
@@ -627,298 +490,350 @@ const ArchitectureNavigator: React.FC = () => {
         .attr("markerHeight", 5)
         .attr("orient", "auto")
         .append("path")
-        .attr("d", "M0,-4L8,0L0,4")
-        .attr("fill", LINK_COLORS[type]);
+        .attr("class", `nav-arrow-${type}`)
+        .attr("d", "M0,-4L8,0L0,4");
     });
-
-    // ── Links ────────────────────────────────────────────────────────
-    g.append("g")
-      .selectAll(".link-line")
-      .data(filteredData.links)
-      .join("line")
-      .attr("class", "link-line")
-      .attr("stroke", (d) => LINK_COLORS[d.type] || "#99999940")
-      .attr("stroke-width", (d) => (d.type === "arch-comp" ? 2 : 1.5))
-      .attr("stroke-opacity", 0.5)
-      .attr("marker-end", (d) => `url(#arrow-${d.type})`)
-      .attr("x1", (d) => {
-        const s =
-          typeof d.source === "string"
-            ? filteredData.nodes.find((n) => n.id === d.source)
-            : d.source;
-        return s?.x ?? 0;
-      })
-      .attr("y1", (d) => {
-        const s =
-          typeof d.source === "string"
-            ? filteredData.nodes.find((n) => n.id === d.source)
-            : d.source;
-        return s?.y ?? 0;
-      })
-      .attr("x2", (d) => {
-        const t =
-          typeof d.target === "string"
-            ? filteredData.nodes.find((n) => n.id === d.target)
-            : d.target;
-        return t?.x ?? 0;
-      })
-      .attr("y2", (d) => {
-        const t =
-          typeof d.target === "string"
-            ? filteredData.nodes.find((n) => n.id === d.target)
-            : d.target;
-        return t?.y ?? 0;
-      });
-
-    // ── Nodes ────────────────────────────────────────────────────────
-    const nodeGroups = g
-      .append("g")
-      .selectAll(".node-group")
-      .data(filteredData.nodes)
-      .join("g")
-      .attr("class", "node-group")
-      .attr("transform", (d) => `translate(${d.x ?? 0},${d.y ?? 0})`)
-      .style("cursor", "pointer");
-
-    // Glow ring for architectures
-    nodeGroups
-      .filter((d) => d.type === "architecture")
-      .append("circle")
-      .attr("r", (d) => (d.size + 6) * scale)
-      .attr("fill", "none")
-      .attr("stroke", (d) => d.color)
-      .attr("stroke-width", 2)
-      .attr("stroke-opacity", 0.2);
-
-    // Expanded indicator ring
-    nodeGroups
-      .filter((d) => d.type === "architecture" && expandedArchitectures.has(d.id))
-      .append("circle")
-      .attr("r", (d) => (d.size + 10) * scale)
-      .attr("fill", "none")
-      .attr("stroke", (d) => d.color)
-      .attr("stroke-width", 1.5)
-      .attr("stroke-dasharray", "4,3")
-      .attr("stroke-opacity", 0.35);
-
-    // Expanded indicator for components
-    nodeGroups
-      .filter((d) => d.type === "component" && expandedComponents.has(d.id))
-      .append("circle")
-      .attr("r", (d) => (d.size + 6) * scale)
-      .attr("fill", "none")
-      .attr("stroke", (d) => d.color)
-      .attr("stroke-width", 1.5)
-      .attr("stroke-dasharray", "3,2")
-      .attr("stroke-opacity", 0.35);
-
-    // Main circle
-    nodeGroups
-      .append("circle")
-      .attr("r", (d) => d.size * scale)
-      .attr("fill", (d) => d.color)
-      .attr("stroke", "hsl(var(--background))")
-      .attr("stroke-width", (d) => (d.type === "architecture" ? 3 : 2))
-      .attr("opacity", (d) => (d.type === "architecture" ? 1 : 0.9));
-
-    // Risk ring for threats
-    nodeGroups
-      .filter((d) => d.type === "threat" && d.riskScore != null && d.riskScore > 0)
-      .append("circle")
-      .attr("r", (d) => (d.size + 4) * scale)
-      .attr("fill", "none")
-      .attr("stroke", (d) => {
-        const r = d.riskScore || 0;
-        return r >= 8 ? "#dc2626" : r >= 6 ? "#ea580c" : "#eab308";
-      })
-      .attr("stroke-width", 2)
-      .attr("stroke-dasharray", "3,3");
-
-    // Type letter inside node
-    nodeGroups
-      .append("text")
-      .attr("text-anchor", "middle")
-      .attr("dy", (d) => (d.type === "architecture" ? 1 : 1))
-      .attr("font-size", (d) => {
-        const sizes: Record<string, number> = {
-          architecture: 16,
-          component: 11,
-          threat: 9,
-          mitigation: 8,
-        };
-        return `${(sizes[d.type] || 10) * scale}px`;
-      })
-      .attr("font-weight", "700")
-      .attr("fill", "#fff")
-      .attr("pointer-events", "none")
-      .text((d) => {
-        if (d.type === "architecture") return d.name.split(" ")[0].charAt(0).toUpperCase();
-        return d.type.charAt(0).toUpperCase();
-      });
-
-    // Label below node
-    nodeGroups
-      .append("text")
-      .attr("text-anchor", "middle")
-      .attr("dy", (d) => (d.size + 14) * scale)
-      .attr("font-size", (d) => {
-        const sizes: Record<string, number> = {
-          architecture: 12,
-          component: 10,
-          threat: 9,
-          mitigation: 8,
-        };
-        return `${sizes[d.type] * scale}px`;
-      })
-      .attr("font-weight", (d) => (d.type === "architecture" ? "600" : "400"))
-      .attr("fill", "hsl(var(--foreground))")
-      .attr("pointer-events", "none")
-      .text((d) => {
-        const maxLen = d.type === "architecture" ? 22 : d.type === "component" ? 18 : 14;
-        return truncate(d.name, isMobile ? maxLen - 5 : maxLen);
-      });
-
-    // Expand hint for architectures (small + icon)
-    nodeGroups
-      .filter((d) => d.type === "architecture")
-      .append("text")
-      .attr("text-anchor", "middle")
-      .attr("dy", (d) => (d.size + 26) * scale)
-      .attr("font-size", `${9 * scale}px`)
-      .attr("fill", "hsl(var(--muted-foreground))")
-      .attr("pointer-events", "none")
-      .text((d) => (expandedArchitectures.has(d.id) ? "click to collapse" : "click to explore"));
-
-    // Expand hint for components
-    nodeGroups
-      .filter((d) => d.type === "component" && expandedArchitectures.has(d.parentArchId || ""))
-      .append("text")
-      .attr("text-anchor", "middle")
-      .attr("dy", (d) => (d.size + 22) * scale)
-      .attr("font-size", `${8 * scale}px`)
-      .attr("fill", "hsl(var(--muted-foreground))")
-      .attr("pointer-events", "none")
-      .text((d) => (expandedComponents.has(d.id) ? "collapse" : "expand threats"));
-
-    // ── Interactions ─────────────────────────────────────────────────
-
-    nodeGroups.on("click", (event, d) => {
-      event.stopPropagation();
-      setSelectedNode(d);
-
-      if (d.type === "architecture") {
-        toggleArchitecture(d.id);
-      } else if (d.type === "component") {
-        toggleComponent(d.id);
-      }
-    });
-
-    nodeGroups
-      .on("mouseover", (event, d) => {
-        setTooltip({ x: event.clientX, y: event.clientY, name: d.name, type: d.type });
-
-        const connected = new Set<string>();
-        filteredData.links.forEach((l) => {
-          const src = typeof l.source === "string" ? l.source : l.source.id;
-          const tgt = typeof l.target === "string" ? l.target : l.target.id;
-          if (src === d.id) connected.add(tgt);
-          if (tgt === d.id) connected.add(src);
-        });
-
-        g.selectAll<SVGGElement, GraphNode>(".node-group")
-          .transition()
-          .duration(200)
-          .style("opacity", (n) => (n.id === d.id || connected.has(n.id) ? 1 : 0.25));
-        g.selectAll<SVGLineElement, GraphLink>(".link-line")
-          .transition()
-          .duration(200)
-          .style("opacity", (l) => {
-            const src = typeof l.source === "string" ? l.source : l.source.id;
-            const tgt = typeof l.target === "string" ? l.target : l.target.id;
-            return src === d.id || tgt === d.id ? 0.8 : 0.08;
-          });
-      })
-      .on("mousemove", (event) => {
-        setTooltip((prev) => (prev ? { ...prev, x: event.clientX, y: event.clientY } : null));
-      })
-      .on("mouseout", () => {
-        setTooltip(null);
-        g.selectAll(".node-group").transition().duration(300).style("opacity", 1);
-        g.selectAll(".link-line").transition().duration(300).style("opacity", 0.5);
-      });
-
-    // ── Fit to view ──────────────────────────────────────────────────
-    requestAnimationFrame(() => {
-      const bounds = (g.node() as SVGGElement)?.getBBox();
-      if (bounds && bounds.width > 0 && bounds.height > 0) {
-        const fitScale =
-          Math.min(
-            dimensions.width / (bounds.width + 80),
-            dimensions.height / (bounds.height + 80),
-          ) * 0.9;
-        const tx = dimensions.width / 2 - fitScale * (bounds.x + bounds.width / 2);
-        const ty = dimensions.height / 2 - fitScale * (bounds.y + bounds.height / 2);
-        svg
-          .transition()
-          .duration(600)
-          .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(fitScale));
-      }
-    });
-
+    const g = svg.append("g").attr("class", "nav-viewport");
+    g.append("g").attr("class", "nav-links");
+    g.append("g").attr("class", "nav-nodes");
+    const zoom = d3
+      .zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.15, 4])
+      .on("zoom", (event) => g.attr("transform", event.transform.toString()));
+    zoomRef.current = zoom;
+    svg.call(zoom);
     return () => {
       svg.on(".zoom", null);
+      svg.selectAll("*").remove();
+      posRef.current = new Map();
+      fitKeyRef.current = "";
     };
+  }, []);
+
+  // ── D3: incremental update ───────────────────────────────────────────
+  useEffect(() => {
+    const svgEl = svgRef.current;
+    const zoom = zoomRef.current;
+    if (!svgEl || !zoom) return;
+    const svg = d3.select(svgEl);
+    const g = svg.select<SVGGElement>("g.nav-viewport");
+    const ms = (v: number) => (reduced ? 0 : v);
+    const isMobile = dimensions.width < 768;
+    const scale = isMobile ? 0.65 : 1;
+    const { nodes: data, links: linkData } = filteredData;
+
+    const prevPos = posRef.current;
+    const pos = layout(data, linkData, dimensions.width, dimensions.height);
+    const at = (id: string | undefined): Pos | undefined => (id ? pos.get(id) : undefined);
+    /** Where a node grows from / retracts to. */
+    const originOf = (d: GraphNode): Pos =>
+      at(d.originId) ?? prevPos.get(d.originId ?? "") ?? at(d.id) ?? { x: 0, y: 0 };
+
+    // Markers follow the theme.
+    (["arch-comp", "comp-threat", "threat-mitigation"] as const).forEach((type) =>
+      svg.select(`path.nav-arrow-${type}`).attr("fill", linkColor(type, theme)),
+    );
+
+    svg.on("click", () => {
+      setSelectedNode(null);
+      g.selectAll<SVGGElement, GraphNode>("g.node-group").style("opacity", null);
+      g.selectAll<SVGLineElement, GraphLink>("line.link-line").style("opacity", null);
+    });
+
+    // Links
+    g.select("g.nav-links")
+      .selectAll<SVGLineElement, GraphLink>("line.link-line")
+      .data(linkData, (l) => l.id)
+      .join(
+        (enter) =>
+          enter
+            .append("line")
+            .attr("class", "link-line")
+            .attr("x1", (l) => at(l.source)?.x ?? 0)
+            .attr("y1", (l) => at(l.source)?.y ?? 0)
+            .attr("x2", (l) => at(l.source)?.x ?? 0)
+            .attr("y2", (l) => at(l.source)?.y ?? 0)
+            .attr("stroke-opacity", 0),
+        (update) => update,
+        (exit) => {
+          const t = exit.transition().duration(ms(250));
+          t.attr("stroke-opacity", 0)
+            .attr("x2", function () {
+              return Number(d3.select(this).attr("x1"));
+            })
+            .attr("y2", function () {
+              return Number(d3.select(this).attr("y1"));
+            })
+            .remove();
+          return exit;
+        },
+      )
+      .attr("stroke", (l) => linkColor(l.type, theme))
+      .attr("stroke-width", (l) => (l.type === "arch-comp" ? 2 : 1.5))
+      .attr("marker-end", (l) => `url(#nav-arrow-${l.type})`)
+      .transition()
+      .duration(ms(450))
+      .ease(d3.easeCubicOut)
+      .attr("stroke-opacity", 0.5)
+      .attr("x1", (l) => at(l.source)?.x ?? 0)
+      .attr("y1", (l) => at(l.source)?.y ?? 0)
+      .attr("x2", (l) => at(l.target)?.x ?? 0)
+      .attr("y2", (l) => at(l.target)?.y ?? 0);
+
+    // Nodes
+    const connectedTo = (id: string) => {
+      const set = new Set<string>([id]);
+      linkData.forEach((l) => {
+        if (l.source === id) set.add(l.target);
+        if (l.target === id) set.add(l.source);
+      });
+      return set;
+    };
+    /** Instant style opacity (null restores the animated attribute opacity). */
+    const highlight = (id: string | null) => {
+      const keep = id ? connectedTo(id) : null;
+      g.selectAll<SVGGElement, GraphNode>("g.node-group").style("opacity", (n) =>
+        !keep || keep.has(n.id) ? null : 0.25,
+      );
+      g.selectAll<SVGLineElement, GraphLink>("line.link-line").style("opacity", (l) =>
+        !id ? null : l.source === id || l.target === id ? 1 : 0.15,
+      );
+    };
+
+    const merged = g
+      .select("g.nav-nodes")
+      .selectAll<SVGGElement, GraphNode>("g.node-group")
+      .data(data, (d) => d.id)
+      .join(
+        (enter) => {
+          const ge = enter
+            .append("g")
+            .attr("class", "node-group")
+            .attr("tabindex", 0)
+            .attr("role", "button")
+            .style("cursor", "pointer")
+            .style("outline", "none")
+            .attr("opacity", 0)
+            .attr("transform", (d) => {
+              const o = originOf(d);
+              return `translate(${o.x},${o.y}) scale(0.6)`;
+            });
+          ge.append("circle").attr("class", "glow-ring").attr("fill", "none");
+          ge.append("circle").attr("class", "expanded-ring").attr("fill", "none");
+          ge.append("circle").attr("class", "focus-ring").attr("fill", "none").attr("opacity", 0);
+          ge.append("circle").attr("class", "main");
+          ge.append("circle").attr("class", "risk-ring").attr("fill", "none");
+          ge.append("text").attr("class", "letter").attr("text-anchor", "middle").attr("dy", 1);
+          ge.append("text").attr("class", "label").attr("text-anchor", "middle");
+          ge.append("text").attr("class", "hint").attr("text-anchor", "middle");
+          return ge;
+        },
+        (update) => update,
+        (exit) => {
+          exit
+            .attr("tabindex", -1)
+            .transition()
+            .duration(ms(250))
+            .attr("opacity", 0)
+            .attr("transform", (d) => {
+              const o = at(d.originId) ?? prevPos.get(d.originId ?? "") ?? { x: 0, y: 0 };
+              return `translate(${o.x},${o.y}) scale(0.6)`;
+            })
+            .remove();
+          return exit;
+        },
+      );
+
+    merged.attr("aria-label", (d) => {
+      const expandable = d.type === "architecture" || d.type === "component";
+      const open =
+        (d.type === "architecture" && expandedArchitectures.has(d.id)) ||
+        (d.type === "component" && expandedComponents.has(d.id));
+      return `${d.type}: ${d.name}${expandable ? (open ? " (expanded)" : " (collapsed)") : ""}`;
+    });
+    merged.attr("aria-expanded", (d) =>
+      d.type === "architecture"
+        ? String(expandedArchitectures.has(d.id))
+        : d.type === "component"
+          ? String(expandedComponents.has(d.id))
+          : null,
+    );
+
+    merged
+      .select<SVGCircleElement>("circle.glow-ring")
+      .attr("r", (d) => (d.size + 6) * scale)
+      .attr("stroke", (d) => nodeColor(d, theme))
+      .attr("stroke-width", 2)
+      .attr("stroke-opacity", (d) => (d.type === "architecture" ? 0.2 : 0));
+    merged
+      .select<SVGCircleElement>("circle.expanded-ring")
+      .attr("r", (d) => (d.size + (d.type === "architecture" ? 10 : 6)) * scale)
+      .attr("stroke", (d) => nodeColor(d, theme))
+      .attr("stroke-width", 1.5)
+      .attr("stroke-dasharray", (d) => (d.type === "architecture" ? "4,3" : "3,2"))
+      .attr("stroke-opacity", (d) =>
+        (d.type === "architecture" && expandedArchitectures.has(d.id)) ||
+        (d.type === "component" && expandedComponents.has(d.id))
+          ? 0.45
+          : 0,
+      );
+    merged
+      .select<SVGCircleElement>("circle.focus-ring")
+      .attr("r", (d) => (d.size + 4) * scale)
+      .attr("stroke", theme.ring)
+      .attr("stroke-width", 2.5);
+    merged
+      .select<SVGCircleElement>("circle.main")
+      .attr("r", (d) => d.size * scale)
+      .attr("stroke", theme.background)
+      .attr("stroke-width", (d) => (d.type === "architecture" ? 3 : 2))
+      .attr("fill", (d) => nodeColor(d, theme));
+    merged
+      .select<SVGCircleElement>("circle.risk-ring")
+      .attr("r", (d) => (d.size + 4) * scale)
+      .attr("stroke", (d) => theme.severity[riskBand(d.riskScore)])
+      .attr("stroke-width", 2)
+      .attr("stroke-dasharray", "3,3")
+      .attr("stroke-opacity", (d) => (d.type === "threat" && (d.riskScore ?? 0) > 0 ? 1 : 0));
+    merged
+      .select<SVGTextElement>("text.letter")
+      .attr("font-size", (d) => `${LETTER_SIZE[d.type] * scale}px`)
+      .attr("font-weight", 700)
+      .attr("fill", (d) => (d.type === "architecture" ? theme.primaryForeground : DARK_TEXT))
+      .attr("pointer-events", "none")
+      .text((d) => TYPE_LETTER[d.type]);
+    merged
+      .select<SVGTextElement>("text.label")
+      .attr("dy", (d) => (d.size + 14) * scale)
+      .attr("font-size", (d) => `${LABEL_SIZE[d.type] * scale}px`)
+      .attr("font-weight", (d) => (d.type === "architecture" ? 600 : 400))
+      .attr("fill", theme.foreground)
+      .attr("pointer-events", "none")
+      .text((d) => {
+        const max = d.type === "architecture" ? 22 : d.type === "component" ? 18 : 14;
+        return truncate(d.name, isMobile ? max - 5 : max);
+      });
+    merged
+      .select<SVGTextElement>("text.hint")
+      .attr("dy", (d) => (d.size + (d.type === "architecture" ? 26 : 22)) * scale)
+      .attr("font-size", (d) => `${(d.type === "architecture" ? 9 : 8) * scale}px`)
+      .attr("fill", theme.mutedForeground)
+      .attr("pointer-events", "none")
+      .text((d) => {
+        if (d.type === "architecture")
+          return expandedArchitectures.has(d.id) ? "click to collapse" : "click to explore";
+        if (d.type === "component")
+          return expandedComponents.has(d.id) ? "collapse" : "expand threats";
+        return "";
+      });
+
+    merged
+      .on("click", (event: MouseEvent, d) => {
+        event.stopPropagation();
+        activate(d);
+      })
+      .on("keydown", (event: KeyboardEvent, d) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          activate(d);
+        }
+      })
+      .on("mouseover", (event: MouseEvent, d) => {
+        setTooltip({ x: event.clientX, y: event.clientY, name: d.name, type: d.type });
+        highlight(d.id);
+      })
+      .on("mousemove", (event: MouseEvent) =>
+        setTooltip((prev) => (prev ? { ...prev, x: event.clientX, y: event.clientY } : null)),
+      )
+      .on("mouseout", () => {
+        setTooltip(null);
+        highlight(null);
+      })
+      .on("focus", function (_event: FocusEvent, d) {
+        d3.select(this).select("circle.focus-ring").attr("opacity", 1);
+        const r = (this as SVGGElement).getBoundingClientRect();
+        setTooltip({ x: r.left + r.width / 2, y: r.top, name: d.name, type: d.type });
+        highlight(d.id);
+      })
+      .on("blur", function () {
+        d3.select(this).select("circle.focus-ring").attr("opacity", 0);
+        setTooltip(null);
+        highlight(null);
+      });
+
+    merged
+      .transition()
+      .duration(ms(450))
+      .ease(d3.easeCubicOut)
+      .attr("opacity", 1)
+      .attr("transform", (d) => {
+        const p = pos.get(d.id) ?? { x: 0, y: 0 };
+        return `translate(${p.x},${p.y}) scale(1)`;
+      });
+
+    posRef.current = pos;
+
+    // Fit to view when the set of nodes (or the viewport) changes — not on theme changes.
+    const fit = () => {
+      let x0 = Infinity;
+      let y0 = Infinity;
+      let x1 = -Infinity;
+      let y1 = -Infinity;
+      data.forEach((d) => {
+        const p = pos.get(d.id);
+        if (!p) return;
+        const r = (d.size + 30) * scale;
+        x0 = Math.min(x0, p.x - r);
+        y0 = Math.min(y0, p.y - r);
+        x1 = Math.max(x1, p.x + r);
+        y1 = Math.max(y1, p.y + r);
+      });
+      if (!Number.isFinite(x0)) return;
+      const bw = x1 - x0;
+      const bh = y1 - y0;
+      const k = Math.min(dimensions.width / (bw + 40), dimensions.height / (bh + 40), 1.6) * 0.95;
+      const tx = dimensions.width / 2 - k * (x0 + bw / 2);
+      const ty = dimensions.height / 2 - k * (y0 + bh / 2);
+      svg
+        .transition("fit")
+        .duration(ms(600))
+        .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(k));
+    };
+    fitRef.current = fit;
+    const fitKey = `${dimensions.width}x${dimensions.height}|${data.map((d) => d.id).join(",")}`;
+    if (fitKey !== fitKeyRef.current && data.length) {
+      fitKeyRef.current = fitKey;
+      fit();
+    }
   }, [
     filteredData,
     dimensions,
     expandedArchitectures,
     expandedComponents,
-    toggleArchitecture,
-    toggleComponent,
+    theme,
+    reduced,
+    activate,
   ]);
 
   // ── Zoom controls ────────────────────────────────────────────────────
-  const zoomIn = useCallback(() => {
-    if (svgRef.current && zoomRef.current)
-      d3.select(svgRef.current).transition().duration(300).call(zoomRef.current.scaleBy, 1.5);
-  }, []);
-
-  const zoomOut = useCallback(() => {
-    if (svgRef.current && zoomRef.current)
-      d3.select(svgRef.current)
-        .transition()
-        .duration(300)
-        .call(zoomRef.current.scaleBy, 1 / 1.5);
-  }, []);
-
+  const zoomBy = useCallback(
+    (factor: number) => {
+      if (svgRef.current && zoomRef.current)
+        d3.select(svgRef.current)
+          .transition()
+          .duration(reduced ? 0 : 300)
+          .call(zoomRef.current.scaleBy, factor);
+    },
+    [reduced],
+  );
   const resetZoom = useCallback(() => {
     if (svgRef.current && zoomRef.current)
       d3.select(svgRef.current)
         .transition()
-        .duration(300)
+        .duration(reduced ? 0 : 300)
         .call(zoomRef.current.transform, d3.zoomIdentity);
-  }, []);
-
-  const centerView = useCallback(() => {
-    if (svgRef.current && zoomRef.current) {
-      const svg = d3.select(svgRef.current);
-      const gNode = svg.select("g");
-      const bounds = (gNode.node() as SVGGElement)?.getBBox();
-      if (bounds && bounds.width > 0 && bounds.height > 0) {
-        const fitScale =
-          Math.min(
-            dimensions.width / (bounds.width + 80),
-            dimensions.height / (bounds.height + 80),
-          ) * 0.9;
-        const tx = dimensions.width / 2 - fitScale * (bounds.x + bounds.width / 2);
-        const ty = dimensions.height / 2 - fitScale * (bounds.y + bounds.height / 2);
-        svg
-          .transition()
-          .duration(750)
-          .call(zoomRef.current.transform, d3.zoomIdentity.translate(tx, ty).scale(fitScale));
-      }
-    }
-  }, [dimensions]);
+  }, [reduced]);
+  const centerView = useCallback(() => fitRef.current(), []);
 
   const toggleFullscreen = useCallback(async () => {
     try {
@@ -930,9 +845,9 @@ const ArchitectureNavigator: React.FC = () => {
         setIsFullscreen(false);
       }
     } catch {
-      setIsFullscreen(!isFullscreen);
+      setIsFullscreen((v) => !v);
     }
-  }, [isFullscreen]);
+  }, []);
 
   useEffect(() => {
     const handler = () => setIsFullscreen(!!document.fullscreenElement);
@@ -940,18 +855,11 @@ const ArchitectureNavigator: React.FC = () => {
     return () => document.removeEventListener("fullscreenchange", handler);
   }, []);
 
-  const collapseAll = useCallback(() => {
-    setExpandedArchitectures(new Set());
-    setExpandedComponents(new Set());
-    setSelectedNode(null);
-  }, []);
-
-  // ── No data guard ────────────────────────────────────────────────────
   if (allArchitectures.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex h-full items-center justify-center">
         <div className="text-center">
-          <h3 className="text-lg font-semibold mb-2">No Data Available</h3>
+          <h3 className="mb-2 text-lg font-semibold">No Data Available</h3>
           <p className="text-muted-foreground">No architecture data found.</p>
         </div>
       </div>
@@ -960,25 +868,33 @@ const ArchitectureNavigator: React.FC = () => {
 
   const detailPath = selectedNode ? getDetailPath(selectedNode) : null;
   const hasExpanded = expandedArchitectures.size > 0;
+  const shownCounts = TYPES.map(
+    (t) => [t, filteredData.nodes.filter((n) => n.type === t).length] as const,
+  );
 
   return (
     <div
       ref={explorerRef}
       className={cn(
-        "flex flex-col lg:flex-row gap-3 h-full",
+        "flex h-full flex-col gap-3 lg:flex-row",
         isFullscreen && "fixed inset-0 z-[9999] bg-background p-3",
       )}
     >
       {/* Mobile sidebar toggle */}
-      <div className="lg:hidden flex items-center gap-2 mb-1">
+      <div className="mb-1 flex items-center gap-2 lg:hidden">
         <Button
           variant="outline"
           size="sm"
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          aria-label={sidebarOpen ? "Collapse controls" : "Expand controls"}
+          aria-expanded={sidebarOpen}
+          aria-controls="nav-controls"
           className="gap-1"
         >
-          {sidebarOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+          {sidebarOpen ? (
+            <ChevronDown className="h-3 w-3" aria-hidden="true" />
+          ) : (
+            <ChevronRight className="h-3 w-3" aria-hidden="true" />
+          )}
           Controls
         </Button>
         <span className="text-xs text-muted-foreground">{filteredData.nodes.length} nodes</span>
@@ -986,59 +902,64 @@ const ArchitectureNavigator: React.FC = () => {
 
       {/* Controls Panel */}
       <div
+        id="nav-controls"
         className={cn(
-          "lg:w-72 space-y-3 shrink-0 overflow-y-auto",
+          "shrink-0 space-y-3 overflow-y-auto lg:w-72",
           !sidebarOpen && "hidden lg:block",
           isFullscreen && "max-h-screen",
         )}
       >
         <Card>
-          <CardContent className="p-3 space-y-3">
-            {/* Search */}
+          <CardContent className="space-y-3 p-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Search
+                className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+                aria-hidden="true"
+              />
               <Input
                 placeholder="Search nodes..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 pr-8 h-8 text-sm"
+                className="h-8 pl-9 pr-8 text-sm"
                 aria-label="Search graph nodes"
               />
               {searchTerm && (
                 <button
+                  type="button"
                   onClick={() => setSearchTerm("")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   aria-label="Clear search"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <X className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
               )}
             </div>
             {debouncedSearch && filteredData.nodes.length === 0 && (
-              <p className="text-xs text-muted-foreground">No matching nodes found.</p>
+              <p className="text-xs text-muted-foreground" role="status">
+                No matching nodes found.
+              </p>
             )}
 
-            {/* Navigation controls */}
             <div>
-              <div className="text-xs font-medium text-muted-foreground mb-1.5">Navigation</div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Navigation</div>
               <div className="grid grid-cols-4 gap-1.5">
                 <Button
-                  onClick={zoomIn}
+                  onClick={() => zoomBy(1.5)}
                   variant="outline"
                   size="sm"
                   aria-label="Zoom in"
                   className="h-7 px-0"
                 >
-                  <ZoomIn className="h-3.5 w-3.5" />
+                  <ZoomIn className="h-3.5 w-3.5" aria-hidden="true" />
                 </Button>
                 <Button
-                  onClick={zoomOut}
+                  onClick={() => zoomBy(1 / 1.5)}
                   variant="outline"
                   size="sm"
                   aria-label="Zoom out"
                   className="h-7 px-0"
                 >
-                  <ZoomOut className="h-3.5 w-3.5" />
+                  <ZoomOut className="h-3.5 w-3.5" aria-hidden="true" />
                 </Button>
                 <Button
                   onClick={centerView}
@@ -1056,21 +977,24 @@ const ArchitectureNavigator: React.FC = () => {
                   aria-label="Reset zoom"
                   className="h-7 px-0"
                 >
-                  <RotateCcw className="h-3.5 w-3.5" />
+                  <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
                 </Button>
               </div>
             </div>
 
-            {/* Fullscreen + Collapse All */}
-            <div className="flex gap-1.5">
+            <div className="flex flex-wrap gap-1.5">
               <Button
                 onClick={toggleFullscreen}
                 variant="outline"
                 size="sm"
                 aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-                className="flex-1 h-7 text-xs gap-1"
+                className="h-7 flex-1 gap-1 text-xs"
               >
-                {isFullscreen ? <Minimize className="h-3 w-3" /> : <Maximize className="h-3 w-3" />}
+                {isFullscreen ? (
+                  <Minimize className="h-3 w-3" aria-hidden="true" />
+                ) : (
+                  <Maximize className="h-3 w-3" aria-hidden="true" />
+                )}
                 {isFullscreen ? "Exit" : "Fullscreen"}
               </Button>
               {hasExpanded && (
@@ -1078,69 +1002,88 @@ const ArchitectureNavigator: React.FC = () => {
                   onClick={collapseAll}
                   variant="outline"
                   size="sm"
-                  className="flex-1 h-7 text-xs gap-1"
+                  className="h-7 flex-1 gap-1 text-xs"
                 >
-                  <RotateCcw className="h-3 w-3" />
-                  Collapse All
+                  <RotateCcw className="h-3 w-3" aria-hidden="true" />
+                  Collapse all
+                </Button>
+              )}
+              {canCollapseOthers && (
+                <Button
+                  onClick={collapseOthers}
+                  variant="outline"
+                  size="sm"
+                  className="h-7 w-full gap-1 text-xs"
+                >
+                  <Shrink className="h-3 w-3" aria-hidden="true" />
+                  Collapse others
                 </Button>
               )}
             </div>
 
-            {/* Type filters */}
-            <div>
-              <div className="text-xs font-medium text-muted-foreground mb-1.5">Show / Hide</div>
-              <div className="grid grid-cols-2 gap-y-1.5 gap-x-3">
-                {(Object.entries(filters) as [string, boolean][]).map(([type, enabled]) => (
-                  <label key={type} className="flex items-center gap-2 cursor-pointer">
+            <fieldset>
+              <legend className="mb-1.5 text-xs font-medium text-muted-foreground">
+                Show / hide
+              </legend>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                {shownCounts.map(([type, count]) => (
+                  <label key={type} className="flex cursor-pointer items-center gap-2">
                     <Checkbox
-                      checked={enabled}
+                      checked={filters[type]}
                       onCheckedChange={() =>
                         setFilters((prev) => ({ ...prev, [type]: !prev[type] }))
                       }
-                      aria-label={`Toggle ${type} nodes`}
                       className="h-3.5 w-3.5"
                     />
                     <span className="flex items-center gap-1.5 text-xs capitalize">
                       <span
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: NODE_COLORS[type as keyof typeof NODE_COLORS] }}
-                      />
+                        className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full text-[8px] font-bold"
+                        style={{ backgroundColor: legendColor(type, theme), color: DARK_TEXT }}
+                        aria-hidden="true"
+                      >
+                        {TYPE_LETTER[type]}
+                      </span>
                       {type}s
+                      {filters[type] && (
+                        <span className="text-muted-foreground tabular-nums">({count})</span>
+                      )}
                     </span>
                   </label>
                 ))}
               </div>
-            </div>
+              <p className="mt-1.5 text-[11px] text-muted-foreground">
+                Components take their KC colour; threats their risk band.
+              </p>
+            </fieldset>
 
-            {/* Help */}
             <details>
-              <summary className="text-xs font-medium text-muted-foreground cursor-pointer select-none">
+              <summary className="cursor-pointer select-none text-xs font-medium text-muted-foreground">
                 Help
               </summary>
-              <div className="text-xs text-muted-foreground space-y-0.5 mt-1.5">
-                <p>Click an architecture node to expand its components.</p>
-                <p>Click a component to reveal its threats and mitigations.</p>
-                <p>Scroll to zoom. Drag the background to pan.</p>
+              <div className="mt-1.5 space-y-0.5 text-xs text-muted-foreground">
+                <p>Click or press Enter on a pattern to expand its components.</p>
+                <p>Expand a component to reveal its threats and the controls for them.</p>
+                <p>Scroll or pinch to zoom. Drag the background to pan.</p>
                 <p>Click empty space to deselect.</p>
               </div>
             </details>
           </CardContent>
         </Card>
 
-        {/* Selected Node Details */}
         {selectedNode && (
           <Card>
-            <CardContent className="p-3 space-y-2.5 max-h-96 overflow-y-auto">
+            <CardContent className="max-h-96 space-y-2.5 overflow-y-auto p-3">
               <div className="flex items-center gap-2">
                 <span
-                  className="w-3 h-3 rounded-full shrink-0"
-                  style={{ backgroundColor: selectedNode.color }}
+                  className="h-3 w-3 shrink-0 rounded-full"
+                  style={{ backgroundColor: nodeColor(selectedNode, theme) }}
+                  aria-hidden="true"
                 />
-                <h3 className="font-semibold text-sm leading-tight">{selectedNode.name}</h3>
+                <h3 className="text-sm font-semibold leading-tight">{selectedNode.name}</h3>
               </div>
 
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="capitalize text-xs">
+                <Badge variant="outline" className="text-xs capitalize">
                   {selectedNode.type}
                 </Badge>
                 {connectedCount > 0 && (
@@ -1150,43 +1093,25 @@ const ArchitectureNavigator: React.FC = () => {
                 )}
               </div>
 
-              <p className="text-xs text-muted-foreground leading-relaxed">
+              <p className="text-xs leading-relaxed text-muted-foreground">
                 {selectedNode.description}
               </p>
 
               {selectedNode.riskScore != null && selectedNode.riskScore > 0 && (
-                <div>
-                  <div className="text-xs font-medium mb-1">Risk Score</div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-muted rounded-full h-1.5">
-                      <div
-                        className={cn(
-                          "h-1.5 rounded-full",
-                          selectedNode.riskScore >= 8
-                            ? "bg-red-500"
-                            : selectedNode.riskScore >= 6
-                              ? "bg-orange-500"
-                              : "bg-yellow-500",
-                        )}
-                        style={{ width: `${(selectedNode.riskScore / 10) * 100}%` }}
-                      />
-                    </div>
-                    <span className="text-xs font-mono">{selectedNode.riskScore}/10</span>
-                  </div>
-                </div>
+                <RiskScore score={selectedNode.riskScore} label="Risk" tone="severity" />
               )}
 
               {selectedNode.tags && selectedNode.tags.length > 0 && (
                 <div>
-                  <div className="text-xs font-medium mb-1">Tags</div>
+                  <div className="mb-1 text-xs font-medium">Tags</div>
                   <div className="flex flex-wrap gap-1">
                     {selectedNode.tags.slice(0, 8).map((tag) => (
-                      <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0">
+                      <Badge key={tag} variant="secondary" className="px-1.5 py-0 text-xs">
                         {tag}
                       </Badge>
                     ))}
                     {selectedNode.tags.length > 8 && (
-                      <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                      <Badge variant="secondary" className="px-1.5 py-0 text-xs">
                         +{selectedNode.tags.length - 8}
                       </Badge>
                     )}
@@ -1194,42 +1119,54 @@ const ArchitectureNavigator: React.FC = () => {
                 </div>
               )}
 
-              {detailPath && (
-                <Link
-                  to={detailPath}
-                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
-                >
-                  View full details <ExternalLink className="h-3 w-3" />
-                </Link>
-              )}
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                {detailPath && (
+                  <Link
+                    to={detailPath}
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    View full details <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                  </Link>
+                )}
+                {canCollapseOthers && (
+                  <button
+                    type="button"
+                    onClick={collapseOthers}
+                    className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:underline"
+                  >
+                    <Shrink className="h-3 w-3" aria-hidden="true" /> Collapse others
+                  </button>
+                )}
+              </div>
             </CardContent>
           </Card>
         )}
       </div>
 
       {/* Graph */}
-      <div className="flex-1 min-h-0 relative" ref={containerRef}>
+      <div className="relative min-h-0 flex-1" ref={containerRef}>
         <Card className="h-full">
-          <CardContent className="p-0 h-full relative overflow-hidden">
+          <CardContent className="relative h-full overflow-hidden p-0">
             <svg
               ref={svgRef}
               width={dimensions.width}
               height={dimensions.height}
-              className="w-full h-full block"
-              role="img"
-              aria-label="Interactive architecture explorer graph"
+              className="block h-full w-full touch-none"
+              role="group"
+              aria-roledescription="interactive graph"
+              aria-label={`Architecture explorer: ${filteredData.nodes.length} nodes, ${filteredData.links.length} links`}
             />
           </CardContent>
         </Card>
 
-        {/* Tooltip */}
         {tooltip && (
           <div
-            className="fixed z-50 pointer-events-none px-2.5 py-1.5 rounded bg-popover border shadow-sm text-xs"
+            className="pointer-events-none fixed z-[10000] rounded border bg-popover px-2.5 py-1.5 text-xs shadow-sm"
             style={{ left: tooltip.x + 12, top: tooltip.y - 8 }}
+            role="tooltip"
           >
             <div className="font-medium">{tooltip.name}</div>
-            <div className="text-muted-foreground capitalize">{tooltip.type}</div>
+            <div className="capitalize text-muted-foreground">{tooltip.type}</div>
           </div>
         )}
       </div>

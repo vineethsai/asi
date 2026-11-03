@@ -1,1064 +1,675 @@
-import { useParams, Link, useNavigate } from "react-router-dom";
-import { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useMemo } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
-  threatsData,
-  mitigationsData,
-  Threat,
-  Mitigation,
-} from "../components/components/securityData";
-import { frameworkData } from "../components/components/frameworkData";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
-import SidebarNav from "../components/layout/SidebarNav";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Icon } from "@/components/ui/icon";
-import { Helmet } from "react-helmet";
-import {
+  ArrowLeft,
+  ArrowRight,
+  Crosshair,
+  ExternalLink,
+  Grid3x3,
+  Info,
+  Layers,
+  Network,
   Shield,
   ShieldCheck,
   ShieldX,
-  ExternalLink,
-  Layers,
-  Target,
-  Calculator,
-  Network,
-  ArrowRight,
-  Info,
-  Crosshair,
-  Activity,
-  Lock,
-  Eye,
-  Gauge,
+  Workflow,
 } from "lucide-react";
-import { agenticTop10Data } from "@/components/components/owaspAgenticTop10Data";
-import { ciscoTaxonomyData } from "@/components/components/ciscoTaxonomyData";
-import { coreRiskScores, getSeverityColor } from "@/components/components/aivssCalcData";
+import PageLayout from "@/components/layout/PageLayout";
+import PageHeader from "@/components/layout/PageHeader";
+import NotFoundEntity from "@/components/layout/NotFoundEntity";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { threatsData, type Threat } from "@/components/components/securityData";
+import { SeverityBadge } from "@/components/content/SeverityBadge";
+import { RiskScore } from "@/components/content/RiskScore";
+import { PhaseBadge } from "@/components/content/PhaseBadge";
+import { SourceNote } from "@/components/content/SourceNote";
+import { RichText } from "@/components/content/RichText";
+import { SOURCES } from "@/data/sources";
+import { KC_LIST } from "@/data/kc";
+import { Icon } from "@/lib/icons";
+import { FRAMEWORK_PALETTE, kcColor } from "@/lib/palette";
+import { parseBand, severityLabel, severityToken } from "@/lib/severity";
+import { cn } from "@/lib/utils";
+import { CiaChips } from "@/components/threats/ThreatCard";
+import { ThreatConstellation } from "@/components/threats/ThreatConstellation";
+import { KillChainStrip } from "@/components/threats/KillChainStrip";
+import {
+  threatFrameworkRefs,
+  type FrameworkKey,
+  type FrameworkRef,
+} from "@/components/threats/frameworkLinks";
+import { threatModelerTarget } from "@/components/threats/modelerLink";
+import {
+  controlCode,
+  mitigationsForThreat,
+  threatBand,
+  threatLabel,
+  threatNeighbours,
+} from "@/components/threats/threatIndex";
+import { componentsForThreat } from "@/components/kc-components/componentIndex";
+import { ScenarioLinks } from "@/components/scenarios/ScenarioLinks";
+import { scenariosForThreat } from "@/data/scenarios";
+import { PHASE_ORDER, phaseApplies, phaseTaskTotal } from "@/components/controls/phaseTasks";
 
-const componentIdToName: Record<string, string> = Object.fromEntries(
-  frameworkData.map((c) => [c.id, c.title]),
-);
+const TABS = ["overview", "attack-vectors", "mitigations", "components", "frameworks"] as const;
+type TabKey = (typeof TABS)[number];
 
-/* ─── Radial Constellation Visualization ─── */
-function ThreatConstellationDiagram({
-  threat,
-  mappings,
-}: {
-  threat: Threat;
-  mappings: {
-    allAsi: { id: string; code: string; name: string }[];
-    ciscoEntries: { code: string; description: string }[];
-    atlasMatches: unknown[];
-    aivssMatches: {
-      rank: number;
-      name: string;
-      severity: string;
-      asiCode: string;
-      aivssScore: number;
-    }[];
-  };
-}) {
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const navigate = useNavigate();
+const FRAMEWORK_CARDS: { key: FrameworkKey; title: string; empty: string }[] = [
+  {
+    key: "asi",
+    title: "OWASP Top 10 for Agentic Applications",
+    empty: "No Agentic Top 10 entry maps to this threat.",
+  },
+  {
+    key: "cisco",
+    title: "Cisco AI Security Taxonomy",
+    empty: "No Cisco taxonomy objective is mapped.",
+  },
+  {
+    key: "aivss",
+    title: "OWASP AIVSS core risks",
+    empty: "No AIVSS core risk shares this threat's ASI entries.",
+  },
+];
 
-  const cx = 300,
-    cy = 195,
-    outerR = 145;
+function basisNote(ref: FrameworkRef): string | undefined {
+  if (ref.framework === "asi") {
+    if (ref.unofficial) return "Editorial mapping (not in Appendix A)";
+    if (ref.basis === "appendix") return "Listed in Top 10 Appendix A";
+    return undefined;
+  }
+  if (ref.framework === "aivss") {
+    return ref.basis === "primary" ? "Primary ASI entry matches" : "Secondary ASI entry matches";
+  }
+  return undefined;
+}
 
-  const FCOLORS: Record<string, string> = {
-    asi: "#f43f5e",
-    cisco: "#06b6d4",
-    aivss: "#f59e0b",
-  };
-
-  const FLABELS: Record<string, string> = {
-    asi: "OWASP Agentic",
-    cisco: "Cisco Taxonomy",
-    aivss: "AIVSS Scores",
-  };
-
-  const nodes = useMemo(() => {
-    const result: Array<{
-      id: string;
-      code: string;
-      label: string;
-      framework: string;
-      link: string;
-      x: number;
-      y: number;
-    }> = [];
-
-    const sectors = [
-      {
-        key: "asi",
-        center: -Math.PI / 2,
-        items: mappings.allAsi.map((e) => ({
-          code: e.code,
-          label: `${e.code}: ${e.name}`,
-          link: "/taxonomy?tab=owasp-agentic",
-        })),
-      },
-      {
-        key: "cisco",
-        center: Math.PI / 6,
-        items: mappings.ciscoEntries.map((e) => ({
-          code: e.code,
-          label: `${e.code}: ${e.description}`,
-          link: "/taxonomy?tab=cisco",
-        })),
-      },
-      {
-        key: "aivss",
-        center: (5 * Math.PI) / 6,
-        items: mappings.aivssMatches.map((e) => ({
-          code: `#${e.rank}`,
-          label: `#${e.rank} ${e.name} (${e.severity})`,
-          link: "/taxonomy?tab=aivss",
-        })),
-      },
-    ];
-
-    const arcSpan = (2 * Math.PI) / 3;
-    const padding = 0.12;
-
-    for (const sector of sectors) {
-      const n = sector.items.length;
-      if (n === 0) continue;
-      const start = sector.center - arcSpan / 2 + arcSpan * padding;
-      const end = sector.center + arcSpan / 2 - arcSpan * padding;
-      for (let i = 0; i < n; i++) {
-        const t = n === 1 ? 0.5 : i / (n - 1);
-        const angle = start + t * (end - start);
-        result.push({
-          id: `${sector.key}-${i}`,
-          code: sector.items[i].code,
-          label: sector.items[i].label,
-          framework: sector.key,
-          link: sector.items[i].link,
-          x: cx + outerR * Math.cos(angle),
-          y: cy + outerR * Math.sin(angle),
-        });
-      }
-    }
-    return result;
-  }, [mappings]);
-
-  if (nodes.length === 0) return null;
-
+function FrameworkRefList({ refs, empty }: { refs: FrameworkRef[]; empty: string }) {
+  if (!refs.length) return <p className="text-sm text-muted-foreground">{empty}</p>;
   return (
-    <div className="mb-4">
-      <svg viewBox="0 0 600 390" className="w-full" style={{ maxHeight: 340 }}>
-        <defs>
-          <filter id="cGlow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-
-        {/* Framework arc labels */}
-        {(["asi", "cisco", "aivss"] as const).map((key) => {
-          const centerAngle = {
-            asi: -Math.PI / 2,
-            cisco: Math.PI / 6,
-            aivss: (5 * Math.PI) / 6,
-          }[key];
-          const lx = cx + (outerR + 28) * Math.cos(centerAngle);
-          const ly = cy + (outerR + 28) * Math.sin(centerAngle);
-          if (!nodes.some((n) => n.framework === key)) return null;
-          return (
-            <text
-              key={key}
-              x={lx}
-              y={ly}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fill={FCOLORS[key]}
-              fontSize="10"
-              fontWeight="600"
-              opacity={0.7}
+    <ul className="space-y-2">
+      {refs.map((ref) => {
+        const note = basisNote(ref);
+        const band = ref.severity ? parseBand(ref.severity) : undefined;
+        return (
+          <li key={`${ref.framework}-${ref.code}`}>
+            <Link
+              to={ref.href}
+              className="group flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              {FLABELS[key]}
-            </text>
-          );
-        })}
-
-        {/* Connection paths (curved bezier) */}
-        {nodes.map((node) => {
-          const dx = node.x - cx;
-          const dy = node.y - cy;
-          const len = Math.sqrt(dx * dx + dy * dy) || 1;
-          const perpX = (-dy / len) * 12;
-          const perpY = (dx / len) * 12;
-          const midX = (cx + node.x) / 2 + perpX;
-          const midY = (cy + node.y) / 2 + perpY;
-          const isActive = hoveredId === node.id;
-          const isDim = hoveredId !== null && !isActive;
-          return (
-            <path
-              key={`p-${node.id}`}
-              d={`M ${cx} ${cy} Q ${midX} ${midY} ${node.x} ${node.y}`}
-              fill="none"
-              stroke={FCOLORS[node.framework]}
-              strokeWidth={isActive ? 3 : 1.5}
-              strokeOpacity={isDim ? 0.08 : isActive ? 0.9 : 0.3}
-              strokeDasharray={isActive ? "none" : "4 3"}
-              className="transition-all duration-200"
-            />
-          );
-        })}
-
-        {/* Center threat node */}
-        <circle cx={cx} cy={cy} r={32} fill={threat.color || "#6366f1"} filter="url(#cGlow)" />
-        <circle
-          cx={cx}
-          cy={cy}
-          r={34}
-          fill="none"
-          stroke={threat.color || "#6366f1"}
-          strokeWidth={2}
-          strokeOpacity={0.4}
-        />
-        <text
-          x={cx}
-          y={cy - 5}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          fill="white"
-          fontSize="11"
-          fontWeight="700"
-          className="pointer-events-none"
-        >
-          {threat.code}
-        </text>
-        <text
-          x={cx}
-          y={cy + 8}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          fill="white"
-          fontSize="7"
-          fontWeight="500"
-          opacity={0.85}
-          className="pointer-events-none"
-        >
-          {threat.name.length > 20 ? threat.name.substring(0, 18) + "\u2026" : threat.name}
-        </text>
-
-        {/* Outer framework nodes */}
-        {nodes.map((node) => {
-          const isActive = hoveredId === node.id;
-          const isDim = hoveredId !== null && !isActive;
-          const r = isActive ? 24 : 20;
-          return (
-            <g
-              key={node.id}
-              onMouseEnter={() => setHoveredId(node.id)}
-              onMouseLeave={() => setHoveredId(null)}
-              onClick={() => navigate(node.link)}
-              style={{ cursor: "pointer" }}
-            >
-              <circle
-                cx={node.x}
-                cy={node.y}
-                r={r}
-                fill={FCOLORS[node.framework]}
-                opacity={isDim ? 0.15 : isActive ? 1 : 0.85}
-                className="transition-all duration-200"
+              <span
+                aria-hidden
+                className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ background: FRAMEWORK_PALETTE[ref.framework].css }}
               />
-              {isActive && (
-                <circle
-                  cx={node.x}
-                  cy={node.y}
-                  r={r + 3}
-                  fill="none"
-                  stroke={FCOLORS[node.framework]}
-                  strokeWidth={2}
-                  strokeOpacity={0.5}
-                />
-              )}
-              <text
-                x={node.x}
-                y={node.y}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fill="white"
-                fontSize="8"
-                fontWeight="600"
-                opacity={isDim ? 0.15 : 1}
-                className="pointer-events-none transition-opacity duration-200"
-              >
-                {node.code.length > 10 ? node.code.substring(0, 8) + ".." : node.code}
-              </text>
-              {isActive && (
-                <g>
-                  <rect
-                    x={node.x - 85}
-                    y={node.y + r + 4}
-                    width={170}
-                    height={20}
-                    rx={4}
-                    fill="hsl(var(--card))"
-                    stroke="hsl(var(--border))"
-                    strokeWidth={1}
-                  />
-                  <text
-                    x={node.x}
-                    y={node.y + r + 15}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fill="hsl(var(--foreground))"
-                    fontSize="8"
-                    fontWeight="500"
-                    className="pointer-events-none"
-                  >
-                    {node.label.length > 42 ? node.label.substring(0, 40) + "\u2026" : node.label}
-                  </text>
-                </g>
-              )}
-            </g>
-          );
-        })}
-      </svg>
+              <span className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-xs font-semibold text-foreground">
+                    {ref.code}
+                  </span>
+                  {band && band !== "none" && <SeverityBadge band={band} size="xs" />}
+                  {ref.unofficial && (
+                    <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+                      editorial
+                    </Badge>
+                  )}
+                </span>
+                <span className="mt-0.5 block text-sm font-medium group-hover:text-primary">
+                  {ref.name}
+                </span>
+                {(ref.detail || note) && (
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {[ref.detail, note].filter(Boolean).join(" · ")}
+                  </span>
+                )}
+              </span>
+              <ArrowRight
+                aria-hidden
+                className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+              />
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function CiaCard({ label, affected }: { label: string; affected: boolean }) {
+  const t = severityToken("high");
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-3 rounded-lg border p-4",
+        affected ? cn(t.bg, t.border) : "border-muted bg-muted/40",
+      )}
+    >
+      {affected ? (
+        <ShieldX aria-hidden className={cn("h-7 w-7 shrink-0", t.fg)} />
+      ) : (
+        <ShieldCheck aria-hidden className="h-7 w-7 shrink-0 text-muted-foreground" />
+      )}
+      <div>
+        <div className="font-semibold">{label}</div>
+        <div className={cn("text-sm font-medium", affected ? t.fg : "text-muted-foreground")}>
+          {affected ? "Affected" : "Not affected"}
+        </div>
+      </div>
     </div>
+  );
+}
+
+function ThreatPager({ threat }: { threat: Threat }) {
+  const { prev, next } = threatNeighbours(threat.id);
+  if (!prev && !next) return null;
+  return (
+    <nav aria-label="Other threats" className="mt-10 grid gap-3 border-t pt-6 sm:grid-cols-2">
+      {prev ? (
+        <Link
+          to={`/threats/${prev.id}`}
+          rel="prev"
+          className="group flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <ArrowLeft
+            aria-hidden
+            className="h-4 w-4 shrink-0 text-muted-foreground group-hover:-translate-x-0.5"
+          />
+          <span className="min-w-0">
+            <span className="block text-xs text-muted-foreground">Previous · {prev.code}</span>
+            <span className="block truncate font-medium">{threatLabel(prev)}</span>
+          </span>
+        </Link>
+      ) : (
+        <span className="hidden sm:block" />
+      )}
+      {next && (
+        <Link
+          to={`/threats/${next.id}`}
+          rel="next"
+          className="group flex items-center justify-end gap-3 rounded-lg border p-4 text-right transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <span className="min-w-0">
+            <span className="block text-xs text-muted-foreground">Next · {next.code}</span>
+            <span className="block truncate font-medium">{threatLabel(next)}</span>
+          </span>
+          <ArrowRight
+            aria-hidden
+            className="h-4 w-4 shrink-0 text-muted-foreground group-hover:translate-x-0.5"
+          />
+        </Link>
+      )}
+    </nav>
   );
 }
 
 export const ThreatDetail = () => {
   const { threatId } = useParams<{ threatId: string }>();
-  const threat: Threat | undefined = threatId ? threatsData[threatId] : undefined;
-  const mitigations: Mitigation[] = threat
-    ? Object.values(mitigationsData).filter((m) => m.threatIds.includes(threat.id))
-    : [];
+  const [params, setParams] = useSearchParams();
+  const threat: Threat | undefined = threatId ? threatsData[threatId.toLowerCase()] : undefined;
 
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
-
-  const handleMobileMenuToggle = () => setIsMobileMenuOpen(!isMobileMenuOpen);
-  const handleMobileMenuClose = () => setIsMobileMenuOpen(false);
-
-  const frameworkMappings = useMemo(() => {
+  const data = useMemo(() => {
     if (!threat) return null;
-
-    const asiCodes = threat.asiMapping || [];
-    const directAsi = agenticTop10Data.filter((e) => asiCodes.includes(e.code));
-    const reverseAsi = agenticTop10Data.filter(
-      (e) => e.relatedThreats.includes(threat.id) && !asiCodes.includes(e.code),
-    );
-    const allAsi = [...directAsi, ...reverseAsi];
-
-    const ciscoCodes = threat.ciscoMapping || [];
-    const ciscoEntries = ciscoTaxonomyData.filter((og) => ciscoCodes.includes(og.code));
-
-    const aivssMatches = coreRiskScores.filter((r) => asiCodes.includes(r.asiCode));
-
-    return { allAsi, ciscoEntries, atlasMatches: [] as unknown[], aivssMatches };
+    const refs = threatFrameworkRefs(threat);
+    const components = componentsForThreat(threat.id);
+    return {
+      refs,
+      refCount: refs.asi.length + refs.cisco.length + refs.aivss.length,
+      mitigations: mitigationsForThreat(threat.id),
+      components,
+      modeler: threatModelerTarget(threat),
+      scenarios: scenariosForThreat(threat.id),
+      kcGroups: KC_LIST.map((kc) => ({
+        kc,
+        entries: components.filter((e) => e.kc === kc.id),
+      })).filter((g) => g.entries.length > 0),
+    };
   }, [threat]);
 
-  if (!threat) {
+  if (!threat || !data) {
     return (
-      <div className="container py-12 text-center">
-        <h1 className="text-2xl font-bold mb-4">Threat Not Found</h1>
-        <Link to="/threats">
-          <Button>Back to Threats</Button>
-        </Link>
-      </div>
+      <PageLayout
+        title="Threat not found"
+        description="This threat does not exist in the agentic threat catalog."
+        canonicalPath={`/threats/${threatId ?? ""}`}
+        noindex
+        section="threats"
+      >
+        <NotFoundEntity type="threat" id={threatId} />
+      </PageLayout>
     );
   }
 
-  const mitigationCount = mitigations.length;
-  const attackVectorCount = (threat.attackVectors || []).length;
-  const riskScore = threat.riskScore || 0;
+  const { refs, refCount, mitigations, components, modeler, kcGroups, scenarios } = data;
+  const tabParam = params.get("tab");
+  const activeTab: TabKey = (TABS as readonly string[]).includes(tabParam ?? "")
+    ? (tabParam as TabKey)
+    : "overview";
+  const setTab = (v: string) => {
+    const next = new URLSearchParams(params);
+    if (v === "overview") next.delete("tab");
+    else next.set("tab", v);
+    setParams(next, { replace: true });
+  };
+  const tabHref = (tab: TabKey) => `/threats/${threat.id}?tab=${tab}`;
 
-  const frameworkCount = frameworkMappings
-    ? frameworkMappings.allAsi.length +
-      frameworkMappings.ciscoEntries.length +
-      frameworkMappings.aivssMatches.length
-    : 0;
-
-  function getRiskColor(score: number) {
-    if (score >= 8) return "text-red-600 dark:text-red-400";
-    if (score >= 6) return "text-orange-600 dark:text-orange-400";
-    if (score >= 4) return "text-yellow-600 dark:text-yellow-400";
-    return "text-green-600 dark:text-green-400";
-  }
-
-  function getSeverityBadge(severity: string) {
-    switch (severity) {
-      case "high":
-        return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
-      case "medium":
-        return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
-      default:
-        return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300";
-    }
-  }
+  const vectorCount = threat.attackVectors?.length ?? 0;
+  const band = threatBand(threat);
+  const kcCodes = [...new Set(components.map((c) => c.kc))];
 
   return (
-    <>
-      <Helmet>
-        <title>{threat.name} | OWASP Securing Agentic Applications Guide</title>
-        <meta
-          name="description"
-          content={`${threat.description} Learn about this AI security threat, its impact, attack vectors, and available mitigations.`}
-        />
-        <meta
-          name="keywords"
-          content={`${threat.name}, AI security threat, OWASP, agentic systems, ${threat.tags?.join(", ") || ""}, AI threats, security vulnerabilities`}
-        />
-        <meta name="robots" content="index, follow" />
-        <link rel="canonical" href={`https://agenticsecurity.info/threats/${threat.id}`} />
-        <meta property="og:title" content={`${threat.name} | OWASP Guide`} />
-        <meta property="og:description" content={threat.description} />
-        <meta property="og:type" content="article" />
-        <meta property="og:url" content={`https://agenticsecurity.info/threats/${threat.id}`} />
-        <meta property="og:site_name" content="OWASP Securing Agentic Applications Guide" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={`${threat.name} | OWASP Guide`} />
-        <meta name="twitter:description" content={threat.description} />
-        <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "TechArticle",
-            headline: threat.name,
-            description: threat.description,
-            url: `https://agenticsecurity.info/threats/${threat.id}`,
-            dateModified: threat.lastUpdated || new Date().toISOString(),
-            author: { "@type": "Organization", name: "OWASP" },
-            publisher: { "@type": "Organization", name: "OWASP", url: "https://owasp.org" },
-            about: "AI Security Threat",
-            keywords: threat.tags?.join(", ") || "",
-            isPartOf: {
-              "@type": "WebSite",
-              name: "OWASP Securing Agentic Applications Guide",
-              url: "https://agenticsecurity.info",
-            },
+    <PageLayout
+      title={`${threat.name} (${threat.code})`}
+      description={threat.description}
+      canonicalPath={`/threats/${threat.id}`}
+      ogType="article"
+      section="threats"
+      activeId={threat.id}
+      keywords={`${threat.name}, AI security threat, OWASP, agentic systems, ${threat.tags?.join(", ") || ""}, AI threats, security vulnerabilities`}
+      jsonLd={{
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        headline: threat.name,
+        description: threat.description,
+        url: `https://agenticsecurity.info/threats/${threat.id}`,
+        ...(threat.lastUpdated ? { dateModified: threat.lastUpdated } : {}),
+        author: { "@type": "Organization", name: "OWASP" },
+        publisher: { "@type": "Organization", name: "OWASP", url: "https://owasp.org" },
+        about: "AI Security Threat",
+        keywords: threat.tags?.join(", ") || "",
+        isPartOf: {
+          "@type": "WebSite",
+          name: "Agentic Security Hub",
+          url: "https://agenticsecurity.info",
+        },
+      }}
+    >
+      <Link
+        to="/threats"
+        className="mb-6 inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft aria-hidden className="mr-2 h-4 w-4" />
+        All threats
+      </Link>
+
+      <PageHeader
+        eyebrow={`Threat ${threat.code}`}
+        title={threat.name}
+        description={threat.description}
+        source={SOURCES.threats}
+        actions={
+          <>
+            <Button asChild size="sm">
+              <Link to={modeler.href} title={modeler.reason}>
+                <Workflow aria-hidden className="mr-1.5 h-4 w-4" />
+                Open in Threat Modeler
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/threats?view=heatmap">
+                <Grid3x3 aria-hidden className="mr-1.5 h-4 w-4" />
+                Heatmap
+              </Link>
+            </Button>
+          </>
+        }
+        stats={[
+          {
+            label: "risk",
+            value: typeof threat.riskScore === "number" ? `${threat.riskScore}/10` : "n/a",
+            hint: `This site's 1–10 risk rating (${severityLabel(band)}).`,
+          },
+          { label: "attack vectors", value: vectorCount },
+          { label: "mitigating controls", value: mitigations.length },
+          {
+            label: "framework refs",
+            value: refCount,
+            hint: "OWASP Agentic Top 10, Cisco taxonomy and AIVSS entries linked to this threat.",
+          },
+        ]}
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <SeverityBadge
+            band={band}
+            score={threat.riskScore}
+            showScore={typeof threat.riskScore === "number"}
+          />
+          <CiaChips threat={threat} />
+          {kcCodes.map((id) => {
+            const kc = KC_LIST.find((k) => k.id === id);
+            return (
+              <Link
+                key={id}
+                to={`/components/${id}`}
+                className="inline-flex h-6 items-center gap-1.5 rounded-full border px-2 text-xs font-medium hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <span
+                  aria-hidden
+                  className="h-2 w-2 rounded-full"
+                  style={{ background: kcColor(id) }}
+                />
+                {kc?.code ?? id.toUpperCase()}
+                <span className="sr-only"> {kc?.name}</span>
+              </Link>
+            );
           })}
-        </script>
-      </Helmet>
-
-      <Header onMobileMenuToggle={handleMobileMenuToggle} isMobileMenuOpen={isMobileMenuOpen} />
-
-      <SidebarNav
-        type="threats"
-        activeId={threat.id}
-        isOpen={isMobileMenuOpen}
-        onClose={handleMobileMenuClose}
-      />
-
-      <section id="main-content" className="py-8 bg-background min-h-screen">
-        <div className="container px-4 md:px-6 max-w-7xl">
-          {/* Breadcrumb */}
-          <Link
-            to="/threats"
-            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
-          >
-            <ArrowRight className="h-4 w-4 mr-2 rotate-180" />
-            Back to Threats
-          </Link>
-
-          {/* Page Header */}
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold tracking-tight">{threat.name}</h1>
-            <p className="mt-1 text-muted-foreground">{threat.description}</p>
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-              <Card className="bg-card border">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Gauge className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Risk Score</span>
-                  </div>
-                  <div className={`text-3xl font-bold ${getRiskColor(riskScore)}`}>
-                    {riskScore || "N/A"}
-                    <span className="text-sm font-normal text-muted-foreground"> / 10</span>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Crosshair className="h-4 w-4 text-yellow-500" />
-                    <span className="text-xs text-muted-foreground">Attack Vectors</span>
-                  </div>
-                  <div className="text-2xl font-bold">{attackVectorCount}</div>
-                  <div className="text-xs text-muted-foreground">Documented</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Shield className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Mitigations</span>
-                  </div>
-                  <div className="text-2xl font-bold text-control">{mitigationCount}</div>
-                  <div className="text-xs text-muted-foreground">Available</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Network className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Framework Refs</span>
-                  </div>
-                  <div className="text-2xl font-bold">{frameworkCount}</div>
-                  <div className="text-xs text-muted-foreground">Mappings</div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Tabbed Content */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-6">
-              <TabsTrigger value="overview" className="flex items-center gap-2">
-                <Info className="h-4 w-4" />
-                <span className="hidden sm:inline">Overview</span>
-              </TabsTrigger>
-              <TabsTrigger value="attack-vectors" className="flex items-center gap-2">
-                <Crosshair className="h-4 w-4" />
-                <span className="hidden sm:inline">Attack Vectors</span>
-                {attackVectorCount > 0 && (
-                  <Badge variant="secondary" className="text-xs ml-1 hidden md:inline-flex">
-                    {attackVectorCount}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="mitigations" className="flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                <span className="hidden sm:inline">Mitigations</span>
-                {mitigationCount > 0 && (
-                  <Badge variant="secondary" className="text-xs ml-1 hidden md:inline-flex">
-                    {mitigationCount}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="frameworks" className="flex items-center gap-2">
-                <Network className="h-4 w-4" />
-                <span className="hidden sm:inline">Frameworks</span>
-                {frameworkCount > 0 && (
-                  <Badge variant="secondary" className="text-xs ml-1 hidden md:inline-flex">
-                    {frameworkCount}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Overview Tab */}
-            <TabsContent value="overview" className="space-y-6">
-              {/* Impact Analysis - CIA Triad */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Activity className="h-5 w-5 text-muted-foreground" />
-                    Impact Analysis
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {threat.impactAnalysis ? (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div
-                        className={`flex items-center gap-4 p-4 rounded-lg border ${
-                          threat.impactAnalysis.confidentiality
-                            ? "bg-destructive/5 dark:bg-destructive/10 border-destructive/20 dark:border-destructive/30"
-                            : "bg-muted/50 border-muted"
-                        }`}
-                      >
-                        {threat.impactAnalysis.confidentiality ? (
-                          <ShieldX className="h-8 w-8 text-destructive flex-shrink-0" />
-                        ) : (
-                          <ShieldCheck className="h-8 w-8 text-green-500 flex-shrink-0" />
-                        )}
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <Lock className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-semibold">Confidentiality</span>
-                          </div>
-                          <span
-                            className={`text-sm font-medium ${
-                              threat.impactAnalysis.confidentiality
-                                ? "text-red-600 dark:text-red-400"
-                                : "text-green-600 dark:text-green-400"
-                            }`}
-                          >
-                            {threat.impactAnalysis.confidentiality ? "Affected" : "Not Affected"}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div
-                        className={`flex items-center gap-4 p-4 rounded-lg border ${
-                          threat.impactAnalysis.integrity
-                            ? "bg-destructive/5 dark:bg-destructive/10 border-destructive/20 dark:border-destructive/30"
-                            : "bg-muted/50 border-muted"
-                        }`}
-                      >
-                        {threat.impactAnalysis.integrity ? (
-                          <ShieldX className="h-8 w-8 text-destructive flex-shrink-0" />
-                        ) : (
-                          <ShieldCheck className="h-8 w-8 text-green-500 flex-shrink-0" />
-                        )}
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <Eye className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-semibold">Integrity</span>
-                          </div>
-                          <span
-                            className={`text-sm font-medium ${
-                              threat.impactAnalysis.integrity
-                                ? "text-red-600 dark:text-red-400"
-                                : "text-green-600 dark:text-green-400"
-                            }`}
-                          >
-                            {threat.impactAnalysis.integrity ? "Affected" : "Not Affected"}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div
-                        className={`flex items-center gap-4 p-4 rounded-lg border ${
-                          threat.impactAnalysis.availability
-                            ? "bg-destructive/5 dark:bg-destructive/10 border-destructive/20 dark:border-destructive/30"
-                            : "bg-muted/50 border-muted"
-                        }`}
-                      >
-                        {threat.impactAnalysis.availability ? (
-                          <ShieldX className="h-8 w-8 text-destructive flex-shrink-0" />
-                        ) : (
-                          <ShieldCheck className="h-8 w-8 text-green-500 flex-shrink-0" />
-                        )}
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <Activity className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-semibold">Availability</span>
-                          </div>
-                          <span
-                            className={`text-sm font-medium ${
-                              threat.impactAnalysis.availability
-                                ? "text-red-600 dark:text-red-400"
-                                : "text-green-600 dark:text-green-400"
-                            }`}
-                          >
-                            {threat.impactAnalysis.availability ? "Affected" : "Not Affected"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">No impact analysis available.</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Affected Components */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Layers className="h-5 w-5 text-muted-foreground" />
-                    Affected Components
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {threat.componentIds.map((id) => (
-                      <Link
-                        to={`/components/${id}`}
-                        key={id}
-                        className="flex items-center gap-3 p-4 rounded-lg border hover:bg-muted/50 transition-colors group"
-                      >
-                        <div className="w-3 h-3 rounded-full bg-purple-500 group-hover:scale-125 transition-transform flex-shrink-0"></div>
-                        <div className="flex-1">
-                          <div className="font-semibold text-foreground group-hover:text-primary transition-colors">
-                            {componentIdToName[id] || id.toUpperCase()}
-                          </div>
-                          <div className="text-xs text-muted-foreground font-mono">
-                            {id.toUpperCase()}
-                          </div>
-                        </div>
-                        <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </Link>
-                    ))}
-                  </div>
-                  {threat.affectedComponents && threat.affectedComponents.length > 0 && (
-                    <div className="mt-4 pt-4 border-t">
-                      <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                        Specific Modules
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                        {threat.affectedComponents.map((component, i) => (
-                          <Badge
-                            key={i}
-                            variant="outline"
-                            className="border-purple-200 text-purple-700 dark:border-purple-800 dark:text-purple-300"
-                          >
-                            {component}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Mitigation Summary */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-muted-foreground" />
-                    Mitigation Summary
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {mitigations.length > 0 ? (
-                    <div className="space-y-4">
-                      {threat.mitigationNames && threat.mitigationNames.length > 0 && (
-                        <div className="mb-4">
-                          <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                            Categories
-                          </h4>
-                          <div className="flex flex-wrap gap-2">
-                            {threat.mitigationNames.map((name, i) => (
-                              <Badge
-                                key={i}
-                                variant="outline"
-                                className="border-green-200 text-green-700 dark:border-green-700 dark:text-green-300"
-                              >
-                                {name}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      <div className="grid gap-3">
-                        {mitigations.slice(0, 4).map((m) => (
-                          <Link
-                            key={m.id}
-                            to={`/controls/${m.id}`}
-                            className="flex items-start gap-4 p-4 rounded-lg border hover:bg-muted/50 transition-colors group"
-                          >
-                            <div className="w-2 h-2 rounded-full bg-control mt-2 group-hover:scale-125 transition-transform flex-shrink-0"></div>
-                            <div className="flex-1 min-w-0">
-                              <div className="font-semibold text-foreground group-hover:text-primary transition-colors mb-1">
-                                {m.name}
-                              </div>
-                              <p className="text-sm text-muted-foreground line-clamp-2">
-                                {m.description}
-                              </p>
-                            </div>
-                            <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 mt-1" />
-                          </Link>
-                        ))}
-                      </div>
-                      {mitigations.length > 4 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setActiveTab("mitigations")}
-                          className="w-full"
-                        >
-                          View all {mitigations.length} mitigations{" "}
-                          <ArrowRight className="h-4 w-4 ml-1" />
-                        </Button>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">
-                      No mitigations documented for this threat.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* References */}
-              {threat.references && threat.references.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <ExternalLink className="h-5 w-5 text-muted-foreground" />
-                      References & Resources
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {threat.references.map((ref, index) => (
-                        <a
-                          key={index}
-                          href={ref.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors group"
-                        >
-                          <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
-                          <span className="text-sm font-medium group-hover:text-primary transition-colors">
-                            {ref.title}
-                          </span>
-                        </a>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-
-            {/* Attack Vectors Tab */}
-            <TabsContent value="attack-vectors" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Crosshair className="h-5 w-5 text-muted-foreground" />
-                    Attack Vectors
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {(threat.attackVectors || []).length > 0 ? (
-                    <div className="space-y-4">
-                      {threat.attackVectors!.map((attack, i) => (
-                        <div
-                          key={i}
-                          className={`p-5 rounded-lg border-l-4 border bg-card ${
-                            attack.severity === "high"
-                              ? "border-l-red-500"
-                              : attack.severity === "medium"
-                                ? "border-l-yellow-500"
-                                : "border-l-blue-500"
-                          }`}
-                        >
-                          <div className="flex items-start justify-between mb-2">
-                            <h3 className="text-lg font-semibold text-foreground">
-                              {attack.vector}
-                            </h3>
-                            {attack.severity && (
-                              <Badge className={`${getSeverityBadge(attack.severity)} capitalize`}>
-                                {attack.severity}
-                              </Badge>
-                            )}
-                          </div>
-                          {attack.example && (
-                            <p className="text-muted-foreground leading-relaxed">
-                              {attack.example}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">
-                      No attack vectors documented for this threat.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Mitigations Tab */}
-            <TabsContent value="mitigations" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-muted-foreground" />
-                    Available Mitigations
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {mitigations.length > 0 ? (
-                    <div className="grid gap-4">
-                      {mitigations.map((m) => (
-                        <Link
-                          key={m.id}
-                          to={`/controls/${m.id}`}
-                          className="flex items-start gap-4 p-5 rounded-lg border hover:bg-muted/50 hover:border-control/40 transition-all group"
-                        >
-                          {m.icon && (
-                            <span className="text-muted-foreground flex-shrink-0">
-                              <Icon name={m.icon} color="currentColor" size={24} />
-                            </span>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="font-semibold text-foreground group-hover:text-primary transition-colors mb-1 text-lg">
-                              {m.name}
-                            </div>
-                            <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
-                              {m.description}
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                              {m.designPhase && (
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300"
-                                >
-                                  Design
-                                </Badge>
-                              )}
-                              {m.buildPhase && (
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800 text-yellow-700 dark:text-yellow-300"
-                                >
-                                  Build
-                                </Badge>
-                              )}
-                              {m.operationPhase && (
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
-                                >
-                                  Operations
-                                </Badge>
-                              )}
-                              {(m.tags || []).slice(0, 3).map((tag) => (
-                                <Badge key={tag} variant="secondary" className="text-xs">
-                                  {tag}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                          <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0 mt-1" />
-                        </Link>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">
-                      No mitigations documented for this threat.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Frameworks Tab */}
-            <TabsContent value="frameworks" className="space-y-6">
-              {frameworkMappings && (
-                <>
-                  <ThreatConstellationDiagram threat={threat} mappings={frameworkMappings} />
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* OWASP Agentic Top 10 */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-base">
-                          <Target className="h-5 w-5 text-muted-foreground" />
-                          OWASP Agentic Top 10
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        {frameworkMappings.allAsi.length > 0 ? (
-                          <div className="space-y-2">
-                            {frameworkMappings.allAsi.map((entry) => (
-                              <Link
-                                key={entry.id}
-                                to={`/taxonomy?tab=owasp-agentic`}
-                                className="flex items-center gap-3 p-3 rounded-lg border hover:bg-rose-50/50 dark:hover:bg-rose-950/20 transition-colors group"
-                              >
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-rose-300 dark:border-rose-800 flex-shrink-0"
-                                >
-                                  {entry.code}
-                                </Badge>
-                                <span className="text-sm font-medium group-hover:text-rose-700 dark:group-hover:text-rose-300 transition-colors">
-                                  {entry.name}
-                                </span>
-                              </Link>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">
-                            No OWASP Agentic Top 10 mappings
-                          </p>
-                        )}
-                      </CardContent>
-                    </Card>
-
-                    {/* Cisco AI Taxonomy */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-base">
-                          <Layers className="h-5 w-5 text-muted-foreground" />
-                          Cisco AI Taxonomy
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        {frameworkMappings.ciscoEntries.length > 0 ? (
-                          <div className="space-y-2">
-                            {frameworkMappings.ciscoEntries.map((og) => (
-                              <Link
-                                key={og.code}
-                                to={`/taxonomy?tab=cisco`}
-                                className="flex items-center gap-3 p-3 rounded-lg border hover:bg-cyan-50/50 dark:hover:bg-cyan-950/20 transition-colors group"
-                              >
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-900/20 dark:text-cyan-300 dark:border-cyan-800 flex-shrink-0"
-                                >
-                                  {og.code}
-                                </Badge>
-                                <span className="text-sm font-medium group-hover:text-cyan-700 dark:group-hover:text-cyan-300 transition-colors">
-                                  {og.description}
-                                </span>
-                              </Link>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">
-                            No Cisco AI Taxonomy mappings
-                          </p>
-                        )}
-                      </CardContent>
-                    </Card>
-
-                    {/* AIVSS Scores */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-base">
-                          <Calculator className="h-5 w-5 text-amber-500" />
-                          AIVSS Risk Scores
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        {frameworkMappings.aivssMatches.length > 0 ? (
-                          <div className="space-y-2">
-                            {frameworkMappings.aivssMatches.map((risk) => (
-                              <Link
-                                key={risk.rank}
-                                to={`/taxonomy?tab=aivss`}
-                                className="flex items-center gap-3 p-3 rounded-lg border hover:bg-amber-50/50 dark:hover:bg-amber-950/20 transition-colors group"
-                              >
-                                <Badge
-                                  variant="outline"
-                                  className={`text-xs flex-shrink-0 ${getSeverityColor(risk.severity)}`}
-                                >
-                                  #{risk.rank}
-                                </Badge>
-                                <div className="flex-1">
-                                  <span className="text-sm font-medium group-hover:text-amber-700 dark:group-hover:text-amber-300 transition-colors">
-                                    {risk.name}
-                                  </span>
-                                  <div className="text-xs text-muted-foreground">
-                                    AIVSS {risk.aivssScore.toFixed(1)} ({risk.severity})
-                                  </div>
-                                </div>
-                              </Link>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">
-                            No AIVSS risk score mappings
-                          </p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </div>
-                </>
-              )}
-            </TabsContent>
-          </Tabs>
+          {threat.alternateNames?.length ? (
+            <span className="text-xs text-muted-foreground">
+              Also called {threat.alternateNames.join(", ")}
+            </span>
+          ) : null}
         </div>
-      </section>
-      <Footer />
-    </>
+      </PageHeader>
+
+      <Tabs value={activeTab} onValueChange={setTab} className="w-full">
+        <TabsList className="mb-6 grid h-auto w-full grid-cols-5">
+          <TabsTrigger value="overview" className="gap-2">
+            <Info aria-hidden className="h-4 w-4" />
+            <span className="sr-only sm:not-sr-only">Overview</span>
+          </TabsTrigger>
+          <TabsTrigger value="attack-vectors" className="gap-2">
+            <Crosshair aria-hidden className="h-4 w-4" />
+            <span className="sr-only sm:not-sr-only">Attack vectors</span>
+            <span className="hidden text-xs text-muted-foreground md:inline">({vectorCount})</span>
+          </TabsTrigger>
+          <TabsTrigger value="mitigations" className="gap-2">
+            <Shield aria-hidden className="h-4 w-4" />
+            <span className="sr-only sm:not-sr-only">Controls</span>
+            <span className="hidden text-xs text-muted-foreground md:inline">
+              ({mitigations.length})
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="components" className="gap-2">
+            <Layers aria-hidden className="h-4 w-4" />
+            <span className="sr-only sm:not-sr-only">Components</span>
+            <span className="hidden text-xs text-muted-foreground md:inline">
+              ({components.length})
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="frameworks" className="gap-2">
+            <Network aria-hidden className="h-4 w-4" />
+            <span className="sr-only sm:not-sr-only">Frameworks</span>
+            <span className="hidden text-xs text-muted-foreground md:inline">({refCount})</span>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Overview */}
+        <TabsContent value="overview" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Impact analysis</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {threat.impactAnalysis ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <CiaCard
+                    label="Confidentiality"
+                    affected={threat.impactAnalysis.confidentiality}
+                  />
+                  <CiaCard label="Integrity" affected={threat.impactAnalysis.integrity} />
+                  <CiaCard label="Availability" affected={threat.impactAnalysis.availability} />
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No impact analysis available.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
+              <CardTitle className="text-lg">Top controls</CardTitle>
+              <Link
+                to={tabHref("mitigations")}
+                className="text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+              >
+                All {mitigations.length}
+              </Link>
+            </CardHeader>
+            <CardContent>
+              {mitigations.length ? (
+                <ul className="grid gap-3 md:grid-cols-2">
+                  {[...mitigations]
+                    .sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0))
+                    .slice(0, 4)
+                    .map((m) => (
+                      <li key={m.id}>
+                        <Link
+                          to={`/controls/${m.id}`}
+                          className="group flex h-full flex-col gap-1 rounded-lg border p-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {controlCode(m.id)}
+                          </span>
+                          <span className="font-semibold group-hover:text-primary">{m.name}</span>
+                          <span className="line-clamp-2 text-sm text-muted-foreground">
+                            {m.description}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                </ul>
+              ) : (
+                <p className="text-muted-foreground">No controls are mapped to this threat.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {threat.references?.length ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">References</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {threat.references.map((ref) => (
+                    <li key={ref.url}>
+                      <a
+                        href={ref.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                      >
+                        <ExternalLink
+                          aria-hidden
+                          className="h-4 w-4 shrink-0 text-muted-foreground"
+                        />
+                        <span className="text-sm font-medium group-hover:text-primary">
+                          {ref.title}
+                        </span>
+                        <span className="sr-only">(opens in a new tab)</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          ) : null}
+        </TabsContent>
+
+        {/* Attack vectors → kill chain */}
+        <TabsContent value="attack-vectors">
+          <h2 className="mb-2 text-lg font-semibold">Kill chain</h2>
+          <KillChainStrip
+            threat={threat}
+            controls={mitigations}
+            allControlsHref={tabHref("mitigations")}
+          />
+          <ScenarioLinks scenarios={scenarios} className="mt-8" />
+        </TabsContent>
+
+        {/* Controls */}
+        <TabsContent value="mitigations">
+          <h2 className="sr-only">Mitigating controls</h2>
+          {mitigations.length ? (
+            <ul className="grid gap-4">
+              {mitigations.map((m) => (
+                <li key={m.id} className="card-hover relative rounded-lg border bg-card p-5">
+                  <div className="flex items-start gap-4">
+                    <span className="mt-0.5 shrink-0 text-muted-foreground">
+                      <Icon name={m.icon ?? "shield"} className="h-6 w-6" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <h3 className="text-lg font-semibold">
+                          <Link
+                            to={`/controls/${m.id}`}
+                            className="after:absolute after:inset-0 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            <span className="mr-2 font-mono text-sm text-muted-foreground">
+                              {controlCode(m.id)}
+                            </span>
+                            {m.name}
+                          </Link>
+                        </h3>
+                        {typeof m.riskScore === "number" && (
+                          <RiskScore score={m.riskScore} className="w-36" />
+                        )}
+                      </div>
+                      <RichText
+                        text={m.description}
+                        variant="compact"
+                        glossary={false}
+                        className="mt-1"
+                      />
+                      <div className="relative z-10 mt-3 flex flex-wrap gap-2">
+                        {PHASE_ORDER.map((p) => {
+                          const n = phaseTaskTotal(m, p);
+                          return phaseApplies(m, p) ? (
+                            <Link
+                              key={p}
+                              to={`/controls/${m.id}?tab=${p}`}
+                              className="inline-flex items-center gap-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              aria-label={`${m.name}, ${p} phase${n ? `: ${n} tasks` : ""}`}
+                            >
+                              <PhaseBadge phase={p} size="xs" />
+                              {n > 0 && (
+                                <span className="text-xs tabular-nums text-muted-foreground">
+                                  {n}
+                                </span>
+                              )}
+                            </Link>
+                          ) : (
+                            <PhaseBadge key={p} phase={p} size="xs" active={false} />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground">No controls are mapped to this threat.</p>
+          )}
+        </TabsContent>
+
+        {/* Components */}
+        <TabsContent value="components" className="space-y-6">
+          <h2 className="sr-only">Affected components</h2>
+          <p className="max-w-3xl text-sm text-muted-foreground">
+            Key components (KC1–KC6) where {threat.code} applies. A sub-component marked “inherited”
+            has no mapping of its own; the source maps the threat to its parent.
+          </p>
+          <div className="grid gap-4 md:grid-cols-2">
+            {kcGroups.map(({ kc, entries }) => (
+              <Card key={kc.id}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <span
+                      aria-hidden
+                      className="h-3 w-3 shrink-0 rounded-full"
+                      style={{ background: kcColor(kc.id) }}
+                    />
+                    <Link
+                      to={`/components/${kc.id}`}
+                      className="hover:text-primary hover:underline"
+                    >
+                      {kc.code} · {kc.name}
+                    </Link>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-1.5">
+                    {entries
+                      .filter((e) => e.depth > 0)
+                      .map((e) => (
+                        <li key={e.id}>
+                          <Link
+                            to={`/components/${e.id}`}
+                            className={cn(
+                              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                              e.depth > 1 && "ml-4",
+                            )}
+                          >
+                            <span className="w-16 shrink-0 font-mono text-xs text-muted-foreground">
+                              {e.code}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate">{e.title}</span>
+                            {e.inherited && (
+                              <span className="shrink-0 text-[11px] text-muted-foreground">
+                                inherited from {e.inheritedFrom?.toUpperCase()}
+                              </span>
+                            )}
+                          </Link>
+                        </li>
+                      ))}
+                    {entries.every((e) => e.depth === 0) && (
+                      <li className="text-sm text-muted-foreground">
+                        Mapped to the component as a whole.
+                      </li>
+                    )}
+                  </ul>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          {threat.affectedComponents?.length ? (
+            <div>
+              <h3 className="mb-2 text-sm font-medium text-muted-foreground">
+                As described in the source
+              </h3>
+              <ul className="flex flex-wrap gap-2">
+                {threat.affectedComponents.map((c) => (
+                  <li key={c}>
+                    <Badge variant="outline">{c}</Badge>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </TabsContent>
+
+        {/* Frameworks */}
+        <TabsContent value="frameworks" className="space-y-6">
+          <h2 className="sr-only">Framework mappings</h2>
+          <ThreatConstellation threat={threat} refs={refs} />
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            {FRAMEWORK_CARDS.map((f) => (
+              <Card key={f.key}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <span
+                      aria-hidden
+                      className="h-3 w-3 shrink-0 rounded-full"
+                      style={{ background: FRAMEWORK_PALETTE[f.key].css }}
+                    />
+                    {f.title}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <FrameworkRefList refs={refs[f.key]} empty={f.empty} />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      <ThreatPager threat={threat} />
+      <SourceNote source={SOURCES.threats} className="mt-6" />
+    </PageLayout>
   );
 };
 

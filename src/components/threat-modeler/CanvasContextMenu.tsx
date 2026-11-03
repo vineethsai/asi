@@ -1,150 +1,217 @@
+import { useRef, type ReactNode } from "react";
+import {
+  ArrowDown,
+  ArrowDownToLine,
+  ArrowUp,
+  ArrowUpToLine,
+  Boxes,
+  CheckSquare,
+  ClipboardPaste,
+  Copy,
+  CopyPlus,
+  FlaskConical,
+  Link2,
+  Maximize2,
+  PanelRight,
+  Shield,
+  Trash2,
+  Wand2,
+} from "lucide-react";
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuLabel,
   ContextMenuSeparator,
+  ContextMenuShortcut,
   ContextMenuSub,
   ContextMenuSubContent,
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import {
-  Copy,
-  Trash2,
-  Edit2,
-  Shield,
-  Maximize2,
-  PlusCircle,
-  CheckSquare,
-  ArrowUpToLine,
-  ArrowDownToLine,
-  ArrowUp,
-  ArrowDown,
-} from "lucide-react";
-import type { TrustLevel } from "./types";
+import { selectNodes, type CanvasActions } from "./hooks/useCanvasActions";
+import { shortcutHint } from "./shortcuts";
+import { tm, useTM } from "./store";
 
-interface CanvasContextMenuProps {
-  children: React.ReactNode;
-  onDeleteSelected: () => void;
-  onDuplicateSelected: () => void;
-  onChangeTrustLevel: (level: TrustLevel) => void;
-  onEditSelected: () => void;
-  onAddTrustBoundary: () => void;
-  onSelectAll: () => void;
-  onFitView: () => void;
-  onGroupInBoundary: () => void;
-  onSendToFront: () => void;
-  onSendToBack: () => void;
-  onSendForward: () => void;
-  onSendBackward: () => void;
-  hasSelection: boolean;
-  isNode: boolean;
-  isEdge: boolean;
+interface Target {
+  nodeId: string | null;
+  edgeId: string | null;
+  x: number;
+  y: number;
 }
 
+function targetOf(e: { target: EventTarget | null; clientX: number; clientY: number }): Target {
+  const el = e.target instanceof Element ? e.target : null;
+  return {
+    nodeId: el?.closest(".react-flow__node")?.getAttribute("data-id") ?? null,
+    edgeId: el?.closest(".react-flow__edge")?.getAttribute("data-id") ?? null,
+    x: e.clientX,
+    y: e.clientY,
+  };
+}
+
+/**
+ * Right-click / long-press (Radix handles touch long-press) menu for the
+ * canvas. Trust level and other properties live in the property panel only
+ * (P3-33); this menu acts on the selection, selecting the clicked element first.
+ */
 export default function CanvasContextMenu({
+  actions,
   children,
-  onDeleteSelected,
-  onDuplicateSelected,
-  onChangeTrustLevel,
-  onEditSelected,
-  onAddTrustBoundary,
-  onSelectAll,
-  onFitView,
-  onGroupInBoundary,
-  onSendToFront,
-  onSendToBack,
-  onSendForward,
-  onSendBackward,
-  hasSelection,
-  isNode,
-  isEdge,
-}: CanvasContextMenuProps) {
+}: {
+  actions: CanvasActions;
+  children: ReactNode;
+}) {
+  const target = useRef<Target>({ nodeId: null, edgeId: null, x: 0, y: 0 });
+  const readOnly = useTM((s) => s.persist === "readonly");
+  const selectedNodes = useTM((s) => s.document.nodes.filter((n) => n.selected).length);
+  const selectedEdge = useTM((s) => s.ui.selectedEdgeId);
+  const single = useTM((s) => {
+    const sel = s.document.nodes.filter((n) => n.selected);
+    return sel.length === 1 ? sel[0] : null;
+  });
+  const empty = useTM((s) => s.document.nodes.length === 0);
+
+  const record = (e: React.MouseEvent | React.PointerEvent) => {
+    target.current = targetOf(e);
+  };
+
+  const onOpenChange = (open: boolean) => {
+    if (!open) return;
+    const { nodeId, edgeId } = target.current;
+    const s = tm();
+    if (nodeId) {
+      if (!s.document.nodes.find((n) => n.id === nodeId)?.selected) selectNodes([nodeId]);
+    } else if (edgeId) {
+      s.setGraph((ns, es) => ({
+        nodes: ns.map((n) => (n.selected ? { ...n, selected: false } : n)),
+        edges: es.map((e) =>
+          e.selected === (e.id === edgeId) ? e : { ...e, selected: e.id === edgeId },
+        ),
+      }));
+      s.setUi({ selectedNodeId: null, selectedEdgeId: edgeId });
+    }
+  };
+
+  const openProperties = () => {
+    if (!window.matchMedia("(min-width: 1024px)").matches) tm().setUi({ sheet: "properties" });
+  };
+  const at = () => actions.rf.screenToFlowPosition({ x: target.current.x, y: target.current.y });
+  const hasNode = selectedNodes > 0;
+  const isBoundary = single?.type === "trustBoundary";
+
   return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
-      <ContextMenuContent className="w-48">
-        {hasSelection && isNode && (
+    <ContextMenu onOpenChange={onOpenChange}>
+      <ContextMenuTrigger asChild onContextMenuCapture={record} onPointerDownCapture={record}>
+        {children}
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-60">
+        {hasNode && (
           <>
-            <ContextMenuItem onClick={onEditSelected} className="text-xs gap-2">
-              <Edit2 className="h-3.5 w-3.5" /> Edit Properties
-            </ContextMenuItem>
-            <ContextMenuItem onClick={onDuplicateSelected} className="text-xs gap-2">
-              <Copy className="h-3.5 w-3.5" /> Duplicate
-            </ContextMenuItem>
-            <ContextMenuSub>
-              <ContextMenuSubTrigger className="text-xs gap-2">
-                <Shield className="h-3.5 w-3.5" /> Trust Level
-              </ContextMenuSubTrigger>
-              <ContextMenuSubContent>
-                <ContextMenuItem onClick={() => onChangeTrustLevel("trusted")} className="text-xs">
-                  Trusted
+            <ContextMenuLabel className="truncate text-xs text-muted-foreground">
+              {single ? single.data.label : `${selectedNodes} components`}
+            </ContextMenuLabel>
+            {single && (
+              <ContextMenuItem onSelect={openProperties}>
+                <PanelRight className="mr-2 h-4 w-4" aria-hidden /> Properties
+              </ContextMenuItem>
+            )}
+            {single && !isBoundary && !readOnly && (
+              <ContextMenuItem onSelect={() => actions.startConnect(single.id)}>
+                <Link2 className="mr-2 h-4 w-4" aria-hidden /> Connect from here
+                <ContextMenuShortcut>{shortcutHint("connect")}</ContextMenuShortcut>
+              </ContextMenuItem>
+            )}
+            {single && !isBoundary && (
+              <ContextMenuItem onSelect={() => tm().simulateRemoval(single.id)} disabled={empty}>
+                <FlaskConical className="mr-2 h-4 w-4" aria-hidden /> What if it were removed?
+              </ContextMenuItem>
+            )}
+            {!readOnly && (
+              <>
+                <ContextMenuSeparator />
+                <ContextMenuItem onSelect={actions.duplicate}>
+                  <CopyPlus className="mr-2 h-4 w-4" aria-hidden /> Duplicate
+                  <ContextMenuShortcut>{shortcutHint("duplicate")}</ContextMenuShortcut>
                 </ContextMenuItem>
+                <ContextMenuItem onSelect={actions.copy}>
+                  <Copy className="mr-2 h-4 w-4" aria-hidden /> Copy
+                  <ContextMenuShortcut>{shortcutHint("copy")}</ContextMenuShortcut>
+                </ContextMenuItem>
+                <ContextMenuItem onSelect={actions.group}>
+                  <Boxes className="mr-2 h-4 w-4" aria-hidden /> Group in trust boundary
+                  <ContextMenuShortcut>{shortcutHint("group")}</ContextMenuShortcut>
+                </ContextMenuItem>
+                <ContextMenuSub>
+                  <ContextMenuSubTrigger>
+                    <ArrowUpToLine className="mr-2 h-4 w-4" aria-hidden /> Arrange
+                  </ContextMenuSubTrigger>
+                  <ContextMenuSubContent className="w-48">
+                    <ContextMenuItem onSelect={() => actions.reorder("front")}>
+                      <ArrowUpToLine className="mr-2 h-4 w-4" aria-hidden /> Bring to front
+                    </ContextMenuItem>
+                    <ContextMenuItem onSelect={() => actions.reorder("forward")}>
+                      <ArrowUp className="mr-2 h-4 w-4" aria-hidden /> Bring forward
+                    </ContextMenuItem>
+                    <ContextMenuItem onSelect={() => actions.reorder("backward")}>
+                      <ArrowDown className="mr-2 h-4 w-4" aria-hidden /> Send backward
+                    </ContextMenuItem>
+                    <ContextMenuItem onSelect={() => actions.reorder("back")}>
+                      <ArrowDownToLine className="mr-2 h-4 w-4" aria-hidden /> Send to back
+                    </ContextMenuItem>
+                  </ContextMenuSubContent>
+                </ContextMenuSub>
+                <ContextMenuSeparator />
                 <ContextMenuItem
-                  onClick={() => onChangeTrustLevel("semi-trusted")}
-                  className="text-xs"
+                  onSelect={actions.deleteSelection}
+                  className="text-destructive focus:text-destructive"
                 >
-                  Semi-Trusted
+                  <Trash2 className="mr-2 h-4 w-4" aria-hidden /> Delete
+                  <ContextMenuShortcut>{shortcutHint("delete")}</ContextMenuShortcut>
                 </ContextMenuItem>
-                <ContextMenuItem
-                  onClick={() => onChangeTrustLevel("untrusted")}
-                  className="text-xs"
-                >
-                  Untrusted
-                </ContextMenuItem>
-              </ContextMenuSubContent>
-            </ContextMenuSub>
-            <ContextMenuItem onClick={onGroupInBoundary} className="text-xs gap-2">
-              <PlusCircle className="h-3.5 w-3.5" /> Group in Trust Boundary
-            </ContextMenuItem>
-            <ContextMenuSub>
-              <ContextMenuSubTrigger className="text-xs gap-2">
-                <ArrowUpToLine className="h-3.5 w-3.5" /> Layer Order
-              </ContextMenuSubTrigger>
-              <ContextMenuSubContent>
-                <ContextMenuItem onClick={onSendToFront} className="text-xs gap-2">
-                  <ArrowUpToLine className="h-3.5 w-3.5" /> Bring to Front
-                </ContextMenuItem>
-                <ContextMenuItem onClick={onSendForward} className="text-xs gap-2">
-                  <ArrowUp className="h-3.5 w-3.5" /> Bring Forward
-                </ContextMenuItem>
-                <ContextMenuItem onClick={onSendBackward} className="text-xs gap-2">
-                  <ArrowDown className="h-3.5 w-3.5" /> Send Backward
-                </ContextMenuItem>
-                <ContextMenuItem onClick={onSendToBack} className="text-xs gap-2">
-                  <ArrowDownToLine className="h-3.5 w-3.5" /> Send to Back
-                </ContextMenuItem>
-              </ContextMenuSubContent>
-            </ContextMenuSub>
+              </>
+            )}
             <ContextMenuSeparator />
           </>
         )}
-        {hasSelection && isEdge && (
+        {!hasNode && selectedEdge && (
           <>
-            <ContextMenuItem onClick={onEditSelected} className="text-xs gap-2">
-              <Edit2 className="h-3.5 w-3.5" /> Edit Metadata
+            <ContextMenuItem onSelect={openProperties}>
+              <PanelRight className="mr-2 h-4 w-4" aria-hidden /> Data flow properties
             </ContextMenuItem>
+            {!readOnly && (
+              <ContextMenuItem
+                onSelect={actions.deleteSelection}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" aria-hidden /> Delete data flow
+              </ContextMenuItem>
+            )}
             <ContextMenuSeparator />
           </>
         )}
-        {hasSelection && (
-          <ContextMenuItem onClick={onDeleteSelected} className="text-xs gap-2 text-destructive">
-            <Trash2 className="h-3.5 w-3.5" /> Delete
-          </ContextMenuItem>
-        )}
-        {!hasSelection && (
+        {!readOnly && (
           <>
-            <ContextMenuItem onClick={onAddTrustBoundary} className="text-xs gap-2">
-              <Shield className="h-3.5 w-3.5" /> Add Trust Boundary
+            <ContextMenuItem onSelect={() => actions.paste()} disabled={!actions.hasClipboard()}>
+              <ClipboardPaste className="mr-2 h-4 w-4" aria-hidden /> Paste
+              <ContextMenuShortcut>{shortcutHint("paste")}</ContextMenuShortcut>
             </ContextMenuItem>
-            <ContextMenuSeparator />
+            <ContextMenuItem onSelect={() => actions.addEntryById("dfd-trust", at())}>
+              <Shield className="mr-2 h-4 w-4" aria-hidden /> Add trust boundary here
+            </ContextMenuItem>
+            <ContextMenuItem onSelect={actions.tidy} disabled={empty}>
+              <Wand2 className="mr-2 h-4 w-4" aria-hidden /> Tidy layout
+              <ContextMenuShortcut>{shortcutHint("tidy")}</ContextMenuShortcut>
+            </ContextMenuItem>
           </>
         )}
-        <ContextMenuItem onClick={onSelectAll} className="text-xs gap-2">
-          <CheckSquare className="h-3.5 w-3.5" /> Select All
+        <ContextMenuItem onSelect={actions.selectAll} disabled={empty}>
+          <CheckSquare className="mr-2 h-4 w-4" aria-hidden /> Select all
+          <ContextMenuShortcut>{shortcutHint("selectAll")}</ContextMenuShortcut>
         </ContextMenuItem>
-        <ContextMenuItem onClick={onFitView} className="text-xs gap-2">
-          <Maximize2 className="h-3.5 w-3.5" /> Fit View
+        <ContextMenuItem onSelect={actions.fit} disabled={empty}>
+          <Maximize2 className="mr-2 h-4 w-4" aria-hidden /> Fit view
+          <ContextMenuShortcut>{shortcutHint("fit")}</ContextMenuShortcut>
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

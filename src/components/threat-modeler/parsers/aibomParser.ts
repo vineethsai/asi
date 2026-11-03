@@ -93,10 +93,16 @@ export function parseAibomReport(json: unknown): ParseResult {
     return { components, connections, warnings: ['No "sources" found inside aibom_analysis'] };
   }
 
+  const usedKeys = new Set<string>();
+
   // Iterate over every source (e.g. a scanned file / project)
   for (const [sourceName, sourceData] of Object.entries(sources)) {
     if (!sourceData || typeof sourceData !== "object") continue;
     const source = sourceData as Record<string, unknown>;
+    // P3-19: relationships resolve by instance id (or by the ORIGINAL name, per source)
+    // before display names are de-duplicated by renaming.
+    const byInstance = new Map<string, string>();
+    const byName = new Map<string, string[]>();
 
     // --- Components ---
     const comps = source.components as Record<string, unknown[]> | undefined;
@@ -110,14 +116,21 @@ export function parseAibomReport(json: unknown): ParseResult {
             `Unrecognized AIBOM category "${category}" in source "${sourceName}" – mapped as "other"`,
           );
         }
-        for (const entry of entries) {
-          if (!entry || typeof entry !== "object") continue;
+        entries.forEach((entry, i) => {
+          if (!entry || typeof entry !== "object") return;
           const record = entry as Record<string, unknown>;
           const rawName = String(
             record.name ?? record.class_name ?? record.instance_id ?? "Unknown",
           );
+          const name = shortenName(rawName);
+          let key = `${sourceName}::${record.instance_id ?? `${category}:${i}`}`;
+          if (usedKeys.has(key)) key = `${key}#${category}:${i}`;
+          usedKeys.add(key);
+          if (record.instance_id != null) byInstance.set(String(record.instance_id), key);
+          for (const n of new Set([name, rawName])) byName.set(n, [...(byName.get(n) ?? []), key]);
           components.push({
-            name: shortenName(rawName),
+            key,
+            name,
             type: mappedType,
             metadata: {
               ...extractMetadata(record),
@@ -125,28 +138,52 @@ export function parseAibomReport(json: unknown): ParseResult {
               originalCategory: category,
             },
           });
-        }
+        });
       }
     }
 
     // --- Relationships ---
     const rels = source.relationships as unknown[] | undefined;
     if (Array.isArray(rels)) {
+      const resolve = (instance: unknown, name: unknown): string | undefined => {
+        if (instance != null && byInstance.has(String(instance)))
+          return byInstance.get(String(instance));
+        if (name == null) return undefined;
+        const keys = byName.get(String(name)) ?? byName.get(shortenName(String(name)));
+        if (keys && keys.length > 1)
+          warnings.push(
+            `Relationship endpoint "${String(name)}" is ambiguous in "${sourceName}"; using the first match`,
+          );
+        return keys?.[0];
+      };
       for (const rel of rels) {
         if (!rel || typeof rel !== "object") continue;
         const r = rel as Record<string, unknown>;
-        const srcName = shortenName(String(r.source_name ?? r.source_instance_id ?? ""));
-        const tgtName = shortenName(String(r.target_name ?? r.target_instance_id ?? ""));
+        const sourceKey = resolve(r.source_instance_id, r.source_name);
+        const targetKey = resolve(r.target_instance_id, r.target_name);
         const label = String(r.label ?? r.relationship_type ?? "RELATED");
-        if (srcName && tgtName) {
-          connections.push({ source: srcName, target: tgtName, label });
+        if (sourceKey && targetKey) {
+          connections.push({
+            source: shortenName(String(r.source_name ?? r.source_instance_id ?? "")),
+            target: shortenName(String(r.target_name ?? r.target_instance_id ?? "")),
+            sourceKey,
+            targetKey,
+            label,
+          });
+        } else {
+          warnings.push(`Skipped relationship with an unknown endpoint in "${sourceName}"`);
         }
       }
     }
   }
 
-  // Deduplicate component names
+  // Deduplicate display names (keys stay unique and unchanged)
   const deduped = deduplicateNames(components);
+  const nameByKey = new Map(deduped.map((c) => [c.key!, c.name]));
+  for (const c of connections) {
+    c.source = nameByKey.get(c.sourceKey!) ?? c.source;
+    c.target = nameByKey.get(c.targetKey!) ?? c.target;
+  }
 
   if (deduped.length === 0) {
     warnings.push(

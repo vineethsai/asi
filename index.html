@@ -1,55 +1,121 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-FB1F73HMB5"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-FB1F73HMB5');
-    </script>
-
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Agents Security Guide - OWASP NIST AI RMF Mapping | Secure AI Agent Development</title>
-    <meta name="description" content="Comprehensive AI agents security guide with OWASP best practices, NIST AI RMF mapping for AI agents, security controls, and secure development frameworks for agentic AI systems." />
+
+    <!-- Theme bootstrap: apply the stored/system theme before first paint (no light flash).
+         Keep the storage key in sync with src/components/layout/ThemeProvider.tsx. -->
+    <script>
+      (function () {
+        var root = document.documentElement;
+        var dark = false;
+        try {
+          var stored = localStorage.getItem("theme");
+          dark =
+            stored === "dark" ||
+            (stored !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        } catch (e) {}
+        root.classList.toggle("dark", dark);
+        root.style.colorScheme = dark ? "dark" : "light";
+        try {
+          if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            root.classList.add("motion-ok");
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f9f9fa" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#131316" />
+
+    <!-- Fonts are requested before any stylesheet so text never waits on late font discovery. -->
+    <link
+      rel="preload"
+      href="/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/GeistMono-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
+    <title>Agentic Security Hub — OWASP agentic AI threats, controls and standards</title>
+    <!-- Tags marked data-react-helmet are defaults that react-helmet replaces per route. -->
+    <meta
+      data-react-helmet="true"
+      name="description"
+      content="Interactive guide to securing agentic AI applications: OWASP agentic threats and mitigations, AISVS verification requirements, NIST AI RMF mapping, framework taxonomy and a threat modeler."
+    />
+    <meta
+      data-react-helmet="true"
+      name="keywords"
+      content="AI agents security, agentic AI security, OWASP, AISVS, NIST AI RMF, AI security controls, AI agent threats, threat modeling, LLM security"
+    />
     <meta name="author" content="OWASP Securing Agentic Applications" />
-    <meta name="keywords" content="AI agents security, AI security, agent security, agent architectures, AI security controls, NIST AI RMF mapping to AI agent, secure development for AI agents, OWASP AI security, agentic systems security, LLM security, AI agent threats, AI agent mitigations, secure AI development, AI governance, AI risk management, artificial intelligence security" />
+    <meta data-react-helmet="true" name="robots" content="index, follow" />
+    <link data-react-helmet="true" rel="canonical" href="https://agenticsecurity.info/" />
 
-    <meta property="og:title" content="AI Agents Security Guide - OWASP NIST AI RMF Mapping" />
-    <meta property="og:description" content="Master AI agents security with comprehensive OWASP guide, NIST AI RMF mapping, and secure development practices for agentic AI systems." />
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="/favicon.svg" />
+    <meta data-react-helmet="true" property="og:site_name" content="Agentic Security Hub" />
+    <meta data-react-helmet="true" property="og:type" content="website" />
+    <meta data-react-helmet="true" property="og:title" content="Agentic Security Hub" />
+    <meta
+      data-react-helmet="true"
+      property="og:description"
+      content="Interactive guide to securing agentic AI applications with OWASP threats, AISVS, NIST AI RMF mapping and a threat modeler."
+    />
+    <meta data-react-helmet="true" property="og:url" content="https://agenticsecurity.info/" />
+    <meta
+      data-react-helmet="true"
+      property="og:image"
+      content="https://agenticsecurity.info/og/home.png"
+    />
+    <meta data-react-helmet="true" property="og:image:width" content="1200" />
+    <meta data-react-helmet="true" property="og:image:height" content="630" />
 
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@vineethsai" />
-    <meta name="twitter:title" content="AI Agents Security Guide - OWASP NIST AI RMF Mapping" />
-    <meta name="twitter:description" content="Master AI agents security with comprehensive OWASP guide, NIST AI RMF mapping, and secure development practices for agentic AI systems." />
-    <meta name="twitter:image" content="/favicon.svg" />
+    <meta data-react-helmet="true" name="twitter:card" content="summary_large_image" />
+    <meta data-react-helmet="true" name="twitter:title" content="Agentic Security Hub" />
+    <meta
+      data-react-helmet="true"
+      name="twitter:description"
+      content="Interactive guide to securing agentic AI applications with OWASP threats, AISVS, NIST AI RMF mapping and a threat modeler."
+    />
+    <meta
+      data-react-helmet="true"
+      name="twitter:image"
+      content="https://agenticsecurity.info/og/home.png"
+    />
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-    <link rel="apple-touch-icon" href="/favicon.svg">
-    <link rel="manifest" href="/site.webmanifest">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
 
-    <meta name="robots" content="index, follow" />
-    <link rel="canonical" href="https://agenticsecurity.info/" />
-    <meta property="og:url" content="https://agenticsecurity.info/" />
-    <meta name="twitter:url" content="https://agenticsecurity.info/" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "Organization",
-        "name": "AI Agents Security Guide - OWASP",
+        "name": "Agentic Security Hub",
         "url": "https://agenticsecurity.info/",
-        "logo": "/favicon.svg",
-        "description": "Comprehensive AI agents security guide with OWASP best practices and NIST AI RMF mapping",
-        "keywords": ["AI agents security", "AI security", "agent security", "agent architectures", "AI security controls", "NIST AI RMF", "secure AI development", "agentic systems"],
-        "sameAs": [
-          "https://owasp.org"
-        ]
+        "logo": "https://agenticsecurity.info/android-chrome-512x512.png",
+        "description": "Interactive guide to securing agentic AI applications with OWASP best practices and NIST AI RMF mapping",
+        "sameAs": ["https://owasp.org/www-project-securing-agentic-applications/"]
       }
+    </script>
+
+    <!-- Google tag (gtag.js). Page views are sent by src/hooks/useAnalytics.ts, one per navigation. -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-FB1F73HMB5"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+      gtag("config", "G-FB1F73HMB5", { send_page_view: false });
     </script>
   </head>
 

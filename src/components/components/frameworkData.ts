@@ -20,23 +20,37 @@ export type ComponentNode = {
   children?: ComponentNode[];
 };
 
-// Helper map for threat IDs to titles (populated from threats.md)
+export const source = {
+  name: "OWASP Securing Agentic Applications Guide (KC1-KC6 reference architecture)",
+  version: "1.0 (Jul 2025)",
+  url: "https://genai.owasp.org/resource/securing-agentic-applications-guide-1-0/",
+  retrievedAt: "2026-11-03",
+};
+
+// Threat IDs to official names (OWASP Agentic AI Threats & Mitigations v1.1).
+// Component -> threat links must agree with `componentIds` in securityData.ts threatsData (enforced by
+// `npm run check:data`); a threat linked to a KC applies to all of its sub-components. The links for
+// T1-T15 follow the Securing Agentic Applications Guide 1.0; T16/T17 were introduced in T&M v1.1
+// (Dec 2025), after the guide, so their component links (KC2 and KC5 for T16; KC1 and KC5 for T17)
+// are this site's editorial mapping.
 const threatIdToTitleMap: { [key: string]: string } = {
   t1: "Memory Poisoning",
   t2: "Tool Misuse",
   t3: "Privilege Compromise",
   t4: "Resource Overload",
-  t5: "Cascading Hallucination",
+  t5: "Cascading Hallucination Attacks",
   t6: "Intent Breaking & Goal Manipulation",
-  t7: "Misaligned Behaviors",
-  t8: "Repudiation",
-  t9: "Identity Spoofing",
-  t10: "Overwhelming HITL",
-  t11: "Unexpected Remote Code Execution (RCE)",
-  t12: "Communication Poisoning",
-  t13: "Rogue Agents",
-  t14: "Human Attacks (on Orchestration)",
-  t15: "Human Manipulation (by LLM)",
+  t7: "Misaligned & Deceptive Behaviors",
+  t8: "Repudiation & Untraceability",
+  t9: "Identity Spoofing & Impersonation / Agent Identity Compromise",
+  t10: "Overwhelming Human in the Loop",
+  t11: "Unexpected RCE and Code Attacks",
+  t12: "Agent Communication Poisoning",
+  t13: "Rogue Agents in Multi-Agent Systems",
+  t14: "Human Attacks on Multi-Agent Systems",
+  t15: "Human Manipulation",
+  t16: "Insecure Inter-Agent Protocol Abuse",
+  t17: "Supply Chain Compromise",
 };
 
 // Data parsed from components.md with complete component definitions
@@ -46,7 +60,7 @@ const parsedComponentsData = [
     title: "Language Models (LLMs)",
     description:
       'The core cognitive engine or "brain" of the agent (e.g., GPT-4, Claude), responsible for understanding, reasoning, planning, and generating responses. This includes various types of language models.',
-    threatIds: ["t5", "t6", "t7", "t15"],
+    threatIds: ["t5", "t6", "t7", "t15", "t17"],
     color: "border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10",
     subComponents: [
       {
@@ -54,28 +68,28 @@ const parsedComponentsData = [
         title: "Large Language Models (LLMs)",
         description:
           "Core cognitive engine utilizing pre-trained foundation models for reasoning, planning, and generation, primarily directed via prompt engineering. Operates within constraints like context window, latency, and cost.",
-        threatIds: ["t5", "t6", "t7", "t15"],
+        threatIds: ["t5", "t6", "t7", "t15", "t17"],
       },
       {
         id: "kc1.2",
         title: "Multimodal LLMs (MLLMs)",
         description:
           "LLMs capable of processing and/or generating information across multiple data types beyond text (e.g., images, audio), enabling agents to perform a wider variety of tasks.",
-        threatIds: ["t5", "t6", "t7", "t15"],
+        threatIds: ["t5", "t6", "t7", "t15", "t17"],
       },
       {
         id: "kc1.3",
         title: "Small-Language Models (SLMs)",
         description:
           "Language models with fewer parameters, trained on smaller, focused datasets, designed for specific tasks or use cases. Characterized by smaller weight space, parameter size, and context window compared to LLMs.",
-        threatIds: ["t5", "t6", "t7", "t15"],
+        threatIds: ["t5", "t6", "t7", "t15", "t17"],
       },
       {
         id: "kc1.4",
         title: "Fine-tuned Models",
         description:
           "Language models (LLMs/MLLMs) that undergo additional training on specific datasets to specialize their capabilities, enhancing performance, adopting personas, or improving reliability for particular tasks.",
-        threatIds: ["t5", "t6", "t7", "t15"],
+        threatIds: ["t5", "t6", "t7", "t15", "t17"],
       },
     ],
   },
@@ -84,7 +98,7 @@ const parsedComponentsData = [
     title: "Orchestration (Control Flow)",
     description:
       "Mechanisms that dictate the agent's overall behavior, information flow, and decision-making processes. The specific mechanism depends on the architecture and impacts responsiveness and efficiency.",
-    threatIds: ["t6", "t8", "t9", "t10", "t12", "t13", "t14"],
+    threatIds: ["t6", "t8", "t9", "t10", "t12", "t13", "t14", "t16"],
     color: "border-green-500/30 bg-green-500/5 hover:bg-green-500/10",
     subComponents: [
       {
@@ -92,21 +106,21 @@ const parsedComponentsData = [
         title: "Workflows",
         description:
           "Structured, pre-defined sequence of tasks or steps that agents follow to achieve a goal, defining the flow of information and actions. Can be linear, conditional, or iterative.",
-        threatIds: ["t6", "t8", "t9", "t10", "t12", "t13", "t14"],
+        threatIds: ["t6", "t8", "t9", "t10", "t12", "t13", "t14", "t16"],
       },
       {
         id: "kc2.2",
         title: "Hierarchical Planning",
         description:
           "Multiple agents collaborating via an orchestrator (router) that decomposes tasks, routes sub-tasks to specialized agents, and monitors performance.",
-        threatIds: ["t6", "t8", "t9", "t10", "t12", "t13", "t14"],
+        threatIds: ["t6", "t8", "t9", "t10", "t12", "t13", "t14", "t16"],
       },
       {
         id: "kc2.3",
         title: "Multi-agent Collaboration",
         description:
           "Multiple agents working together, communicating and coordinating actions, sharing information and resources to achieve a common goal. Useful for complex tasks requiring diverse skills.",
-        threatIds: ["t6", "t8", "t9", "t10", "t12", "t13", "t14"],
+        threatIds: ["t6", "t8", "t9", "t10", "t12", "t13", "t14", "t16"],
       },
     ],
   },
@@ -160,31 +174,37 @@ const parsedComponentsData = [
         id: "kc4.1",
         title: "In-agent session memory",
         description: "Memory limited to a single agent and a single session.",
+        threatIds: ["t1", "t3", "t5", "t6", "t8", "t12"],
       },
       {
         id: "kc4.2",
         title: "Cross-agent session memory",
         description: "Memory shared across multiple agents but limited to a single session.",
+        threatIds: ["t1", "t3", "t5", "t6", "t8", "t12"],
       },
       {
         id: "kc4.3",
         title: "In-agent cross-session memory",
         description: "Memory limited to a single agent but shared across multiple sessions.",
+        threatIds: ["t1", "t3", "t5", "t6", "t8", "t12"],
       },
       {
         id: "kc4.4",
         title: "Cross-agent cross-session memory",
         description: "Memory shared across multiple agents and sessions.",
+        threatIds: ["t1", "t3", "t5", "t6", "t8", "t12"],
       },
       {
         id: "kc4.5",
         title: "In-agent cross-user memory",
         description: "Memory limited to a single agent but shared across multiple users.",
+        threatIds: ["t1", "t3", "t5", "t6", "t8", "t12"],
       },
       {
         id: "kc4.6",
         title: "Cross-agent cross-user memory",
         description: "Memory shared across multiple agents and users.",
+        threatIds: ["t1", "t3", "t5", "t6", "t8", "t12"],
       },
     ],
   },
@@ -193,7 +213,7 @@ const parsedComponentsData = [
     title: "Tool Integration Frameworks",
     description:
       "Allow agents to extend capabilities by using external tools (APIs, functions, data stores) to interact with the real world or other systems. Manages tool selection and use.",
-    threatIds: ["t2", "t3", "t6", "t8", "t11"],
+    threatIds: ["t2", "t3", "t6", "t7", "t8", "t11", "t16", "t17"],
     color: "border-pink-500/30 bg-pink-500/5 hover:bg-pink-500/10",
     subComponents: [
       {
@@ -201,21 +221,21 @@ const parsedComponentsData = [
         title: "Flexible Libraries / SDK Features",
         description:
           "Code-level building blocks (e.g., LangChain, CrewAI) or API capabilities (OpenAI Tool Use) offering high flexibility but requiring more coding effort.",
-        threatIds: ["t2", "t3", "t6", "t8", "t11"],
+        threatIds: ["t2", "t3", "t6", "t7", "t8", "t11", "t16", "t17"],
       },
       {
         id: "kc5.2",
         title: "Managed Platforms / Services",
         description:
           "Vendor-provided solutions (e.g., Amazon Bedrock Agents, Microsoft Copilot Platform) handling infrastructure and simplifying setup, often with easier ecosystem integration and low-code interfaces.",
-        threatIds: ["t2", "t3", "t6", "t8", "t11"],
+        threatIds: ["t2", "t3", "t6", "t7", "t8", "t11", "t16", "t17"],
       },
       {
         id: "kc5.3",
         title: "Managed APIs",
         description:
           "Vendor-hosted services (e.g., OpenAI Assistants API) providing higher-level abstractions, managing state and aspects of tool orchestration via API calls.",
-        threatIds: ["t2", "t3", "t6", "t8", "t11"],
+        threatIds: ["t2", "t3", "t6", "t7", "t8", "t11", "t16", "t17"],
       },
     ],
   },

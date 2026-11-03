@@ -1,83 +1,86 @@
-import { memo, useState, useRef, useCallback, useEffect } from "react";
-import { createPortal } from "react-dom";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from "@xyflow/react";
-import type { CanvasEdgeData } from "../types";
-import { Lock, Unlock, ShieldAlert } from "lucide-react";
+import { ArrowLeftRight, Lock, LockOpen, ShieldAlert, TriangleAlert } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { severityColor, severityLabel, severityToken } from "@/lib/severity";
+import { tm, useTM } from "../store";
+import type { CanvasEdge } from "../types";
+import { classificationColor } from "../nodes/visualTokens";
 
-const CLASSIFICATION_COLORS: Record<string, string> = {
-  Public: "#22c55e",
-  Internal: "#eab308",
-  Confidential: "#f97316",
-  Restricted: "#ef4444",
-};
+/**
+ * Data flow edge (§7.5): colour by classification, width from the attack-path
+ * score through it, dashed + lock-open when unencrypted, double arrow when
+ * bidirectional, animated dash offset only while "Flow" is on or the edge is
+ * on the playing attack path, a moving dot on the active hop, what-if ghost,
+ * and an unclipped label whose tooltip lives inside the label renderer so it
+ * follows pan / zoom and opens on hover and keyboard focus.
+ */
 
-function EdgeTooltip({
-  anchorRef,
-  edgeData,
-  label,
-  encrypted,
-  classification,
-  containsPII,
+const safeId = (id: string) => id.replace(/[^a-zA-Z0-9_-]/g, "_");
+
+/** SMIL animations inserted after page load must be started explicitly. */
+function MovingDot({
+  path,
+  dur,
+  reverse,
+  color,
 }: {
-  anchorRef: React.RefObject<HTMLDivElement | null>;
-  edgeData: CanvasEdgeData | undefined;
-  label: string;
-  encrypted: boolean;
-  classification: string;
-  containsPII: boolean;
+  path: string;
+  dur: number;
+  reverse?: boolean;
+  color: string;
 }) {
-  const [pos, setPos] = useState({ top: 0, left: 0 });
-
-  useEffect(() => {
-    if (!anchorRef.current) return;
-    const rect = anchorRef.current.getBoundingClientRect();
-    setPos({
-      top: rect.top - 4,
-      left: rect.left + rect.width / 2,
-    });
-  }, [anchorRef]);
-
-  return createPortal(
-    <div
-      className="fixed w-52 p-2.5 rounded-md border bg-popover text-popover-foreground shadow-lg text-[10px] space-y-0.5 pointer-events-none animate-in fade-in-0 zoom-in-95"
-      style={{
-        top: pos.top,
-        left: pos.left,
-        transform: "translate(-50%, -100%)",
-        zIndex: 99999,
-      }}
+  const ref = useRef<SVGAnimateMotionElement>(null);
+  useLayoutEffect(() => {
+    try {
+      ref.current?.beginElement();
+    } catch {
+      /* SMIL unsupported */
+    }
+  }, []);
+  return (
+    <circle
+      r={5}
+      fill={color}
+      stroke="hsl(var(--background))"
+      strokeWidth={1.5}
+      pointerEvents="none"
     >
-      <p className="font-semibold text-xs">{label}</p>
-      <p>Protocol: {edgeData?.protocol ?? "HTTPS"}</p>
-      <p>Encrypted: {encrypted ? "Yes" : "No"}</p>
-      <p>Auth: {edgeData?.authentication ?? "None"}</p>
-      <p>Classification: {classification}</p>
-      {containsPII && <p className="text-orange-500 font-semibold">Contains PII</p>}
-      {edgeData?.bidirectional && <p>Bidirectional: Yes</p>}
-    </div>,
-    document.body,
+      <animateMotion
+        ref={ref}
+        begin="indefinite"
+        dur={`${dur}ms`}
+        fill="freeze"
+        path={path}
+        keyPoints={reverse ? "1;0" : "0;1"}
+        keyTimes="0;1"
+        calcMode="linear"
+      />
+    </circle>
   );
 }
 
-function DataFlowEdge(props: EdgeProps) {
-  const {
-    sourceX,
-    sourceY,
-    targetX,
-    targetY,
-    sourcePosition,
-    targetPosition,
-    style = {},
-    markerEnd,
-    data,
-    selected,
-  } = props;
-  const edgeData = data as unknown as CanvasEdgeData | undefined;
-  const encrypted = edgeData?.encrypted ?? true;
-  const classification = edgeData?.dataClassification ?? "Internal";
-  const label = edgeData?.label ?? "Data Flow";
-  const containsPII = edgeData?.containsPII ?? false;
-  const threatCount = edgeData?.threats?.length ?? 0;
+function DataFlowEdge({
+  id,
+  source,
+  target,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  data,
+  selected,
+}: EdgeProps<CanvasEdge>) {
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
     sourceY,
@@ -86,75 +89,250 @@ function DataFlowEdge(props: EdgeProps) {
     targetY,
     targetPosition,
   });
-  const strokeColor = CLASSIFICATION_COLORS[classification] ?? "#eab308";
+  const summary = useTM((s) => s.edgeThreats[id]);
+  const flowOn = useTM((s) => s.ui.flowAnimation);
+  const onPath = useTM((s) => !!s.ui.highlight?.visitedEdgeIds.includes(id));
+  const still = useTM((s) => !!s.ui.highlight?.still);
+  const active = useTM((s) => s.ui.highlight?.activeEdgeId === id && !s.ui.highlight.still);
+  const reverse = useTM((s) => !!s.ui.highlight?.activeEdgeReverse);
+  const runKey = useTM((s) => s.ui.highlight?.runKey ?? 0);
+  const hopMs = useTM((s) => s.ui.highlight?.hopMs ?? 1200);
+  const band = useTM((s) => s.ui.highlight?.band ?? "high");
+  const ghost = useTM((s) => {
+    const w = s.ui.whatIf.result?.nodeId;
+    if (!w) return false;
+    if (w === source || w === target) return true;
+    const parent = (nid: string) => s.document.nodes.find((n) => n.id === nid)?.parentId;
+    return parent(source) === w || parent(target) === w;
+  });
+  const sourceLabel = useTM(
+    (s) => s.document.nodes.find((n) => n.id === source)?.data.label ?? source,
+  );
+  const targetLabel = useTM(
+    (s) => s.document.nodes.find((n) => n.id === target)?.data.label ?? target,
+  );
 
-  const [hovered, setHovered] = useState(false);
-  const labelRef = useRef<HTMLDivElement>(null);
-  const hoverTimeout = useRef<ReturnType<typeof setTimeout>>();
+  const [hover, setHover] = useState(false);
+  const [focus, setFocus] = useState(false);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => clearTimeout(leaveTimer.current), []);
 
-  const onEnter = useCallback(() => {
-    clearTimeout(hoverTimeout.current);
-    setHovered(true);
-  }, []);
+  const encrypted = data?.encrypted ?? true;
+  const classification = data?.dataClassification ?? "Internal";
+  const label = data?.label || "Data flow";
+  const pii = !!data?.containsPII;
+  const bidirectional = !!data?.bidirectional;
+  const unverified = data?.customMetadata?.postureUnverified === "true";
+  const stroke = selected ? "hsl(var(--primary))" : classificationColor(classification);
+  const width = 1.5 + 3 * Math.max(0, Math.min(1, summary?.pathWeight ?? 0)) + (selected ? 0.5 : 0);
+  const markerId = `tm-arrow-${safeId(id)}`;
+  const flowing = (flowOn || onPath) && !still;
+  const open = summary?.open ?? 0;
+  const resolved = (summary?.total ?? 0) - open;
 
-  const onLeave = useCallback(() => {
-    hoverTimeout.current = setTimeout(() => setHovered(false), 100);
-  }, []);
+  const select = useCallback(() => {
+    tm().setGraph((nodes, edges) => ({
+      nodes: nodes.some((n) => n.selected)
+        ? nodes.map((n) => (n.selected ? { ...n, selected: false } : n))
+        : nodes,
+      edges: edges.map((e) =>
+        !!e.selected === (e.id === id) ? e : { ...e, selected: e.id === id },
+      ),
+    }));
+    tm().setUi({ selectedEdgeId: id, selectedNodeId: null });
+  }, [id]);
 
-  useEffect(() => {
-    return () => clearTimeout(hoverTimeout.current);
-  }, []);
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      e.stopPropagation();
+      select();
+    }
+  };
+
+  const showTip = hover || focus;
+  const posture = `${encrypted ? "encrypted" : "unencrypted"}, authentication ${data?.authentication ?? "None"}, ${classification}${pii ? ", contains PII" : ""}${bidirectional ? ", bidirectional" : ""}`;
 
   return (
     <>
-      <BaseEdge
-        path={edgePath}
-        markerEnd={markerEnd}
-        style={{
-          ...style,
-          stroke: selected ? "hsl(var(--primary))" : strokeColor,
-          strokeWidth: selected ? 2.5 : 1.5,
-          strokeDasharray: encrypted ? undefined : "5 5",
-          opacity: 0.8,
-        }}
-      />
+      <defs>
+        <marker
+          id={markerId}
+          viewBox="0 0 10 10"
+          refX="8.5"
+          refY="5"
+          markerWidth="12"
+          markerHeight="12"
+          markerUnits="userSpaceOnUse"
+          orient="auto-start-reverse"
+        >
+          <path d="M0,0 L10,5 L0,10 z" fill={stroke} />
+        </marker>
+      </defs>
+      <g className={cn(ghost && "tm-ghost")}>
+        <BaseEdge
+          id={id}
+          path={edgePath}
+          markerEnd={`url(#${markerId})`}
+          markerStart={bidirectional ? `url(#${markerId})` : undefined}
+          interactionWidth={18}
+          className="tm-edge-path"
+          style={{
+            stroke,
+            strokeWidth: width,
+            strokeDasharray: encrypted && !ghost ? undefined : "6 5",
+            opacity: onPath ? 1 : 0.85,
+          }}
+        />
+        {onPath && !selected && (
+          <path
+            d={edgePath}
+            fill="none"
+            pointerEvents="none"
+            stroke={severityColor(band)}
+            strokeOpacity={0.35}
+            strokeWidth={width + 5}
+            strokeLinecap="round"
+          />
+        )}
+        {flowing && (
+          <path
+            d={edgePath}
+            fill="none"
+            pointerEvents="none"
+            className="tm-flow"
+            stroke="hsl(var(--background))"
+            strokeOpacity={0.9}
+            strokeWidth={Math.max(1, width - 0.5)}
+            strokeLinecap="round"
+          />
+        )}
+        {active && (
+          <MovingDot
+            key={runKey}
+            path={edgePath}
+            dur={hopMs}
+            reverse={reverse}
+            color={severityColor(band)}
+          />
+        )}
+      </g>
       <EdgeLabelRenderer>
         <div
+          className={cn("nodrag nopan absolute", ghost && "tm-ghost")}
           style={{
-            position: "absolute",
-            transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+            transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
             pointerEvents: "all",
+            zIndex: showTip ? 1000 : undefined,
           }}
-          className="nodrag nopan"
+          onMouseEnter={() => {
+            clearTimeout(leaveTimer.current);
+            setHover(true);
+          }}
+          onMouseLeave={() => {
+            leaveTimer.current = setTimeout(() => setHover(false), 120);
+          }}
         >
           <div
-            ref={labelRef}
-            onMouseEnter={onEnter}
-            onMouseLeave={onLeave}
-            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-medium border bg-background/90 backdrop-blur-sm shadow-sm ${selected ? "border-primary" : "border-border"}`}
+            role="button"
+            tabIndex={0}
+            aria-label={`Data flow ${label}: ${sourceLabel} to ${targetLabel}, ${posture}${open ? `, ${open} open threat${open === 1 ? "" : "s"}` : ""}${unverified ? ", posture unverified" : ""}`}
+            aria-pressed={!!selected}
+            onClick={(e) => {
+              e.stopPropagation();
+              select();
+            }}
+            onKeyDown={onKeyDown}
+            onFocus={() => setFocus(true)}
+            onBlur={() => setFocus(false)}
+            className={cn(
+              "flex max-w-[180px] cursor-pointer items-center gap-1 rounded-md border bg-background/95 px-1.5 py-0.5 text-[11px] font-medium shadow-sm backdrop-blur-sm",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              selected ? "border-primary" : "border-border",
+              unverified && "border-dashed",
+            )}
           >
             {encrypted ? (
-              <Lock className="h-2.5 w-2.5 text-green-500" />
+              <Lock
+                className="h-3 w-3 shrink-0"
+                style={{ color: severityColor("low", "fg") }}
+                aria-hidden
+              />
             ) : (
-              <Unlock className="h-2.5 w-2.5 text-red-500" />
+              <LockOpen
+                className="h-3 w-3 shrink-0"
+                style={{ color: severityColor("critical", "fg") }}
+                aria-hidden
+              />
             )}
-            <span className="truncate max-w-[80px]">{label}</span>
-            {containsPII && <ShieldAlert className="h-2.5 w-2.5 text-orange-500" />}
-            {threatCount > 0 && (
-              <span className="px-1 py-0 rounded-full bg-red-500 text-white text-[8px] font-bold">
-                {threatCount}
+            <span className="min-w-0 truncate">{label}</span>
+            {bidirectional && (
+              <ArrowLeftRight className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />
+            )}
+            {pii && (
+              <ShieldAlert
+                className="h-3 w-3 shrink-0"
+                style={{ color: severityColor("high", "fg") }}
+                aria-hidden
+              />
+            )}
+            {unverified && (
+              <TriangleAlert
+                className="h-3 w-3 shrink-0"
+                style={{ color: severityColor("medium", "fg") }}
+                aria-hidden
+              />
+            )}
+            {open > 0 && summary?.band && (
+              <span
+                aria-hidden
+                className={cn(
+                  "shrink-0 rounded-full px-1 text-[11px] font-bold leading-tight",
+                  severityToken(summary.band).solid,
+                )}
+              >
+                {open}
+              </span>
+            )}
+            {resolved > 0 && (
+              <span aria-hidden className="shrink-0 text-[11px] text-muted-foreground">
+                <s>{resolved}</s>
               </span>
             )}
           </div>
-          {hovered && (
-            <EdgeTooltip
-              anchorRef={labelRef}
-              edgeData={edgeData}
-              label={label}
-              encrypted={encrypted}
-              classification={classification}
-              containsPII={containsPII}
-            />
+          {showTip && (
+            <div
+              role="tooltip"
+              className="pointer-events-none absolute bottom-full left-1/2 mb-1.5 w-56 -translate-x-1/2 space-y-0.5 rounded-md border bg-popover p-2 text-[11px] leading-snug text-popover-foreground shadow-lg"
+            >
+              <p className="break-words text-xs font-semibold">{label}</p>
+              <p className="text-muted-foreground">
+                {sourceLabel} → {targetLabel}
+              </p>
+              <p>Protocol: {data?.protocol || "—"}</p>
+              <p>Encrypted: {encrypted ? "Yes" : "No"}</p>
+              <p>Authentication: {data?.authentication || "None"}</p>
+              <p className="flex items-center gap-1">
+                Classification:
+                <span
+                  className="inline-block h-2 w-2 rounded-full"
+                  style={{ background: classificationColor(classification) }}
+                />
+                {classification}
+              </p>
+              {pii && <p className="font-semibold">Contains PII</p>}
+              {bidirectional && <p>Bidirectional</p>}
+              <p>
+                Threats: {open} open
+                {summary?.band ? ` (highest ${severityLabel(summary.band)})` : ""}
+                {resolved > 0 ? `, ${resolved} resolved` : ""}
+              </p>
+              {unverified && (
+                <p className="font-semibold">
+                  Posture unverified (imported) — confirm it in the panel.
+                </p>
+              )}
+            </div>
           )}
         </div>
       </EdgeLabelRenderer>

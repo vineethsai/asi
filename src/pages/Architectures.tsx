@@ -1,323 +1,350 @@
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
-import SidebarNav from "@/components/layout/SidebarNav";
-import { Card, CardContent } from "@/components/ui/card";
-import { Link } from "react-router-dom";
-import { architecturesData, Architecture } from "../components/components/architecturesData";
-import { getComponentTitle } from "../components/components/componentDataMap";
-import FeatureComparisonMatrix from "../components/home/FeatureComparisonMatrix";
-import { useState, useMemo } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Icon } from "@/components/ui/icon";
+import { Suspense, lazy, useId, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { Crosshair, Search, Share2 } from "lucide-react";
+import PageLayout from "@/components/layout/PageLayout";
+import PageHeader from "@/components/layout/PageHeader";
+import { SkeletonBlock } from "@/components/layout/Skeletons";
+import { threatModelerPathFor } from "@/config/navigation";
+import { architecturesData, type Architecture } from "@/components/components/architecturesData";
+import { getComponentTitle } from "@/components/components/componentDataMap";
+import FeatureComparisonMatrix from "@/components/home/FeatureComparisonMatrix";
+import { threatBandCounts } from "@/components/home/siteStats";
+import ArchitectureFlowDiagram from "@/components/visual/ArchitectureFlowDiagram";
+import { Sparkline } from "@/components/charts/Sparkline";
+import { SeverityBadge } from "@/components/content/SeverityBadge";
+import { EmptyState } from "@/components/content/EmptyState";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import {
   Select,
-  SelectTrigger,
   SelectContent,
   SelectItem,
+  SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Helmet } from "react-helmet";
-import { Search, Crosshair, ShieldAlert, Shield, Layers } from "lucide-react";
+import { Icon } from "@/lib/icons";
+import { stagger } from "@/lib/motion";
+import { BANDS, compareBands, riskBand, severityLabel, type Band } from "@/lib/severity";
+import { SOURCES } from "@/data/sources";
+import { useReveal } from "@/hooks/useReveal";
 
-const ARCH_TO_TEMPLATE: Record<string, string> = {
-  sequential: "sequential-pipeline",
-  hierarchical: "multi-agent",
-  collaborative: "collaborative-swarm",
-  reactive: "reactive-agent",
-  knowledge_intensive: "knowledge-intensive",
-};
+const ArchitectureNavigator = lazy(() => import("@/components/architecture/ArchitectureNavigator"));
+
+const ARCHITECTURES: Architecture[] = Object.values(architecturesData).sort(
+  (a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0),
+);
+
+type SortKey = "displayOrder" | "name" | "threats" | "risk";
+
+const SORTS: { value: SortKey; label: string }[] = [
+  { value: "displayOrder", label: "Default order" },
+  { value: "risk", label: "Risk (highest first)" },
+  { value: "threats", label: "Threats (most first)" },
+  { value: "name", label: "Name (A–Z)" },
+];
+
+const distinct = (lists: string[][]) => new Set(lists.flat()).size;
+
+/** Static diagram, mounted the first time the card scrolls into view and never re-rendered. */
+function DiagramThumb({ arch }: { arch: Architecture }) {
+  const { ref, isVisible } = useReveal<HTMLDivElement>({ rootMargin: "200px 0px" });
+  return (
+    <div ref={ref} className="h-40 border-b bg-muted/20">
+      {isVisible ? (
+        <ArchitectureFlowDiagram
+          architectureId={arch.id}
+          variant="thumbnail"
+          className="h-full w-full"
+          title={`${arch.name} diagram`}
+        />
+      ) : (
+        <SkeletonBlock className="h-full w-full rounded-none" />
+      )}
+    </div>
+  );
+}
+
+function ArchitectureCard({ arch, index }: { arch: Architecture; index: number }) {
+  const counts = useMemo(() => threatBandCounts(arch.threatIds), [arch]);
+  return (
+    <li className="enter" style={stagger(index)}>
+      <article className="card-hover relative flex h-full flex-col overflow-hidden rounded-lg border bg-card focus-within:ring-2 focus-within:ring-ring">
+        <DiagramThumb arch={arch} />
+        <div className="flex flex-1 flex-col gap-3 p-5">
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="flex min-w-0 items-center gap-2 text-lg font-semibold leading-snug">
+              <Icon name={arch.icon} className="h-5 w-5 shrink-0 text-muted-foreground" />
+              <Link
+                to={`/architectures/${arch.id}`}
+                className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none"
+              >
+                {arch.name}
+              </Link>
+            </h2>
+            {arch.riskScore != null && (
+              <SeverityBadge
+                score={arch.riskScore}
+                showScore
+                size="xs"
+                className="shrink-0"
+                title="Editorial pattern risk (1–10)"
+              />
+            )}
+          </div>
+
+          <p className="line-clamp-3 text-sm text-muted-foreground">{arch.description}</p>
+
+          {arch.tags && arch.tags.length > 0 && (
+            <ul className="flex flex-wrap gap-1.5" aria-label="Tags">
+              {arch.tags.map((tag) => (
+                <li
+                  key={tag}
+                  className="rounded-md bg-secondary px-2 py-0.5 text-xs text-secondary-foreground"
+                >
+                  {tag}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+            <Sparkline counts={counts} showText width={72} height={20} />
+            <span className="text-muted-foreground">
+              <span className="font-medium text-foreground">{arch.mitigationIds.length}</span>{" "}
+              mitigations
+            </span>
+            <span className="text-muted-foreground">
+              <span className="font-medium text-foreground">{arch.keyComponents.length}</span> key
+              components
+            </span>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">Key components: </span>
+            {arch.keyComponents.map((id) => getComponentTitle(id)).join(", ")}
+          </p>
+
+          <div className="mt-auto flex items-center justify-between gap-2 border-t pt-3">
+            <span className="text-xs text-muted-foreground">
+              v{arch.version ?? "–"} · updated{" "}
+              {arch.lastUpdated ? <time dateTime={arch.lastUpdated}>{arch.lastUpdated}</time> : "–"}
+            </span>
+            <Link
+              to={threatModelerPathFor(arch.id)}
+              className="relative z-10 inline-flex shrink-0 items-center gap-1.5 rounded-md border border-primary/30 px-2.5 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Crosshair className="h-3 w-3" aria-hidden="true" />
+              Open in Threat Modeler
+            </Link>
+          </div>
+        </div>
+      </article>
+    </li>
+  );
+}
 
 const Architectures = () => {
-  const architectures: Architecture[] = Object.values(architecturesData);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [params, setParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState("");
-  const [tagFilter, setTagFilter] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<string>("displayOrder");
+  const [band, setBand] = useState<Band | "all">("all");
+  const [sortBy, setSortBy] = useState<SortKey>("displayOrder");
+  const searchId = useId();
+  const bandId = useId();
+  const sortId = useId();
+  const { ref: gridRef } = useReveal<HTMLUListElement>();
 
-  const allTags = useMemo(
-    () => Array.from(new Set(architectures.flatMap((a) => a.tags || []))),
-    [architectures],
-  );
-
-  const filtered = useMemo(() => {
-    return architectures.filter((a) => {
-      const matchesSearch =
-        searchTerm === "" ||
-        a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        a.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (a.tags || []).some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-      const matchesTag = !tagFilter || (a.tags || []).includes(tagFilter);
-      return matchesSearch && matchesTag;
-    });
-  }, [architectures, searchTerm, tagFilter]);
-
-  const sorted = useMemo(() => {
-    return [...filtered].sort((a, b) => {
-      if (sortBy === "name") return a.name.localeCompare(b.name);
-      if (sortBy === "threats") return (b.threatIds?.length || 0) - (a.threatIds?.length || 0);
-      return (a.displayOrder || 0) - (b.displayOrder || 0);
-    });
-  }, [filtered, sortBy]);
-
-  // Summary statistics
-  const totalThreats = useMemo(
-    () => new Set(architectures.flatMap((a) => a.threatIds || [])).size,
-    [architectures],
-  );
-  const totalMitigations = useMemo(
-    () => new Set(architectures.flatMap((a) => a.mitigationIds || [])).size,
-    [architectures],
-  );
-
-  const handleMobileMenuToggle = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
+  const graphOpen = params.get("view") === "graph";
+  const setGraphOpen = (open: boolean) => {
+    const next = new URLSearchParams(params);
+    if (open) next.set("view", "graph");
+    else next.delete("view");
+    setParams(next, { replace: !open });
   };
 
-  const handleMobileMenuClose = () => {
-    setIsMobileMenuOpen(false);
+  const bandsPresent = useMemo(() => {
+    const counts = new Map<Band, number>();
+    ARCHITECTURES.forEach((a) => {
+      const b = riskBand(a.riskScore);
+      counts.set(b, (counts.get(b) ?? 0) + 1);
+    });
+    return BANDS.filter((b) => counts.has(b)).map((b) => ({ band: b, count: counts.get(b) ?? 0 }));
+  }, []);
+
+  const sorted = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    const list = ARCHITECTURES.filter((a) => {
+      const matches =
+        !q ||
+        a.name.toLowerCase().includes(q) ||
+        a.description.toLowerCase().includes(q) ||
+        (a.tags ?? []).some((tag) => tag.toLowerCase().includes(q)) ||
+        a.keyComponents.some((c) => getComponentTitle(c).toLowerCase().includes(q));
+      return matches && (band === "all" || riskBand(a.riskScore) === band);
+    });
+    return [...list].sort((a, b) => {
+      if (sortBy === "name") return a.name.localeCompare(b.name);
+      if (sortBy === "threats") return b.threatIds.length - a.threatIds.length;
+      if (sortBy === "risk")
+        return (
+          compareBands(riskBand(a.riskScore), riskBand(b.riskScore)) ||
+          (b.riskScore ?? 0) - (a.riskScore ?? 0)
+        );
+      return (a.displayOrder ?? 0) - (b.displayOrder ?? 0);
+    });
+  }, [searchTerm, band, sortBy]);
+
+  const stats = [
+    { label: "patterns", value: ARCHITECTURES.length },
+    {
+      label: "threats covered",
+      value: distinct(ARCHITECTURES.map((a) => a.threatIds)),
+      hint: "Distinct threats linked to at least one pattern",
+    },
+    {
+      label: "controls",
+      value: distinct(ARCHITECTURES.map((a) => a.mitigationIds)),
+      hint: "Distinct mitigations linked to at least one pattern",
+    },
+    {
+      label: "key components",
+      value: distinct(ARCHITECTURES.map((a) => a.keyComponents)),
+      hint: "Distinct KC sub-components used by the patterns",
+    },
+  ];
+
+  const resetFilters = () => {
+    setSearchTerm("");
+    setBand("all");
   };
 
   return (
-    <>
-      <Helmet>
-        <title>Agent Architectures & AI Security Patterns | Secure AI Agent Development</title>
-        <meta
-          name="description"
-          content="Comprehensive guide to agent architectures and AI security patterns for agentic systems. Explore secure design patterns, architectural best practices, and security implications for AI agents and LLM-based applications."
+    <PageLayout
+      title="Agent Architectures"
+      description="Guide to agentic architecture patterns and their security implications: secure design patterns, architectural best practices and the threats each pattern exposes."
+      canonicalPath="/architectures"
+      keywords="agent architectures, AI security patterns, agentic architectures, secure AI development, AI agent design, agent security, AI security architecture, LLM architectures, artificial intelligence patterns, secure agent development, AI system design"
+    >
+      <PageHeader
+        eyebrow="Learn"
+        title="Agent architectures"
+        description="Reference patterns for agentic systems, the components each one uses and the threats it exposes."
+        stats={stats}
+        source={SOURCES.architectures}
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setGraphOpen(true)}
+          >
+            <Share2 className="h-4 w-4" aria-hidden="true" />
+            Open graph explorer
+          </Button>
+        }
+        filters={
+          <>
+            <div className="relative w-full sm:w-64">
+              <label htmlFor={searchId} className="sr-only">
+                Search architectures
+              </label>
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden="true"
+              />
+              <Input
+                id={searchId}
+                type="search"
+                placeholder="Search patterns, tags, components…"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <label htmlFor={bandId} className="sr-only">
+              Risk band
+            </label>
+            <Select value={band} onValueChange={(v) => setBand(v as Band | "all")}>
+              <SelectTrigger id={bandId} className="w-full sm:w-44">
+                <SelectValue placeholder="All risk levels" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All risk levels</SelectItem>
+                {bandsPresent.map(({ band: b, count }) => (
+                  <SelectItem key={b} value={b}>
+                    {severityLabel(b)} risk ({count})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <label htmlFor={sortId} className="sr-only">
+              Sort by
+            </label>
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortKey)}>
+              <SelectTrigger id={sortId} className="w-full sm:w-48">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                {SORTS.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground" role="status">
+              {sorted.length} of {ARCHITECTURES.length} shown
+            </span>
+          </>
+        }
+      />
+
+      {sorted.length > 0 ? (
+        <ul ref={gridRef} className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {sorted.map((arch, i) => (
+            <ArchitectureCard key={arch.id} arch={arch} index={i} />
+          ))}
+        </ul>
+      ) : (
+        <EmptyState
+          icon="filter"
+          title="No architectures match"
+          description="Try a different search term or risk level."
+          action={{ label: "Clear filters", onClick: resetFilters }}
         />
-        <meta
-          name="keywords"
-          content="agent architectures, AI security patterns, agentic architectures, secure AI development, AI agent design, agent security, AI security architecture, LLM architectures, artificial intelligence patterns, secure agent development, AI system design"
-        />
-        <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://agenticsecurity.info/architectures" />
-        <meta property="og:url" content="https://agenticsecurity.info/architectures" />
-        <meta name="twitter:url" content="https://agenticsecurity.info/architectures" />
-      </Helmet>
-      <Header onMobileMenuToggle={handleMobileMenuToggle} isMobileMenuOpen={isMobileMenuOpen} />
+      )}
 
-      {/* Mobile Navigation Sidebar */}
-      <SidebarNav type="architectures" isOpen={isMobileMenuOpen} onClose={handleMobileMenuClose} />
+      <div className="mt-16">
+        <FeatureComparisonMatrix />
+      </div>
 
-      <section id="main-content" className="py-16">
-        <div className="container px-4 md:px-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="mb-8">
-              <h1 className="text-2xl font-bold tracking-tight">AI Agent Architectures</h1>
-              <p className="mt-1 text-muted-foreground">
-                Comprehensive guide to agent architectures and AI security patterns for agentic
-                systems. Explore secure design patterns, architectural best practices, and security
-                implications for AI agents.
-              </p>
-            </div>
-
-            {/* Summary Statistics */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
-              <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-                <div className="rounded-md bg-primary/10 p-2">
-                  <Layers className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{architectures.length}</p>
-                  <p className="text-xs text-muted-foreground">Architectures</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-                <div className="rounded-md bg-destructive/10 p-2">
-                  <ShieldAlert className="h-5 w-5 text-destructive" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{totalThreats}</p>
-                  <p className="text-xs text-muted-foreground">Unique Threats</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-                <div className="rounded-md bg-green-500/10 p-2">
-                  <Shield className="h-5 w-5 text-green-600 dark:text-green-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{totalMitigations}</p>
-                  <p className="text-xs text-muted-foreground">Unique Mitigations</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Search, Filter, Sort Controls */}
-            <div className="flex flex-wrap gap-3 mb-6">
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Search</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search architectures..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Tag</label>
-                <Select
-                  value={tagFilter || "all"}
-                  onValueChange={(val) => setTagFilter(val === "all" ? null : val)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Tags" />
-                  </SelectTrigger>
-                  <SelectContent className="z-[9999] bg-popover border shadow-lg">
-                    <SelectItem value="all">All Tags</SelectItem>
-                    {allTags.map((tag) => (
-                      <SelectItem key={tag} value={tag}>
-                        {tag}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Sort By</label>
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sort By" />
-                  </SelectTrigger>
-                  <SelectContent className="z-[9999] bg-popover border shadow-lg">
-                    <SelectItem value="displayOrder">Default Order</SelectItem>
-                    <SelectItem value="name">Name (A-Z)</SelectItem>
-                    <SelectItem value="threats">Threats (High to Low)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Architectures Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-0">
-              {sorted.map((arch) => (
-                <Card
-                  key={arch.id}
-                  className="h-full bg-card hover:bg-muted/50 transition-colors overflow-hidden"
-                  style={{ borderLeft: `4px solid ${arch.color || "var(--border)"}` }}
-                >
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <Link
-                        to={`/architectures/${arch.id}`}
-                        className="flex items-center gap-2 min-w-0"
-                      >
-                        {arch.icon && (
-                          <span className="text-muted-foreground shrink-0">
-                            <Icon name={arch.icon} color="currentColor" size={24} />
-                          </span>
-                        )}
-                        <h3 className="text-xl font-bold text-foreground hover:text-primary transition-colors">
-                          {arch.name}
-                        </h3>
-                      </Link>
-                      {arch.status && (
-                        <Badge variant="outline" className="capitalize shrink-0">
-                          {arch.status}
-                        </Badge>
-                      )}
-                    </div>
-
-                    <Link to={`/architectures/${arch.id}`}>
-                      <p className="text-muted-foreground mb-3">{arch.description}</p>
-                    </Link>
-
-                    {/* Tags */}
-                    <div className="flex flex-wrap gap-1.5 mb-3">
-                      {(arch.tags || []).map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-
-                    {/* Threat & Mitigation Counts */}
-                    <div className="flex gap-4 mb-3 text-sm">
-                      <div className="flex items-center gap-1.5">
-                        <ShieldAlert className="h-3.5 w-3.5 text-destructive" />
-                        <span className="text-muted-foreground">
-                          <span className="font-medium text-foreground">
-                            {arch.threatIds?.length || 0}
-                          </span>{" "}
-                          threats
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Shield className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
-                        <span className="text-muted-foreground">
-                          <span className="font-medium text-foreground">
-                            {arch.mitigationIds?.length || 0}
-                          </span>{" "}
-                          mitigations
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Key Components - human-readable names */}
-                    <div className="text-sm mb-3">
-                      <span className="font-medium">Key Components: </span>
-                      <span className="text-muted-foreground">
-                        {arch.keyComponents.map((id) => getComponentTitle(id)).join(", ")}
-                      </span>
-                    </div>
-
-                    {/* Footer: version, date, references, Threat Modeler CTA */}
-                    <div className="flex items-center justify-between pt-3 border-t border-border">
-                      <div>
-                        <div className="text-xs text-muted-foreground">
-                          Version: {arch.version || "-"} | Last Updated: {arch.lastUpdated || "-"}
-                        </div>
-                        {arch.references && arch.references.length > 0 && (
-                          <div className="text-xs mt-1">
-                            {arch.references.map((ref) => (
-                              <a
-                                key={ref.url}
-                                href={ref.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="underline text-primary mr-2"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {ref.title}
-                              </a>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <Link
-                        to={`/threat-modeler?template=${ARCH_TO_TEMPLATE[arch.id] ?? ""}`}
-                        className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 border border-primary/30 rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors shrink-0 ml-2"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Crosshair className="h-3 w-3" />
-                        Threat Modeler
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {/* No Results */}
-            {sorted.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
-                No architectures match your search criteria. Try adjusting your filters.
-              </div>
-            )}
-
-            <div className="mt-16">
-              <FeatureComparisonMatrix />
-            </div>
+      <Dialog open={graphOpen} onOpenChange={setGraphOpen}>
+        <DialogContent className="flex h-[90vh] w-[96vw] max-w-7xl flex-col gap-0 overflow-hidden p-0">
+          <div className="border-b px-4 py-3 pr-12">
+            <DialogTitle className="text-base">Architecture graph explorer</DialogTitle>
+            <DialogDescription className="text-xs">
+              Expand a pattern into its components, then a component into the threats that hit it
+              and the controls that answer them.
+            </DialogDescription>
           </div>
-        </div>
-      </section>
-      <Footer />
-    </>
+          <div className="min-h-0 flex-1 p-3">
+            {graphOpen && (
+              <Suspense
+                fallback={
+                  <div className="flex h-full gap-3" role="status" aria-busy="true">
+                    <span className="sr-only">Loading graph explorer…</span>
+                    <SkeletonBlock className="hidden h-full w-72 lg:block" />
+                    <SkeletonBlock className="h-full flex-1" />
+                  </div>
+                }
+              >
+                <ArchitectureNavigator />
+              </Suspense>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </PageLayout>
   );
 };
 

@@ -1,27 +1,30 @@
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+/**
+ * SecurityChecklist — the /interactive "Security Checklist" (§6.10): ten implementation items in
+ * four categories, each with an OWASP AISVS 1.01 reference (deep-linked to /aisvs#<code>), a
+ * guide, a code sample (shared <CodeBlock>) and verification steps. Completion is stored in the
+ * shared progress store (useChecklistProgress); the score is a labelled weighted estimate.
+ */
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Database, History, Lock, RefreshCw, Shield, Target, type LucideIcon } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  CheckCircle,
-  AlertTriangle,
-  Shield,
-  Database,
-  Eye,
-  Lock,
-  RefreshCw,
-  Target,
-} from "lucide-react";
+import { SeverityBadge } from "@/components/content/SeverityBadge";
+import { Ring } from "@/components/charts/Ring";
+import { CodeBlock } from "@/components/controls/CodeBlock";
+import { useChecklistProgress } from "@/hooks/useProgress";
+import { priorityBand } from "@/lib/severity";
+import { cn } from "@/lib/utils";
 
 interface ChecklistItem {
   id: string;
@@ -29,9 +32,12 @@ interface ChecklistItem {
   description: string;
   category: string;
   priority: "critical" | "high" | "medium" | "low";
+  /** OWASP AISVS 1.01 chapter, section or requirement ("C2", "C2.1", "C2.1.1"). */
   aisvsReference: string;
   implementationGuide: string;
   codeExample?: string;
+  /** Fence language of `codeExample` (default "typescript"). */
+  codeLanguage?: string;
   estimatedTime: string;
   dependencies?: string[];
   verificationSteps: string[];
@@ -41,46 +47,16 @@ interface ChecklistCategory {
   id: string;
   name: string;
   description: string;
-  icon: React.ReactNode;
-  color: string;
+  icon: LucideIcon;
   items: ChecklistItem[];
 }
-
-const colorMap: Record<string, { bg: string; text: string; border: string }> = {
-  blue: {
-    bg: "bg-blue-100 dark:bg-blue-950/30",
-    text: "text-blue-800 dark:text-blue-300",
-    border: "border-blue-200 dark:border-blue-800",
-  },
-  green: {
-    bg: "bg-green-100 dark:bg-green-950/30",
-    text: "text-green-800 dark:text-green-300",
-    border: "border-green-200 dark:border-green-800",
-  },
-  purple: {
-    bg: "bg-purple-100 dark:bg-purple-950/30",
-    text: "text-purple-800 dark:text-purple-300",
-    border: "border-purple-200 dark:border-purple-800",
-  },
-  orange: {
-    bg: "bg-orange-100 dark:bg-orange-950/30",
-    text: "text-orange-800 dark:text-orange-300",
-    border: "border-orange-200 dark:border-orange-800",
-  },
-  red: {
-    bg: "bg-red-100 dark:bg-red-950/30",
-    text: "text-red-800 dark:text-red-300",
-    border: "border-red-200 dark:border-red-800",
-  },
-};
 
 const securityChecklist: ChecklistCategory[] = [
   {
     id: "input-validation",
     name: "Input Validation & Filtering",
     description: "Protect against prompt injection and malicious inputs",
-    icon: <Shield className="h-5 w-5" />,
-    color: "blue",
+    icon: Shield,
     items: [
       {
         id: "prompt-injection-defense",
@@ -131,15 +107,13 @@ function validateInput(input: string): { valid: boolean; reason?: string } {
         description: "Clean and normalize user inputs before processing",
         category: "input-validation",
         priority: "high",
-        aisvsReference: "C2.2",
+        aisvsReference: "C2.1",
         implementationGuide:
           "Implement Unicode normalization, homoglyph detection, and content sanitization to prevent adversarial inputs.",
         codeExample: `
-import { normalize } from 'normalize-unicode';
-
 function sanitizeInput(input: string): string {
-  // Unicode normalization
-  let sanitized = normalize(input, 'NFC');
+  // Unicode compatibility normalization (also folds fullwidth forms)
+  let sanitized = input.normalize('NFKC');
   
   // Remove potentially dangerous characters
   sanitized = sanitized.replace(/[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]/g, '');
@@ -171,9 +145,10 @@ function sanitizeInput(input: string): string {
         description: "Screen inputs and outputs for policy violations",
         category: "input-validation",
         priority: "high",
-        aisvsReference: "C2.4",
+        aisvsReference: "C2.2",
         implementationGuide:
           "Deploy content classifiers to detect harmful content categories including violence, hate speech, and inappropriate requests.",
+        codeLanguage: "python",
         codeExample: `
 from transformers import pipeline
 
@@ -210,8 +185,7 @@ if not allowed:
     id: "data-security",
     name: "Training Data Security",
     description: "Secure training data and prevent poisoning attacks",
-    icon: <Database className="h-5 w-5" />,
-    color: "green",
+    icon: Database,
     items: [
       {
         id: "data-provenance",
@@ -274,7 +248,7 @@ function getDataLineage(datasetId: string): DataProvenance | undefined {
         description: "Implement automated checks for data quality and integrity",
         category: "data-security",
         priority: "high",
-        aisvsReference: "C1.5",
+        aisvsReference: "C1.3",
         implementationGuide:
           "Set up automated validation pipelines to detect format errors, null values, label inconsistencies, and statistical anomalies.",
         codeExample: `
@@ -321,9 +295,10 @@ function validateDataset(data: any[]): DataValidationResult {
         description: "Implement anomaly detection to identify potential data poisoning",
         category: "data-security",
         priority: "high",
-        aisvsReference: "C1.6",
+        aisvsReference: "C1.3.1",
         implementationGuide:
           "Deploy statistical and ML-based anomaly detection to identify suspicious patterns in training data that could indicate poisoning attempts.",
+        codeLanguage: "python",
         codeExample: `
 import numpy as np
 from sklearn.ensemble import IsolationForest
@@ -364,8 +339,7 @@ if len(flagged_idx) > 0:
     id: "access-control",
     name: "Access Control & Authentication",
     description: "Secure access to AI systems and data",
-    icon: <Lock className="h-5 w-5" />,
-    color: "purple",
+    icon: Lock,
     items: [
       {
         id: "api-authentication",
@@ -373,7 +347,7 @@ if len(flagged_idx) > 0:
         description: "Implement robust authentication for all API endpoints",
         category: "access-control",
         priority: "critical",
-        aisvsReference: "C3.1",
+        aisvsReference: "C5",
         implementationGuide:
           "Deploy strong authentication mechanisms including API keys, OAuth 2.0, or JWT tokens with proper authorization controls.",
         codeExample: `
@@ -414,7 +388,7 @@ const authenticateToken: AuthMiddleware = (req, res, next) => {
         description: "Implement rate limiting to prevent abuse and DoS attacks",
         category: "access-control",
         priority: "high",
-        aisvsReference: "C2.5",
+        aisvsReference: "C11.2.2",
         implementationGuide:
           "Configure rate limiting per user, IP, and API key with different limits for different endpoints based on computational cost.",
         codeExample: `
@@ -459,10 +433,9 @@ async function checkRateLimit(identifier: string, endpoint: 'ai' | 'standard') {
   },
   {
     id: "monitoring",
-    name: "Monitoring & Logging",
-    description: "Monitor AI system behavior and maintain audit logs",
-    icon: <Eye className="h-5 w-5" />,
-    color: "orange",
+    name: "Deployment & Audit",
+    description: "Roll out model changes safely and keep an immutable record of them",
+    icon: History,
     items: [
       {
         id: "controlled-deployment",
@@ -474,6 +447,7 @@ async function checkRateLimit(identifier: string, endpoint: 'ai' | 'standard') {
         aisvsReference: "C3.3",
         implementationGuide:
           "Implement gradual rollout mechanisms (canary, blue-green deployments) with automated rollback triggers based on error rates, latency thresholds, or security alerts. Ensure atomic rollback restores complete model state including weights, configurations, and dependencies.",
+        codeLanguage: "yaml",
         codeExample: `
 # Kubernetes canary deployment with automated rollback
 apiVersion: v1
@@ -515,7 +489,7 @@ spec:
           "Generate immutable audit records for all model changes including deployment, configuration, and retirement",
         category: "monitoring",
         priority: "high",
-        aisvsReference: "C3.4",
+        aisvsReference: "C12.5.3",
         implementationGuide:
           "Implement immutable audit records for all model changes including timestamp, authenticated actor identity, change type, and before/after states. Version control prompt templates in git with mandatory code review before deployment.",
         codeExample: `
@@ -556,325 +530,231 @@ async function recordModelChange(audit: Omit<ModelChangeAuditRecord, 'id' | 'tim
   },
 ];
 
-export const SecurityChecklist: React.FC = () => {
-  const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
-  const [activeCategory, setActiveCategory] = useState<string>("input-validation");
+const ALL_ITEMS = securityChecklist.flatMap((c) => c.items);
+const TOTAL = ALL_ITEMS.length;
+
+/** Weights of the score estimate (shown in the UI). */
+const WEIGHTS = { critical: 60, high: 30, all: 10 } as const;
+
+function weightedScore(done: ReadonlySet<string>): number {
+  const part = (items: ChecklistItem[], weight: number) =>
+    items.length ? (items.filter((i) => done.has(i.id)).length / items.length) * weight : weight;
+  return Math.round(
+    part(
+      ALL_ITEMS.filter((i) => i.priority === "critical"),
+      WEIGHTS.critical,
+    ) +
+      part(
+        ALL_ITEMS.filter((i) => i.priority === "high"),
+        WEIGHTS.high,
+      ) +
+      (ALL_ITEMS.filter((i) => done.has(i.id)).length / Math.max(1, TOTAL)) * WEIGHTS.all,
+  );
+}
+
+export function SecurityChecklist() {
+  const { done, toggle, reset } = useChecklistProgress(TOTAL);
+  const [activeCategory, setActiveCategory] = useState<string>(securityChecklist[0].id);
   const [showCompletedOnly, setShowCompletedOnly] = useState(false);
 
-  // Load completed items from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("ai-security-checklist");
-    if (saved) {
-      setCompletedItems(new Set(JSON.parse(saved)));
-    }
-  }, []);
-
-  // Save completed items to localStorage
-  useEffect(() => {
-    localStorage.setItem("ai-security-checklist", JSON.stringify(Array.from(completedItems)));
-  }, [completedItems]);
-
-  const toggleItem = (itemId: string) => {
-    setCompletedItems((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(itemId)) {
-        newSet.delete(itemId);
-      } else {
-        newSet.add(itemId);
-      }
-      return newSet;
-    });
-  };
-
-  const resetChecklist = () => {
-    setCompletedItems(new Set());
-    localStorage.removeItem("ai-security-checklist");
-  };
-
-  // Calculate progress
-  const totalItems = securityChecklist.reduce((sum, category) => sum + category.items.length, 0);
-  const completedCount = completedItems.size;
-  const progressPercentage = totalItems > 0 ? (completedCount / totalItems) * 100 : 0;
-
-  // Get category progress
-  const getCategoryProgress = (categoryId: string) => {
-    const category = securityChecklist.find((c) => c.id === categoryId);
-    if (!category) return 0;
-
-    const categoryCompleted = category.items.filter((item) => completedItems.has(item.id)).length;
-    return (categoryCompleted / category.items.length) * 100;
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "critical":
-        return "bg-red-100 text-red-800 dark:bg-red-950/30 dark:text-red-300";
-      case "high":
-        return "bg-orange-100 text-orange-800 dark:bg-orange-950/30 dark:text-orange-300";
-      case "medium":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-300";
-      case "low":
-        return "bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-300";
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-950/30 dark:text-gray-300";
-    }
-  };
-
-  const getSecurityScore = () => {
-    const criticalItems = securityChecklist
-      .flatMap((c) => c.items)
-      .filter((i) => i.priority === "critical");
-    const highItems = securityChecklist
-      .flatMap((c) => c.items)
-      .filter((i) => i.priority === "high");
-
-    const criticalCompleted = criticalItems.filter((i) => completedItems.has(i.id)).length;
-    const highCompleted = highItems.filter((i) => completedItems.has(i.id)).length;
-
-    const criticalScore =
-      criticalItems.length > 0 ? (criticalCompleted / criticalItems.length) * 60 : 60;
-    const highScore = highItems.length > 0 ? (highCompleted / highItems.length) * 30 : 30;
-    const overallScore = (completedCount / totalItems) * 10;
-
-    return Math.round(criticalScore + highScore + overallScore);
-  };
-
-  const securityScore = getSecurityScore();
+  const completedCount = ALL_ITEMS.filter((i) => done.has(i.id)).length;
+  const pct = TOTAL ? Math.round((completedCount / TOTAL) * 100) : 0;
+  const score = weightedScore(done);
+  const categoryDone = (c: ChecklistCategory) => c.items.filter((i) => done.has(i.id)).length;
+  const categoriesComplete = securityChecklist.filter(
+    (c) => categoryDone(c) === c.items.length,
+  ).length;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="text-center">
-        <h2 className="text-3xl font-bold mb-4">AI Security Implementation Checklist</h2>
-        <p className="text-muted-foreground max-w-2xl mx-auto">
-          Follow this comprehensive checklist to implement security controls for your AI system
-          based on OWASP AISVS standards. Track your progress and get implementation guidance.
-        </p>
+      <div className="grid gap-4 md:grid-cols-[1fr_auto]">
+        <Card>
+          <CardContent className="space-y-4 p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold">Your progress</h2>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  aria-pressed={showCompletedOnly}
+                  onClick={() => setShowCompletedOnly((v) => !v)}
+                >
+                  {showCompletedOnly ? "Show all items" : "Show completed only"}
+                </Button>
+                <Button variant="outline" size="sm" onClick={reset} disabled={completedCount === 0}>
+                  <RefreshCw aria-hidden className="mr-2 h-4 w-4" />
+                  Reset
+                </Button>
+              </div>
+            </div>
+            <dl className="grid grid-cols-3 gap-3 text-center">
+              <div className="rounded-md border p-3">
+                <dt className="text-xs text-muted-foreground">Items done</dt>
+                <dd className="text-2xl font-bold tabular-nums">
+                  {completedCount}/{TOTAL}
+                </dd>
+              </div>
+              <div className="rounded-md border p-3">
+                <dt className="text-xs text-muted-foreground">Progress</dt>
+                <dd className="text-2xl font-bold tabular-nums">{pct}%</dd>
+              </div>
+              <div className="rounded-md border p-3">
+                <dt className="text-xs text-muted-foreground">Categories done</dt>
+                <dd className="text-2xl font-bold tabular-nums">
+                  {categoriesComplete}/{securityChecklist.length}
+                </dd>
+              </div>
+            </dl>
+            <Progress
+              value={pct}
+              aria-label="Checklist progress"
+              aria-valuetext={`${completedCount} of ${TOTAL} items (${pct}%)`}
+              className="h-2"
+            />
+            <p className="text-xs text-muted-foreground">Saved in this browser.</p>
+          </CardContent>
+        </Card>
+
+        <Card className="md:w-72">
+          <CardContent className="flex items-center gap-4 p-5">
+            <Ring
+              value={score}
+              max={100}
+              size={72}
+              thickness={7}
+              tone="progress"
+              ariaLabel={`Weighted estimate ${score} out of 100`}
+            />
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold">Weighted estimate</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {WEIGHTS.critical}% critical items, {WEIGHTS.high}% high items, {WEIGHTS.all}% all
+                items. A progress indicator for this list, not a security rating.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Progress Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="security-card">
-          <CardContent className="p-4 text-center">
-            <div className="text-3xl font-bold text-primary mb-1">
-              {completedCount}/{totalItems}
-            </div>
-            <div className="text-sm text-muted-foreground">Items Complete</div>
-          </CardContent>
-        </Card>
-
-        <Card className="security-card">
-          <CardContent className="p-4 text-center">
-            <div className="text-3xl font-bold text-primary mb-1">
-              {Math.round(progressPercentage)}%
-            </div>
-            <div className="text-sm text-muted-foreground">Progress</div>
-          </CardContent>
-        </Card>
-
-        <Card className="security-card">
-          <CardContent className="p-4 text-center">
-            <div
-              className={`text-3xl font-bold mb-1 ${
-                securityScore >= 80
-                  ? "text-green-600 dark:text-green-400"
-                  : securityScore >= 60
-                    ? "text-yellow-600 dark:text-yellow-400"
-                    : "text-red-600 dark:text-red-400"
-              }`}
-            >
-              {securityScore}/100
-            </div>
-            <div className="text-sm text-muted-foreground">Security Score</div>
-          </CardContent>
-        </Card>
-
-        <Card className="security-card">
-          <CardContent className="p-4 text-center">
-            <div className="text-3xl font-bold text-primary mb-1">
-              {securityChecklist.filter((c) => getCategoryProgress(c.id) === 100).length}
-            </div>
-            <div className="text-sm text-muted-foreground">Categories Done</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Overall Progress */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Overall Security Implementation</h3>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowCompletedOnly(!showCompletedOnly)}
-              >
-                {showCompletedOnly ? "Show All" : "Show Completed"}
-              </Button>
-              <Button variant="outline" size="sm" onClick={resetChecklist}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Reset
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Progress</span>
-              <span>{Math.round(progressPercentage)}% complete</span>
-            </div>
-            <Progress value={progressPercentage} className="h-3" />
-          </div>
-
-          {securityScore < 80 && (
-            <Alert className="mt-4 bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-800">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                <strong>Security Score: {securityScore}/100</strong>
-                <br />
-                {securityScore < 40 &&
-                  "Critical security gaps identified. Prioritize implementing critical and high priority items."}
-                {securityScore >= 40 &&
-                  securityScore < 60 &&
-                  "Moderate security posture. Focus on completing high priority items."}
-                {securityScore >= 60 &&
-                  securityScore < 80 &&
-                  "Good progress! Complete remaining critical items to improve security."}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {securityScore >= 80 && (
-            <Alert className="mt-4 bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
-              <CheckCircle className="h-4 w-4" />
-              <AlertDescription>
-                <strong>Excellent Security Score: {securityScore}/100</strong>
-                <br />
-                Your AI system has strong security controls implemented. Continue monitoring and
-                maintaining these controls.
-              </AlertDescription>
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Category Tabs */}
       <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          {securityChecklist.map((category) => (
-            <TabsTrigger key={category.id} value={category.id} className="flex items-center gap-2">
-              {category.icon}
-              <span className="hidden sm:inline">{category.name.split(" ")[0]}</span>
-              <Badge variant="outline" className="text-xs">
-                {Math.round(getCategoryProgress(category.id))}%
-              </Badge>
-            </TabsTrigger>
-          ))}
+        <TabsList className="grid h-auto w-full grid-cols-4">
+          {securityChecklist.map((category) => {
+            const CatIcon = category.icon;
+            const cd = categoryDone(category);
+            return (
+              <TabsTrigger key={category.id} value={category.id} className="gap-2">
+                <CatIcon aria-hidden className="h-4 w-4 shrink-0" />
+                <span className="sr-only sm:not-sr-only sm:truncate">{category.name}</span>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {cd}/{category.items.length}
+                </span>
+              </TabsTrigger>
+            );
+          })}
         </TabsList>
 
-        {securityChecklist.map((category) => (
-          <TabsContent key={category.id} value={category.id} className="space-y-4">
-            <Card className="security-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <div
-                    className={`p-2 rounded-lg ${colorMap[category.color]?.bg ?? "bg-gray-100 dark:bg-gray-950/30"}`}
-                  >
-                    {category.icon}
-                  </div>
-                  <div>
-                    <h3 className="text-xl">{category.name}</h3>
-                    <p className="text-muted-foreground text-sm font-normal">
-                      {category.description}
-                    </p>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm font-medium">Category Progress</span>
-                  <span className="text-sm text-muted-foreground">
-                    {category.items.filter((item) => completedItems.has(item.id)).length}/
-                    {category.items.length} complete
-                  </span>
-                </div>
-                <Progress value={getCategoryProgress(category.id)} className="h-2" />
-              </CardContent>
-            </Card>
-
-            <div className="space-y-4">
-              {category.items
-                .filter((item) => !showCompletedOnly || completedItems.has(item.id))
-                .map((item) => (
-                  <Card
-                    key={item.id}
-                    className={`checklist-item ${completedItems.has(item.id) ? "completed" : ""}`}
-                  >
+        {securityChecklist.map((category) => {
+          const items = category.items.filter((i) => !showCompletedOnly || done.has(i.id));
+          return (
+            <TabsContent key={category.id} value={category.id} className="space-y-4">
+              <div>
+                <h2 className="text-xl font-semibold">{category.name}</h2>
+                <p className="text-sm text-muted-foreground">{category.description}</p>
+              </div>
+              {items.length === 0 && (
+                <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  No completed items in this category yet.
+                </p>
+              )}
+              {items.map((item) => {
+                const checked = done.has(item.id);
+                const checkboxId = `checklist-${item.id}`;
+                return (
+                  <Card key={item.id} className={cn(checked && "border-emerald-500/40")}>
                     <CardContent className="p-0">
                       <Accordion type="single" collapsible className="w-full">
                         <AccordionItem value={item.id} className="border-none">
-                          <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                            <div className="flex items-start gap-4 w-full">
-                              <Checkbox
-                                checked={completedItems.has(item.id)}
-                                onCheckedChange={() => toggleItem(item.id)}
-                                className="mt-1"
-                              />
-                              <div className="flex-1 text-left">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <h4 className="font-semibold">{item.title}</h4>
-                                  <Badge className={getPriorityColor(item.priority)}>
-                                    {item.priority}
-                                  </Badge>
-                                  <Badge variant="outline" className="text-xs">
-                                    {item.aisvsReference}
-                                  </Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground">{item.description}</p>
-                                <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                                  <span>⏱️ {item.estimatedTime}</span>
-                                </div>
-                              </div>
+                          {/* The checkbox and the AISVS link sit beside (not inside) the trigger: no nested interactive content. */}
+                          <div className="flex items-start gap-4 px-4 sm:px-6">
+                            <Checkbox
+                              id={checkboxId}
+                              checked={checked}
+                              onCheckedChange={() => toggle(item.id)}
+                              className="mt-5"
+                              aria-label={`Mark "${item.title}" as done`}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <AccordionTrigger className="py-4 hover:no-underline">
+                                <span className="block flex-1 text-left">
+                                  <span className="mb-1.5 flex flex-wrap items-center gap-2">
+                                    <span
+                                      className={cn(
+                                        "font-semibold",
+                                        checked && "text-muted-foreground line-through",
+                                      )}
+                                    >
+                                      {item.title}
+                                    </span>
+                                    <SeverityBadge
+                                      band={priorityBand(item.priority)}
+                                      size="xs"
+                                      label={`${item.priority[0].toUpperCase()}${item.priority.slice(1)} priority`}
+                                    />
+                                  </span>
+                                  <span className="block text-sm font-normal text-muted-foreground">
+                                    {item.description}
+                                  </span>
+                                </span>
+                              </AccordionTrigger>
+                              <p className="-mt-2 mb-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                                <Link
+                                  to={`/aisvs#${item.aisvsReference}`}
+                                  className="inline-flex h-5 items-center rounded border px-1.5 font-mono text-[11px] text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                >
+                                  AISVS {item.aisvsReference}
+                                </Link>
+                                <span>Estimated {item.estimatedTime}</span>
+                              </p>
                             </div>
-                          </AccordionTrigger>
+                          </div>
 
-                          <AccordionContent className="px-6 pb-6">
+                          <AccordionContent className="px-4 pb-6 sm:px-6">
                             <div className="space-y-4">
                               <div>
-                                <h5 className="font-medium mb-2">Implementation Guide</h5>
+                                <h3 className="mb-2 font-medium">Implementation guide</h3>
                                 <p className="text-sm text-muted-foreground">
                                   {item.implementationGuide}
                                 </p>
                               </div>
-
                               {item.codeExample && (
                                 <div>
-                                  <h5 className="font-medium mb-2">Code Example</h5>
-                                  <pre className="text-xs overflow-auto bg-muted p-4 rounded-lg">
-                                    <code>{item.codeExample.trim()}</code>
-                                  </pre>
+                                  <h3 className="mb-2 font-medium">Code example</h3>
+                                  <CodeBlock
+                                    code={item.codeExample}
+                                    language={item.codeLanguage ?? "typescript"}
+                                  />
                                 </div>
                               )}
-
                               <div>
-                                <h5 className="font-medium mb-2">Verification Steps</h5>
+                                <h3 className="mb-2 font-medium">Verification steps</h3>
                                 <ul className="space-y-1">
-                                  {item.verificationSteps.map((step, index) => (
-                                    <li key={index} className="flex items-center gap-2 text-sm">
-                                      <Target className="h-3 w-3 text-muted-foreground" />
+                                  {item.verificationSteps.map((step) => (
+                                    <li key={step} className="flex items-center gap-2 text-sm">
+                                      <Target
+                                        aria-hidden
+                                        className="h-3 w-3 text-muted-foreground"
+                                      />
                                       {step}
                                     </li>
                                   ))}
                                 </ul>
                               </div>
-
                               {item.dependencies && (
                                 <div>
-                                  <h5 className="font-medium mb-2">Dependencies</h5>
+                                  <h3 className="mb-2 font-medium">Dependencies</h3>
                                   <div className="flex flex-wrap gap-2">
-                                    {item.dependencies.map((dep, index) => (
-                                      <Badge key={index} variant="outline" className="text-xs">
+                                    {item.dependencies.map((dep) => (
+                                      <Badge key={dep} variant="outline" className="text-xs">
                                         {dep}
                                       </Badge>
                                     ))}
@@ -887,11 +767,14 @@ export const SecurityChecklist: React.FC = () => {
                       </Accordion>
                     </CardContent>
                   </Card>
-                ))}
-            </div>
-          </TabsContent>
-        ))}
+                );
+              })}
+            </TabsContent>
+          );
+        })}
       </Tabs>
     </div>
   );
-};
+}
+
+export default SecurityChecklist;

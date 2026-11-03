@@ -1,608 +1,586 @@
-import { useState, useMemo } from "react";
-import { useParams, Link } from "react-router-dom";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
-import SidebarNav from "@/components/layout/SidebarNav";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { useMemo } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
-  Shield,
-  AlertTriangle,
   GitMerge,
-  Wrench,
-  Code,
-  Database,
+  Info,
+  Shield,
+  Workflow,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { threatsData, mitigationsData, Threat } from "../components/components/securityData";
-import { Helmet } from "react-helmet";
+import PageLayout from "@/components/layout/PageLayout";
+import PageHeader from "@/components/layout/PageHeader";
+import NotFoundEntity from "@/components/layout/NotFoundEntity";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  getComponentById,
-  getMainComponentId,
-  buildComponentMap,
-} from "../components/components/frameworkData";
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { threatsData, type Mitigation, type Threat } from "@/components/components/securityData";
+import { getComponentById } from "@/components/components/frameworkData";
+import { architecturesData } from "@/components/components/architecturesData";
+import { RichText } from "@/components/content/RichText";
+import { SeverityBadge } from "@/components/content/SeverityBadge";
+import { PhaseBadge } from "@/components/content/PhaseBadge";
+import { SourceNote } from "@/components/content/SourceNote";
+import { SOURCES } from "@/data/sources";
+import { KC } from "@/data/kc";
+import { threatModelerPathFor } from "@/config/navigation";
+import { Icon } from "@/lib/icons";
+import { kcColor } from "@/lib/palette";
+import { severityLabel } from "@/lib/severity";
+import { cn } from "@/lib/utils";
+import {
+  componentEntry,
+  descendantsOf,
+  threatIdsInKc,
+  type ComponentEntry,
+} from "@/components/kc-components/componentIndex";
+import {
+  MITIGATION_LIST,
+  compareThreatCodes,
+  controlCode,
+  threatBand,
+  threatLabel,
+} from "@/components/threats/threatIndex";
+import { PHASE_META, PHASE_ORDER, phaseApplies } from "@/components/controls/phaseTasks";
+import { renderCodeBlock } from "@/components/controls/renderCode";
 
-const componentMap = buildComponentMap();
-const normalizeId = (id: string) => id.replace(/-/g, ".").toLowerCase();
+const TABS = ["overview", "threats", "mitigations", "architectures"] as const;
+type TabKey = (typeof TABS)[number];
+
+/** A pattern uses a node when one of its key components is the node, a descendant or an ancestor. */
+function usesComponent(keyComponents: string[], id: string): string[] {
+  return keyComponents.filter((k) => {
+    const kk = k.toLowerCase();
+    return kk === id || kk.startsWith(`${id}.`) || id.startsWith(`${kk}.`);
+  });
+}
+
+function KcPill({ entry }: { entry: ComponentEntry }) {
+  return (
+    <span
+      className="inline-flex h-6 items-center rounded-full border px-2 font-mono text-xs font-semibold text-foreground"
+      style={{ background: kcColor(entry.kc, 0.14), borderColor: kcColor(entry.kc, 0.45) }}
+    >
+      {entry.code}
+    </span>
+  );
+}
+
+function ControlGuidance({ control }: { control: Mitigation }) {
+  const sections = [
+    ...PHASE_ORDER.map((p) => ({
+      key: p,
+      label: `${PHASE_META[p].label} phase`,
+      text: control.implementationDetail[PHASE_META[p].field],
+    })),
+    {
+      key: "tools",
+      label: "Tools & frameworks",
+      text: control.implementationDetail.toolsAndFrameworks,
+    },
+  ].filter((s) => s.text?.trim());
+  if (!sections.length) return null;
+  return (
+    <Accordion type="multiple" className="rounded-md border px-3">
+      {sections.map((s) => (
+        <AccordionItem key={s.key} value={s.key} className="last:border-b-0">
+          <AccordionTrigger className="py-3 text-sm hover:no-underline">{s.label}</AccordionTrigger>
+          <AccordionContent>
+            <RichText text={s.text} variant="compact" renderCode={renderCodeBlock} />
+          </AccordionContent>
+        </AccordionItem>
+      ))}
+    </Accordion>
+  );
+}
 
 const ComponentDetail = () => {
   const { componentId } = useParams<{ componentId: string }>();
-  const [activeTab, setActiveTab] = useState<
-    "overview" | "threats" | "mitigations" | "architectures"
-  >("overview");
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const entry = componentEntry(componentId);
 
-  const {
-    component,
-    subComponent,
-    isSubComponent,
-    mainComponentId,
-    threatCodes,
-    relatedThreats,
-    relatedMitigations,
-  } = useMemo(() => {
-    const mainId = getMainComponentId(componentId ?? "");
-    const currentNode = componentId ? getComponentById(componentId) : undefined;
-    const mainNode = getComponentById(mainId);
-    const parentNode = mainNode ?? currentNode;
-    const isSub = currentNode && parentNode && currentNode.id !== parentNode.id;
-
-    const viewComponent = parentNode
-      ? {
-          id: parentNode.id,
-          title: parentNode.title,
-          description: parentNode.description ?? "",
-          color: parentNode.color,
-          subComponents: (parentNode.children ?? []).map((c) => ({
-            id: c.id,
-            title: c.title,
-            description: c.description ?? "",
-          })),
-          relatedArchitectures: parentNode.relatedArchitectures ?? [],
-          relatedComponents: parentNode.relatedComponents ?? [],
-          securityImplications: parentNode.securityImplications ?? "",
-          implementationConsiderations: parentNode.implementationConsiderations ?? "",
-        }
-      : null;
-
-    const threatIds = (currentNode ?? parentNode)?.threatIds ?? [];
-    const threats = threatIds.map((tid) => threatsData[tid]).filter((t): t is Threat => !!t);
-    const mitigations = Object.values(mitigationsData).filter((m) =>
-      threats.some((t) => m.threatIds.includes(t.id)),
-    );
-    const codes = threatIds.map((tid) => threatsData[tid]?.code).filter(Boolean) as string[];
-
+  const data = useMemo(() => {
+    if (!entry) return null;
+    const node = getComponentById(entry.id);
+    const root = getComponentById(entry.kc);
+    const parent = componentEntry(entry.parentId);
+    const threatIds = entry.depth === 0 ? threatIdsInKc(entry.kc) : entry.threatIds;
+    const threats = threatIds
+      .map((id) => threatsData[id])
+      .filter((t): t is Threat => !!t)
+      .sort(compareThreatCodes);
+    const threatSet = new Set(threats.map((t) => t.id));
+    const controls = MITIGATION_LIST.filter((m) => m.threatIds.some((t) => threatSet.has(t)));
+    const relevance = new Map((root?.relatedArchitectures ?? []).map((a) => [a.id, a.relevance]));
+    const architectures = Object.values(architecturesData)
+      .map((a) => ({
+        arch: a,
+        uses: usesComponent(a.keyComponents, entry.id),
+        relevance: relevance.get(a.id),
+      }))
+      .filter((x) => x.uses.length > 0 || (entry.depth === 0 && x.relevance))
+      .sort(
+        (a, b) =>
+          Number(b.relevance === "primary") - Number(a.relevance === "primary") ||
+          b.uses.length - a.uses.length,
+      );
     return {
-      component: viewComponent,
-      subComponent:
-        currentNode && isSub
-          ? {
-              id: currentNode.id,
-              title: currentNode.title,
-              description: currentNode.description ?? "",
-            }
-          : null,
-      isSubComponent: !!isSub,
-      mainComponentId: mainId,
-      threatCodes: codes,
-      relatedThreats: threats,
-      relatedMitigations: mitigations,
+      node,
+      root,
+      parent,
+      threats,
+      controls,
+      architectures,
+      children: entry.childIds.map((c) => componentEntry(c)).filter(Boolean) as ComponentEntry[],
+      descendants: descendantsOf(entry.id),
     };
-  }, [componentId]);
+  }, [entry]);
 
-  const handleMobileMenuToggle = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
-
-  const handleMobileMenuClose = () => {
-    setIsMobileMenuOpen(false);
-  };
-
-  // Icons for subcomponents based on component type
-  const getSubcomponentIcon = (componentId: string) => {
-    switch (componentId) {
-      case "kc1":
-        return null;
-      case "kc2":
-        return <GitMerge className="w-4 h-4 mr-2" />;
-      case "kc3":
-        return null;
-      case "kc4":
-        return null;
-      case "kc5":
-        return <Wrench className="w-4 h-4 mr-2" />;
-      case "kc6":
-        return componentId.includes("kc6.2") ? (
-          <Code className="w-4 h-4 mr-2" />
-        ) : componentId.includes("kc6.3") ? (
-          <Database className="w-4 h-4 mr-2" />
-        ) : null;
-      default:
-        return null;
-    }
-  };
-
-  // If component not found, or sub-component not found, show not found message
-  if (!component || (isSubComponent && !subComponent)) {
+  if (!entry || !data) {
     return (
-      <>
-        <Header onMobileMenuToggle={handleMobileMenuToggle} isMobileMenuOpen={isMobileMenuOpen} />
-
-        {/* Mobile Navigation Sidebar */}
-        <SidebarNav type="components" isOpen={isMobileMenuOpen} onClose={handleMobileMenuClose} />
-
-        <main id="main-content" className="container py-12">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-3xl font-bold mb-4">
-              {isSubComponent ? "Sub-Component Not Found" : "Component Not Found"}
-            </h1>
-            <p className="text-muted-foreground mb-6">
-              The {isSubComponent ? "sub-component" : "component"} you're looking for does not exist
-              or has been removed.
-            </p>
-            <Link to="/components">
-              <Button>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Components
-              </Button>
-            </Link>
-          </div>
-        </main>
-        <Footer />
-      </>
+      <PageLayout
+        title="Component not found"
+        description="This component does not exist in the agentic components framework."
+        canonicalPath={`/components/${componentId ?? ""}`}
+        noindex
+        section="components"
+      >
+        <NotFoundEntity type="component" id={componentId} />
+      </PageLayout>
     );
   }
 
-  // Prepare SEO data
-  const pageTitle = isSubComponent ? subComponent!.title : component.title;
-  const pageDescription = isSubComponent ? subComponent!.description : component.description;
-  const pageUrl = `https://agenticsecurity.info/components/${componentId}`;
+  const { node, root, parent, threats, controls, architectures, children, descendants } = data;
+  const kc = KC[entry.kc];
+  const isSub = entry.depth > 0;
+  const source = isSub ? SOURCES.components : SOURCES.kc;
+  const description = entry.description || kc.description;
+  const tabParam = params.get("tab");
+  const tab: TabKey = (TABS as readonly string[]).includes(tabParam ?? "")
+    ? (tabParam as TabKey)
+    : "overview";
+  const setTab = (v: string) => {
+    const next = new URLSearchParams(params);
+    if (v === "overview") next.delete("tab");
+    else next.set("tab", v);
+    setParams(next, { replace: true });
+  };
+  const threatCodes = threats.map((t) => t.code);
 
   return (
-    <>
-      <Helmet>
-        <title>{pageTitle} | OWASP Securing Agentic Applications Guide</title>
-        <meta
-          name="description"
-          content={`${pageDescription} Learn about security threats, mitigations, and best practices for this AI component.`}
-        />
-        <meta
-          name="keywords"
-          content={`${pageTitle}, AI security, OWASP, agentic systems, ${threatCodes.join(", ")}, AI threats, security controls`}
-        />
-        <meta name="robots" content="index, follow" />
-        <link rel="canonical" href={pageUrl} />
-        <meta property="og:title" content={`${pageTitle} | OWASP Guide`} />
-        <meta property="og:description" content={pageDescription} />
-        <meta property="og:type" content="article" />
-        <meta property="og:url" content={pageUrl} />
-        <meta property="og:site_name" content="OWASP Securing Agentic Applications Guide" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={`${pageTitle} | OWASP Guide`} />
-        <meta name="twitter:description" content={pageDescription} />
-        <meta name="twitter:url" content={pageUrl} />
-        <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "TechArticle",
-            headline: pageTitle,
-            description: pageDescription,
-            url: pageUrl,
-            datePublished: new Date().toISOString(),
-            dateModified: new Date().toISOString(),
-            author: {
-              "@type": "Organization",
-              name: "OWASP",
-            },
-            publisher: {
-              "@type": "Organization",
-              name: "OWASP",
-              url: "https://owasp.org",
-            },
-            about: "AI Security",
-            keywords: threatCodes.join(", "),
-            isPartOf: {
-              "@type": "WebSite",
-              name: "OWASP Securing Agentic Applications Guide",
-              url: "https://agenticsecurity.info",
-            },
-          })}
-        </script>
-      </Helmet>
-      <Header onMobileMenuToggle={handleMobileMenuToggle} isMobileMenuOpen={isMobileMenuOpen} />
-
-      {/* Mobile Navigation Sidebar */}
-      <SidebarNav
-        type="components"
-        activeId={componentId}
-        isOpen={isMobileMenuOpen}
-        onClose={handleMobileMenuClose}
-      />
-
-      <main id="main-content" className="container py-12">
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <Link
-              to="/components"
-              className="inline-flex items-center text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
+    <PageLayout
+      title={`${entry.title} (${entry.code})`}
+      description={`${description} Threats, controls and architecture patterns for this agentic AI component.`}
+      canonicalPath={`/components/${entry.id}`}
+      ogType="article"
+      section="components"
+      activeId={entry.id}
+      keywords={`${entry.title}, ${entry.code}, AI security, OWASP, agentic systems, ${threatCodes.join(", ")}`}
+      jsonLd={{
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        headline: entry.title,
+        description,
+        url: `https://agenticsecurity.info/components/${entry.id}`,
+        dateModified: source.retrievedAt,
+        author: { "@type": "Organization", name: "OWASP" },
+        publisher: { "@type": "Organization", name: "OWASP", url: "https://owasp.org" },
+        about: "AI Security",
+        keywords: threatCodes.join(", "),
+        isPartOf: {
+          "@type": "WebSite",
+          name: "Agentic Security Hub",
+          url: "https://agenticsecurity.info",
+        },
+      }}
+    >
+      <nav aria-label="Breadcrumb" className="mb-6">
+        <ol className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+          <li>
+            <Link to="/components" className="inline-flex items-center hover:text-foreground">
+              <ArrowLeft aria-hidden className="mr-1.5 h-4 w-4" />
               Components
             </Link>
+          </li>
+          {isSub && (
+            <li className="flex items-center gap-1.5">
+              <span aria-hidden>/</span>
+              <Link to={`/components/${kc.id}`} className="hover:text-foreground">
+                {kc.code} {kc.name}
+              </Link>
+            </li>
+          )}
+          {parent && parent.depth > 0 && (
+            <li className="flex items-center gap-1.5">
+              <span aria-hidden>/</span>
+              <Link to={`/components/${parent.id}`} className="hover:text-foreground">
+                {parent.code} {parent.title}
+              </Link>
+            </li>
+          )}
+        </ol>
+      </nav>
 
-            {isSubComponent && (
-              <>
-                <span className="text-muted-foreground">/</span>
-                <Link
-                  to={`/components/${mainComponentId}`}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  {component.title}
-                </Link>
-              </>
-            )}
-          </div>
+      <PageHeader
+        eyebrow={isSub ? `Sub-component of ${kc.code}` : "Key component"}
+        title={entry.title}
+        description={description}
+        source={source}
+        stats={[
+          ...(descendants.length ? [{ label: "sub-components", value: descendants.length }] : []),
+          {
+            label: "threats",
+            value: threats.length,
+            hint: entry.inherited
+              ? `No mapping of its own; inherited from ${entry.inheritedFrom?.toUpperCase()}.`
+              : isSub
+                ? undefined
+                : "Distinct threats mapped to this component or any sub-component.",
+          },
+          {
+            label: "controls",
+            value: controls.length,
+            hint: "Controls that mitigate at least one of these threats.",
+          },
+          { label: "architecture patterns", value: architectures.length },
+        ]}
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <KcPill entry={entry} />
+          {entry.inherited && (
+            <Badge variant="outline" className="text-xs">
+              Threats inherited from {entry.inheritedFrom?.toUpperCase()}
+            </Badge>
+          )}
+        </div>
+      </PageHeader>
 
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold tracking-tight">
-              {isSubComponent ? subComponent!.title : component.title}
-            </h1>
-            <p className="mt-1 text-muted-foreground">
-              {isSubComponent ? subComponent!.description : component.description}
+      <Tabs value={tab} onValueChange={setTab} className="w-full">
+        <TabsList className="mb-6 grid h-auto w-full grid-cols-4">
+          <TabsTrigger value="overview" className="gap-2">
+            <Info aria-hidden className="h-4 w-4" />
+            <span className="sr-only sm:not-sr-only">Overview</span>
+          </TabsTrigger>
+          <TabsTrigger value="threats" className="gap-2">
+            <AlertTriangle aria-hidden className="h-4 w-4" />
+            <span className="sr-only sm:not-sr-only">Threats</span>
+            <span className="hidden text-xs text-muted-foreground md:inline">
+              ({threats.length})
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="mitigations" className="gap-2">
+            <Shield aria-hidden className="h-4 w-4" />
+            <span className="sr-only sm:not-sr-only">Controls</span>
+            <span className="hidden text-xs text-muted-foreground md:inline">
+              ({controls.length})
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="architectures" className="gap-2">
+            <GitMerge aria-hidden className="h-4 w-4" />
+            <span className="sr-only sm:not-sr-only">Architectures</span>
+            <span className="hidden text-xs text-muted-foreground md:inline">
+              ({architectures.length})
+            </span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          {children.length > 0 && (
+            <section aria-labelledby="subcomponents">
+              <h2 id="subcomponents" className="mb-3 text-lg font-semibold">
+                Sub-components
+              </h2>
+              <ul className="grid gap-3 md:grid-cols-2">
+                {children.map((c) => (
+                  <li key={c.id}>
+                    <Link
+                      to={`/components/${c.id}`}
+                      className="group flex h-full items-start gap-3 rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="font-mono text-xs text-muted-foreground">{c.code}</span>
+                        <span className="block font-semibold group-hover:text-primary">
+                          {c.title}
+                        </span>
+                        <span className="mt-0.5 line-clamp-2 block text-sm text-muted-foreground">
+                          {c.description}
+                        </span>
+                        <span className="mt-1.5 block text-xs text-muted-foreground">
+                          {c.threatIds.length} threat{c.threatIds.length === 1 ? "" : "s"}
+                          {c.inherited ? " (inherited)" : ""}
+                          {c.childIds.length ? ` · ${c.childIds.length} sub-components` : ""}
+                        </span>
+                      </span>
+                      <ArrowRight
+                        aria-hidden
+                        className="mt-1 h-4 w-4 shrink-0 text-muted-foreground"
+                      />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {root?.securityImplications && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">
+                  Security implications{isSub ? ` of ${kc.code}` : ""}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RichText text={root.securityImplications} variant="compact" />
+              </CardContent>
+            </Card>
+          )}
+          {root?.implementationConsiderations && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">
+                  Implementation considerations{isSub ? ` for ${kc.code}` : ""}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RichText text={root.implementationConsiderations} variant="compact" />
+              </CardContent>
+            </Card>
+          )}
+
+          {!isSub && (root?.relatedComponents?.length ?? 0) > 0 && (
+            <section aria-labelledby="related-components">
+              <h2 id="related-components" className="mb-3 text-lg font-semibold">
+                Related components
+              </h2>
+              <ul className="flex flex-wrap gap-2">
+                {root!.relatedComponents!.map((id) => {
+                  const rel = componentEntry(id);
+                  return rel ? (
+                    <li key={rel.id}>
+                      <Link
+                        to={`/components/${rel.id}`}
+                        className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <span
+                          aria-hidden
+                          className="h-2.5 w-2.5 rounded-full"
+                          style={{ background: kcColor(rel.kc) }}
+                        />
+                        {rel.code} · {rel.title}
+                      </Link>
+                    </li>
+                  ) : null;
+                })}
+              </ul>
+            </section>
+          )}
+          {isSub && node?.description == null && (
+            <p className="text-sm text-muted-foreground">
+              No further detail is documented for this sub-component.
             </p>
-            {isSubComponent && (
-              <p className="mt-1 text-sm text-muted-foreground">Part of: {component.title}</p>
-            )}
-          </div>
+          )}
+        </TabsContent>
 
-          {/* Tab navigation */}
-          <div className="border-b mb-6">
-            <div className="flex flex-wrap gap-y-2 md:gap-y-0 space-x-6">
-              <button
-                onClick={() => setActiveTab("overview")}
-                className={cn(
-                  "pb-2 px-1 font-medium",
-                  activeTab === "overview"
-                    ? "border-b-2 border-primary text-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                Overview
-              </button>
-              <button
-                onClick={() => setActiveTab("threats")}
-                className={cn(
-                  "pb-2 px-1 font-medium flex items-center",
-                  activeTab === "threats"
-                    ? "border-b-2 border-threat text-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <AlertTriangle className="mr-1 h-4 w-4" />
-                Threats
-                <span className="ml-1 text-xs bg-threat/10 text-threat px-2 py-0.5 rounded-full">
-                  {relatedThreats.length}
-                </span>
-              </button>
-              <button
-                onClick={() => setActiveTab("mitigations")}
-                className={cn(
-                  "pb-2 px-1 font-medium flex items-center",
-                  activeTab === "mitigations"
-                    ? "border-b-2 border-control text-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <Shield className="mr-1 h-4 w-4" />
-                Mitigations
-                <span className="ml-1 text-xs bg-control/10 text-control px-2 py-0.5 rounded-full">
-                  {relatedMitigations.length}
-                </span>
-              </button>
-              <button
-                onClick={() => setActiveTab("architectures")}
-                className={cn(
-                  "pb-2 px-1 font-medium flex items-center",
-                  activeTab === "architectures"
-                    ? "border-b-2 border-architecture text-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <GitMerge className="mr-1 h-4 w-4" />
-                Architectures
-              </button>
-            </div>
-          </div>
-
-          {/* Tab content */}
-          <div>
-            {activeTab === "overview" && (
-              <div className="space-y-8">
-                {!isSubComponent && (
-                  <div>
-                    <h2 className="text-xl font-semibold mb-4">Subcomponents</h2>
-                    <div className="grid grid-cols-1 gap-4">
-                      {component.subComponents.map((subComp) => (
-                        <Link to={`/components/${subComp.id}`} key={subComp.id}>
-                          <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-                            <CardContent className="pt-6">
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center">
-                                  {getSubcomponentIcon(subComp.id)}
-                                  <h3 className="text-lg font-medium">{subComp.title}</h3>
-                                </div>
-                                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                              </div>
-                              <p className="text-muted-foreground">{subComp.description}</p>
-                            </CardContent>
-                          </Card>
-                        </Link>
-                      ))}
-                    </div>
+        <TabsContent value="threats" className="space-y-4">
+          <h2 className="sr-only">Threats to {entry.title}</h2>
+          {entry.inherited && (
+            <p className="text-sm text-muted-foreground">
+              The source maps these threats to {entry.inheritedFrom?.toUpperCase()} as a whole; this
+              sub-component has no mapping of its own.
+            </p>
+          )}
+          {threats.length ? (
+            <ul className="grid gap-4 md:grid-cols-2">
+              {threats.map((t) => (
+                <li
+                  key={t.id}
+                  className="card-hover relative flex flex-col rounded-lg border bg-card p-5"
+                >
+                  <div className="mb-1 flex flex-wrap items-center gap-2">
+                    <span className="font-mono text-xs text-muted-foreground">{t.code}</span>
+                    <SeverityBadge band={threatBand(t)} size="xs" />
                   </div>
-                )}
-
-                {isSubComponent && (
-                  <div>
-                    <h2 className="text-xl font-semibold mb-4">Detailed Information</h2>
-                    <Card>
-                      <CardContent className="pt-6">
-                        <div className="space-y-4">
-                          <div>
-                            <h3 className="font-medium mb-2">Description</h3>
-                            <p className="text-muted-foreground">{subComponent!.description}</p>
-                          </div>
-                          <div>
-                            <h3 className="font-medium mb-2">Parent Component</h3>
-                            <Link to={`/components/${mainComponentId}`}>
-                              <div
-                                className={cn(
-                                  "inline-block border rounded-md p-3 transition-colors hover:bg-accent",
-                                  component.color,
-                                )}
-                              >
-                                {component.title}
-                              </div>
-                            </Link>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
-
-                {!isSubComponent && (
-                  <>
-                    <div>
-                      <h2 className="text-xl font-semibold mb-4">Security Implications</h2>
-                      <Card>
-                        <CardContent className="pt-6">
-                          <p className="text-muted-foreground">{component.securityImplications}</p>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    <div>
-                      <h2 className="text-xl font-semibold mb-4">Implementation Considerations</h2>
-                      <Card>
-                        <CardContent className="pt-6">
-                          <p className="text-muted-foreground">
-                            {component.implementationConsiderations}
-                          </p>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    <div>
-                      <h2 className="text-xl font-semibold mb-4">Related Components</h2>
-                      <div className="flex flex-wrap gap-3">
-                        {component.relatedComponents.map((id) => (
-                          <Link to={`/components/${id}`} key={id}>
-                            <div
-                              className={cn(
-                                "border rounded-md p-3 transition-colors hover:bg-accent",
-                                componentMap.get(normalizeId(id))?.color,
-                              )}
-                            >
-                              {componentMap.get(normalizeId(id))?.title}
-                            </div>
+                  <h3 className="font-semibold">
+                    <Link
+                      to={`/threats/${t.id}`}
+                      className="after:absolute after:inset-0 hover:underline focus-visible:outline-none"
+                    >
+                      {t.name}
+                    </Link>
+                  </h3>
+                  <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">{t.description}</p>
+                  <ul
+                    className="relative z-10 mt-3 flex flex-wrap gap-1.5"
+                    aria-label="Components affected"
+                  >
+                    {[...new Set(t.componentIds.map((c) => c.toLowerCase()))].map((c) => {
+                      const ce = componentEntry(c);
+                      return ce ? (
+                        <li key={c}>
+                          <Link
+                            to={`/components/${ce.id}`}
+                            className="inline-flex h-6 items-center gap-1 rounded border px-1.5 font-mono text-[11px] hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            <span
+                              aria-hidden
+                              className="h-2 w-2 rounded-full"
+                              style={{ background: kcColor(ce.kc) }}
+                            />
+                            {ce.code}
                           </Link>
-                        ))}
+                        </li>
+                      ) : null;
+                    })}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground">No threats are mapped to this component.</p>
+          )}
+        </TabsContent>
+
+        <TabsContent value="mitigations" className="space-y-4">
+          <h2 className="sr-only">Controls for {entry.title}</h2>
+          {controls.length ? (
+            <ul className="space-y-4">
+              {controls.map((m) => {
+                const mitigated = m.threatIds
+                  .filter((id) => threats.some((t) => t.id === id))
+                  .map((id) => threatsData[id])
+                  .filter(Boolean)
+                  .sort(compareThreatCodes);
+                return (
+                  <li key={m.id} className="rounded-lg border bg-card p-5">
+                    <div className="flex items-start gap-3">
+                      <Icon
+                        name={m.icon ?? "shield"}
+                        className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground"
+                      />
+                      <div className="min-w-0 flex-1 space-y-3">
+                        <div>
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {controlCode(m.id)}
+                          </span>
+                          <h3 className="font-semibold">
+                            <Link
+                              to={`/controls/${m.id}`}
+                              className="hover:text-primary hover:underline"
+                            >
+                              {m.name}
+                            </Link>
+                          </h3>
+                          <RichText
+                            text={m.description}
+                            variant="compact"
+                            glossary={false}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {PHASE_ORDER.map((p) => (
+                            <PhaseBadge key={p} phase={p} size="xs" active={phaseApplies(m, p)} />
+                          ))}
+                          <span className="mx-1 h-4 w-px bg-border" aria-hidden />
+                          <span className="text-xs text-muted-foreground">Mitigates here:</span>
+                          {mitigated.map((t) => (
+                            <Link
+                              key={t.id}
+                              to={`/threats/${t.id}`}
+                              title={threatLabel(t)}
+                              className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              <SeverityBadge band={threatBand(t)} label={t.code} size="xs" />
+                              <span className="sr-only">
+                                {" "}
+                                {threatLabel(t)}, {severityLabel(threatBand(t))} risk
+                              </span>
+                            </Link>
+                          ))}
+                        </div>
+                        <ControlGuidance control={m} />
                       </div>
                     </div>
-                  </>
-                )}
-              </div>
-            )}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground">No controls address this component's threats.</p>
+          )}
+        </TabsContent>
 
-            {activeTab === "threats" && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-semibold mb-4">Threats to {component.title}</h2>
-                {relatedThreats.length > 0 ? (
-                  <div className="space-y-4">
-                    {relatedThreats.map((threat) => (
-                      <Card key={threat.id} className="border-threat/20">
-                        <CardContent className="pt-6">
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-lg font-medium">
-                              <span className="font-mono text-xs bg-threat/10 text-threat px-2 py-0.5 rounded mr-2">
-                                {threat.code}
-                              </span>
-                              {threat.name}
-                            </h3>
-                            <span
-                              className={cn(
-                                "text-xs px-2 py-0.5 rounded-full",
-                                threat.impactLevel === "high"
-                                  ? "bg-destructive/10 text-destructive"
-                                  : threat.impactLevel === "medium"
-                                    ? "bg-warning/10 text-warning"
-                                    : "bg-primary/10 text-primary",
-                              )}
-                            >
-                              {threat.impactLevel.charAt(0).toUpperCase() +
-                                threat.impactLevel.slice(1)}{" "}
-                              Impact
-                            </span>
-                          </div>
-                          <p className="text-muted-foreground mb-4">{threat.description}</p>
-                          <div className="text-sm">
-                            <span className="font-medium">Affected Components: </span>
-                            <div className="flex flex-wrap gap-2 mt-1">
-                              {threat.componentIds.map((id) => (
-                                <Link to={`/components/${id}`} key={id}>
-                                  <span className="inline-block bg-secondary px-2 py-1 rounded text-xs">
-                                    {componentMap.get(normalizeId(id))?.title?.split(" ")[0] ?? id}
-                                  </span>
-                                </Link>
-                              ))}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+        <TabsContent value="architectures" className="space-y-4">
+          <h2 className="sr-only">Architecture patterns using {entry.title}</h2>
+          {architectures.length ? (
+            <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {architectures.map(({ arch, uses, relevance }) => (
+                <li key={arch.id} className="flex flex-col rounded-lg border bg-card p-5">
+                  <div className="mb-1 flex flex-wrap items-center gap-2">
+                    <h3 className="font-semibold">
+                      <Link
+                        to={`/architectures/${arch.id}`}
+                        className="hover:text-primary hover:underline"
+                      >
+                        {arch.name}
+                      </Link>
+                    </h3>
+                    {relevance && (
+                      <Badge
+                        variant={relevance === "primary" ? "default" : "outline"}
+                        className="h-5 px-1.5 text-[10px]"
+                      >
+                        {relevance === "primary" ? "Primary role" : "Supporting role"}
+                      </Badge>
+                    )}
                   </div>
-                ) : (
-                  <p className="text-muted-foreground">
-                    No specific threats documented for this component.
-                  </p>
-                )}
-              </div>
-            )}
-
-            {activeTab === "mitigations" && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-semibold mb-4">Security Controls & Mitigations</h2>
-                {relatedMitigations.length > 0 ? (
-                  <div className="space-y-4">
-                    {relatedMitigations.map((mitigation) => (
-                      <Card key={mitigation.id} className="border-control/20">
-                        <CardContent className="pt-6">
-                          <h3 className="text-lg font-medium mb-2 text-foreground">
-                            {mitigation.name}
-                          </h3>
-                          <p className="text-muted-foreground mb-4">{mitigation.description}</p>
-
-                          <div className="flex flex-wrap gap-2 mb-4">
-                            {mitigation.designPhase && (
-                              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                                Design Phase
-                              </span>
-                            )}
-                            {mitigation.buildPhase && (
-                              <span className="text-xs bg-secondary/10 text-secondary px-2 py-0.5 rounded-full">
-                                Build Phase
-                              </span>
-                            )}
-                            {mitigation.operationPhase && (
-                              <span className="text-xs bg-success/10 text-success px-2 py-0.5 rounded-full">
-                                Operation Phase
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="mb-4">
-                            <span className="text-sm font-medium">Mitigates Threats: </span>
-                            <div className="flex flex-wrap gap-2 mt-1">
-                              {mitigation.threatIds.map((threatId) => {
-                                const threat = threatsData[threatId];
-                                return threat ? (
-                                  <span
-                                    key={threatId}
-                                    className="text-xs bg-threat/10 text-threat px-2 py-0.5 rounded-full"
-                                  >
-                                    <span className="font-mono">{threat.code}</span> - {threat.name}
-                                  </span>
-                                ) : null;
-                              })}
-                            </div>
-                          </div>
-                          <div className="bg-muted p-4 rounded-md">
-                            <h4 className="text-sm font-medium mb-2">Implementation Guidance</h4>
-                            {mitigation.implementationDetail ? (
-                              <div className="space-y-2">
-                                {mitigation.implementationDetail.design && (
-                                  <div>
-                                    <span className="font-semibold">Design Phase:</span>
-                                    <div className="text-sm text-muted-foreground whitespace-pre-line">
-                                      {mitigation.implementationDetail.design}
-                                    </div>
-                                  </div>
-                                )}
-                                {mitigation.implementationDetail.build && (
-                                  <div>
-                                    <span className="font-semibold">Build Phase:</span>
-                                    <div className="text-sm text-muted-foreground whitespace-pre-line">
-                                      {mitigation.implementationDetail.build}
-                                    </div>
-                                  </div>
-                                )}
-                                {mitigation.implementationDetail.operations && (
-                                  <div>
-                                    <span className="font-semibold">Operation Phase:</span>
-                                    <div className="text-sm text-muted-foreground whitespace-pre-line">
-                                      {mitigation.implementationDetail.operations}
-                                    </div>
-                                  </div>
-                                )}
-                                {mitigation.implementationDetail.toolsAndFrameworks && (
-                                  <div>
-                                    <span className="font-semibold">Tools & Frameworks:</span>
-                                    <div className="text-sm text-muted-foreground whitespace-pre-line">
-                                      {mitigation.implementationDetail.toolsAndFrameworks}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <p className="text-sm text-muted-foreground">
-                                No implementation guidance available.
-                              </p>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                  <p className="line-clamp-3 text-sm text-muted-foreground">{arch.description}</p>
+                  {uses.length > 0 && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Uses{" "}
+                      {uses.map((u, i) => (
+                        <span key={u}>
+                          {i > 0 && ", "}
+                          <Link
+                            to={`/components/${u.toLowerCase()}`}
+                            className={cn("font-mono hover:text-foreground hover:underline")}
+                          >
+                            {u.toUpperCase()}
+                          </Link>
+                        </span>
+                      ))}
+                    </p>
+                  )}
+                  <div className="mt-auto flex flex-wrap gap-2 pt-4">
+                    <Button asChild size="sm" variant="outline">
+                      <Link to={`/architectures/${arch.id}`}>View pattern</Link>
+                    </Button>
+                    <Button asChild size="sm" variant="ghost">
+                      <Link to={threatModelerPathFor(arch.id)}>
+                        <Workflow aria-hidden className="mr-1.5 h-4 w-4" />
+                        Model it
+                      </Link>
+                    </Button>
                   </div>
-                ) : (
-                  <p className="text-muted-foreground">
-                    No specific mitigations documented for this component's threats.
-                  </p>
-                )}
-              </div>
-            )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground">No architecture pattern lists this component.</p>
+          )}
+        </TabsContent>
+      </Tabs>
 
-            {activeTab === "architectures" && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-semibold mb-4">Relevant Architectures</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {component.relatedArchitectures.map((arch) => (
-                    <Card key={arch.id} className="bg-card">
-                      <CardContent className="pt-6">
-                        <h3 className="text-lg font-medium mb-2">{arch.name}</h3>
-                        <p className="text-sm text-muted-foreground mb-4">
-                          {arch.relevance === "primary"
-                            ? `${component.title} is a primary component in this architecture.`
-                            : `${component.title} plays a supporting role in this architecture.`}
-                        </p>
-                        <Link to={`/architectures/${arch.id}`}>
-                          <Button variant="outline" size="sm">
-                            View Architecture
-                          </Button>
-                        </Link>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </main>
-      <Footer />
-    </>
+      <SourceNote source={source} className="mt-8" />
+    </PageLayout>
   );
 };
 

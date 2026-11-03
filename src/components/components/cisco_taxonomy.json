@@ -1,58 +1,90 @@
 {
-  "version": "1.0.0",
+  "version": "2.0.0",
   "OB-001": {
     "code": "OB-001",
     "description": "Goal Hijacking",
     "objective_group": "Common Manipulation Risks",
-    "definition": "Actors provide malicious instructions (via prompt) to override, bypass, alter, or subvert the output of a LLM/agent's system instructions, guardrails, or intended behavior. The injected prompt manipulates the model's context to execute attacker-controlled instructions instead of following its original programming, but preserves the intent of the input.",
+    "definition": "Actors use adversarial instructions and context manipulation to override, bypass, alter, or subvert an LLM/agent's system instructions, guardrails, or intended behavior. This objective encapsulates prompt injection and jailbreak-style attacks, including direct user prompting, indirect payload delivery through external content, multimodal payloads, and multi-turn goal drift. The attack manipulates model context so the system follows attacker-controlled objectives instead of aligned constraints.",
     "mappings": [],
     "ai_tech": [
       {
         "code": "AITech-1.1",
-        "description": "Direct Prompt Injection",
-        "definition": "Actors provide malicious instructions (via prompt) to override, bypass, alter, or subvert the output of a LLM/agent's system instructions, guardrails, or intended behavior. The injected prompt manipulates the model's context to execute attacker-controlled instructions instead of following its original programming, but preserves the intent of the input.",
+        "description": "Direct Prompt Injection and Jailbreak (Prompt-based Manipulation)",
+        "definition": "Text-based prompt techniques to manipulate an LLM/agent's behavior to bypass safeguards and/or follow attacker-defined goals. This can include the use of obfuscation, context and instruction manipulation, or propagating attacks through multi-agent environments.",
         "mappings": [
-          "OWASP: LLM01:2025: Prompt Injection",
+          "OWASP: LLM01:2026: Prompt Injection",
           "OWASP: ASI01: Agent Goal Hijack",
-          "MITRE ATLAS: AML.T0051.000: LLM Prompt Injection (Direct)",
+          "MITRE ATLAS: AML.T0051: LLM Prompt Injection",
+          "MITRE ATLAS: AML.T0054: LLM Jailbreak",
           "MITRE ATLAS: AML.T0093: Prompt Infiltration via Public-Facing Application",
           "NIST AML: NISTAML.018: Prompt Injection"
         ],
         "ai_subtech": [
           {
             "code": "AISubtech-1.1.1",
-            "description": "Instruction Manipulation (Direct Prompt Injection)",
-            "definition": "Explicit attempts to override, replace, or modify the model's system instructions, operational directives, or behavioral guidelines through direct user input, causing the model to follow attacker-controlled instructions instead of its intended programming (e.g., Ignore previous instructions).",
+            "description": "Instruction Manipulation",
+            "definition": "Attempts to override, replace, or reprioritize system directives so the model follows attacker-controlled instructions.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "OWASP: ASI01: Agent Goal Hijack",
-              "MITRE ATLAS: AML.T0051.000: LLM Prompt Injection (Direct)",
+              "MITRE ATLAS: AML.T0051: LLM Prompt Injection",
+              "MITRE ATLAS: AML.T0054: LLM Jailbreak",
               "MITRE ATLAS: AML.T0093: Prompt Infiltration via Public-Facing Application",
               "NIST AML: NISTAML.018: Prompt Injection"
             ]
           },
           {
             "code": "AISubtech-1.1.2",
-            "description": "Obfuscation (Direct Prompt Injection)",
-            "definition": "Disguising, encoding, or concealing malicious instructions within direct user input to evade detection mechanisms, content filters, and safety classifiers while preserving the malicious intent and functionality of the prompt injection. Examples include: character substitution (leetspeak, homoglyphs, unicode), encoding techniques (e.g., base64, ROT13, hexadecimal, binary), language mixing, whitespace manipulation, semantic obfuscation (synonyms, paraphrasing), and format-based hiding.",
+            "description": "Obfuscation",
+            "definition": "Disguising malicious payload intent with encoding, formatting, language tricks, or paraphrase chains to evade guardrails.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "OWASP: ASI01: Agent Goal Hijack",
-              "MITRE ATLAS: AML.T0051.000: LLM Prompt Injection (Direct)",
+              "MITRE ATLAS: AML.T0051: LLM Prompt Injection",
+              "MITRE ATLAS: AML.T0054: LLM Jailbreak",
               "MITRE ATLAS: AML.T0093: Prompt Infiltration via Public-Facing Application",
               "NIST AML: NISTAML.018: Prompt Injection"
             ]
           },
           {
             "code": "AISubtech-1.1.3",
-            "description": "Multi-Agent Prompt Injection",
-            "definition": "Exploiting inter-agent communication by injecting malicious instructions into one agent's output, which is then trusted, processed, and executed by another agent in a multi-agent system.",
+            "description": "Multi-Agent Propagation",
+            "definition": "Propagating malicious instructions across agent boundaries so downstream agents trust and execute attacker objectives.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "OWASP: ASI01: Agent Goal Hijack",
+              "MITRE ATLAS: AML.T0051: LLM Prompt Injection",
+              "MITRE ATLAS: AML.T0054: LLM Jailbreak",
+              "MITRE ATLAS: AML.T0093: Prompt Infiltration via Public-Facing Application",
+              "NIST AML: NISTAML.018: Prompt Injection",
               "OWASP: ASI07: Insecure Inter-Agent Communication",
-              "MITRE ATLAS: AML.T0051.000: LLM Prompt Injection (Direct)",
-              "MITRE ATLAS: AML.T0067: LLM Trusted Output Component Manipulation",
+              "MITRE ATLAS: AML.T0067: LLM Trusted Output Component Manipulation"
+            ]
+          },
+          {
+            "code": "AISubtech-1.1.4",
+            "description": "Token Exploitation",
+            "definition": "Exploiting tokenization, control-sequence, parser, or delimiter edge cases to trigger unsafe handling or bypass controls.",
+            "mappings": [
+              "OWASP: LLM01:2026: Prompt Injection",
+              "OWASP: ASI01: Agent Goal Hijack",
+              "MITRE ATLAS: AML.T0051: LLM Prompt Injection",
+              "MITRE ATLAS: AML.T0054: LLM Jailbreak",
+              "MITRE ATLAS: AML.T0093: Prompt Infiltration via Public-Facing Application",
+              "NIST AML: NISTAML.018: Prompt Injection",
+              "MITRE ATLAS: AML.T0043: Craft Adversarial Data"
+            ]
+          },
+          {
+            "code": "AISubtech-1.1.5",
+            "description": "Context Manipulation",
+            "definition": "Using fabricated framing -- through roleplay, staged scenarios, false premises, or adversarial argumentation -- to make harmful outputs appear permissible.",
+            "mappings": [
+              "OWASP: LLM01:2026: Prompt Injection",
+              "OWASP: ASI01: Agent Goal Hijack",
+              "MITRE ATLAS: AML.T0051: LLM Prompt Injection",
+              "MITRE ATLAS: AML.T0054: LLM Jailbreak",
+              "MITRE ATLAS: AML.T0093: Prompt Infiltration via Public-Facing Application",
               "NIST AML: NISTAML.018: Prompt Injection"
             ]
           }
@@ -61,10 +93,10 @@
       {
         "code": "AITech-1.2",
         "description": "Indirect Prompt Injection",
-        "definition": "Actors embed malicious instructions in external data sources (such as web pages, documents, emails, databases, API responses) that the LLM or the agent retrieves and processes, causing hidden instructions to be executed without the user's knowledge or awareness. The attack exploits the model's inability to distinguish between trusted system instructions and untrusted external content.(Source: https://genai.owasp.org/llmrisk/llm01-prompt-injection/ )",
+        "definition": "Variation of prompt-based manipulation where the attacker embeds malicious instructions in external data sources (such as web pages, documents, emails, databases, API responses, etc.) that the LLM or the agent retrieves and processes, causing attacker instructions to be executed. The attack exploits the model's inability to distinguish between trusted system instructions and untrusted external content.",
         "mappings": [
-          "OWASP: LLM01:2025: Prompt Injection",
-          "OWASP: LLM03:2025: Supply Chain",
+          "OWASP: LLM01:2026: Prompt Injection",
+          "OWASP: LLM04:2026: Supply Chain",
           "OWASP: ASI01: Agent Goal Hijack",
           "MITRE ATLAS: AML.T0051.001: LLM Prompt Injection (Indirect)",
           "MITRE ATLAS: AML.T0070: RAG Poisoning",
@@ -72,106 +104,14 @@
           "NIST AML: NISTAML.015: Indirect Prompt Injection",
           "MITRE ATLAS: AML.T0067: LLM Trusted Output Component Manipulation"
         ],
-        "ai_subtech": [
-          {
-            "code": "AISubtech-1.2.1",
-            "description": "Instruction Manipulation (Indirect Prompt Injection)",
-            "definition": "Embedding malicious instructions within external data sources (e.g., documents, web pages, emails, databases, API responses) that an LLM retrieves and processes, causing these external instructions to override or modify the model's intended behavior without the user's knowledge or awareness.",
-            "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
-              "OWASP: LLM03:2025: Supply Chain",
-              "OWASP: ASI01: Agent Goal Hijack",
-              "MITRE ATLAS: AML.T0051.001: LLM Prompt Injection (Indirect)",
-              "MITRE ATLAS: AML.T0070: RAG Poisoning",
-              "MITRE ATLAS: AML.T0093: Prompt Infiltration via Public-Facing Application",
-              "NIST AML: NISTAML.015: Indirect Prompt Injection",
-              "MITRE ATLAS: AML.T0067: LLM Trusted Output Component Manipulation"
-            ]
-          },
-          {
-            "code": "AISubtech-1.2.2",
-            "description": "Obfuscation (Indirect Prompt Injection)",
-            "definition": "Concealing, encoding, or disguising malicious instructions within external data sources to evade content scanning, input validation, and security filters while ensuring the AI model can still interpret and execute the hidden instructions when the content is retrieved.",
-            "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
-              "OWASP: LLM03:2025: Supply Chain",
-              "OWASP: ASI01: Agent Goal Hijack",
-              "MITRE ATLAS: AML.T0051.001: LLM Prompt Injection (Indirect)",
-              "MITRE ATLAS: AML.T0093: Prompt Infiltration via Public-Facing Application",
-              "NIST AML: NISTAML.015: Indirect Prompt Injection",
-              "MITRE ATLAS: AML.T0067: LLM Trusted Output Component Manipulation"
-            ]
-          },
-          {
-            "code": "AISubtech-1.2.3",
-            "description": "Multi-Agent (Indirect Prompt Injection)",
-            "definition": "Exploiting inter-agent communication by injecting malicious instructions into one agent's output, which is then trusted, processed, and executed by another agent in a multi-agent system.",
-            "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
-              "OWASP: LLM03:2025: Supply Chain",
-              "OWASP: ASI01: Agent Goal Hijack",
-              "OWASP: ASI07: Insecure Inter-Agent Communication",
-              "MITRE ATLAS: AML.T0051.001: LLM Prompt Injection (Indirect)",
-              "MITRE ATLAS: AML.T0070: RAG Poisoning",
-              "NIST AML: NISTAML.015: Indirect Prompt Injection",
-              "MITRE ATLAS: AML.T0067: LLM Trusted Output Component Manipulation"
-            ]
-          }
-        ]
+        "ai_subtech": []
       },
       {
         "code": "AITech-1.3",
-        "description": "Goal Manipulation",
-        "definition": "Actors gain access to LLM/agent systems, functions, data, or resources without proper authorization through exploitation of authentication weaknesses, access control bypasses, or privilege boundaries. This includes both gaining initial unauthorized access and accessing restricted capabilities within a legitimately accessed system.",
-        "mappings": [
-          "OWASP: LLM06:2025: Excessive Agency",
-          "OWASP: ASI01: Agent Goal Hijack",
-          "MITRE ATLAS: AML.T0051: LLM Prompt Injection",
-          "MITRE ATLAS: AML.T0018: Manipulate AI Model",
-          "MITRE ATLAS: AML.T0067: LLM Trusted Output Component Manipulation",
-          "MITRE ATT&CK: T1078: Valid Accounts",
-          "MITRE ATT&CK:  TA0001: Initial Access",
-          "NIST AML: NISTAML.027: Misaligned Outputs"
-        ],
-        "ai_subtech": [
-          {
-            "code": "AISubtech-1.3.1",
-            "description": "Goal Manipulation (Models, Agents)",
-            "definition": "Gradually manipulating or embedding concealed/contradictory objectives within prompts, context, or interactions over multiple turns to shift the model/agent's operational goals away from intended objectives toward attacker-defined ones, causing deviation from aligned behavior.",
-            "mappings": [
-              "OWASP: LLM06:2025: Excessive Agency",
-              "OWASP: ASI01: Agent Goal Hijack",
-              "MITRE ATLAS: AML.T0051: LLM Prompt Injection",
-              "MITRE ATLAS: AML.T0018: Manipulate AI Model",
-              "MITRE ATLAS: AML.T0067: LLM Trusted Output Component Manipulation",
-              "MITRE ATT&CK: T1078: Valid Accounts",
-              "MITRE ATT&CK:  TA0001: Initial Access",
-              "NIST AML: NISTAML.027: Misaligned Outputs"
-            ]
-          },
-          {
-            "code": "AISubtech-1.3.2",
-            "description": "Goal Manipulation (Tools, Prompts, Resources)",
-            "definition": "Redirecting an agent's operational goals and objectives through compromising trusted external components it relies on to function, including injecting malicious objectives through compromised tools, poisoned external resources, malicious prompt templates, or corrupted dependencies.",
-            "mappings": [
-              "OWASP: LLM06:2025: Excessive Agency",
-              "OWASP: ASI01: Agent Goal Hijack",
-              "MITRE ATLAS: AML.T0051: LLM Prompt Injection",
-              "MITRE ATLAS: AML.T0018: Manipulate AI Model",
-              "MITRE ATLAS: AML.T0067: LLM Trusted Output Component Manipulation",
-              "MITRE ATLAS: AML.T0010: AI Supply Chain Compromise",
-              "MITRE ATLAS: AML.T0093: Prompt Infiltration via Public-Facing Application",
-              "NIST AML: NISTAML.027: Misaligned Outputs"
-            ]
-          }
-        ]
-      },
-      {
-        "code": "AITech-1.4",
-        "description": "Multi-Modal Injection and Manipulation",
+        "description": "Multimodal Injection and Manipulation",
         "definition": "Actors deliberately insert, alter, or create malicious content across various modalities (such as text, image, audio, video, or sensor streams) to influence, corrupt, or exploit an AI system's fusion, interpretation, or decision-making processes. Attacks exploit the integration points where different data types are combined.",
         "mappings": [
-          "OWASP: LLM01:2025: Prompt Injection",
+          "OWASP: LLM01:2026: Prompt Injection",
           "OWASP: ASI01: Agent Goal Hijack",
           "MITRE ATLAS: AML.T0051: LLM Prompt Injection",
           "MITRE ATLAS: AML.T0050: Command and Scripting Interpreter",
@@ -181,11 +121,11 @@
         ],
         "ai_subtech": [
           {
-            "code": "AISubtech-1.4.1",
+            "code": "AISubtech-1.3.1",
             "description": "Image-Text Injection",
             "definition": "Embedding malicious instructions, prompts, or data within images using techniques such as steganography, adversarial stickers, embedded text, or visual triggers. These elements are often imperceptible to humans but are extracted, interpreted, or acted upon by vision language models or downstream agents. The image serves as a carrier for a linguistic or symbolic payload intended to influence model behavior.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "OWASP: ASI01: Agent Goal Hijack",
               "MITRE ATLAS: AML.T0051: LLM Prompt Injection",
               "MITRE ATLAS: AML.T0050: Command and Scripting Interpreter",
@@ -195,11 +135,11 @@
             ]
           },
           {
-            "code": "AISubtech-1.4.2",
+            "code": "AISubtech-1.3.2",
             "description": "Image Manipulation",
             "definition": "Modifying visual content across any modality by altering pixels, structure, or image features to influence model perception or decision-making. This includes adding noise, applying transformations, overlaying patterns or text, or generating multiple manipulated variants to exploit weaknesses in vision encoders, robustness layers, or safety filters. The manipulation targets how the model interprets the image itself rather than embedding hidden instructions.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "OWASP: ASI01: Agent Goal Hijack",
               "MITRE ATLAS: AML.T0051: LLM Prompt Injection",
               "MITRE ATLAS: AML.T0050: Command and Scripting Interpreter",
@@ -209,12 +149,12 @@
             ]
           },
           {
-            "code": "AISubtech-1.4.3",
+            "code": "AISubtech-1.3.3",
             "description": "Audio Command Injection",
             "definition": "Hidden, inaudible, or unintelligible voice commands and instructions embedded in audio streams using ultrasonic frequencies, backmasking, or steganographic techniques that automatic speech recognition (ASR) models interpret as valid instructions.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
-              "OWASP: LLM05:2025: Insecure Output Handling",
+              "OWASP: LLM01:2026: Prompt Injection",
+              "OWASP: LLM10:2026: Improper Output Handling",
               "OWASP: ASI01: Agent Goal Hijack",
               "MITRE ATLAS: AML.T0043: Craft Adversarial Data",
               "MITRE ATLAS: AML.T0015: Evade AI Model",
@@ -222,11 +162,11 @@
             ]
           },
           {
-            "code": "AISubtech-1.4.4",
+            "code": "AISubtech-1.3.4",
             "description": "Video Overlay Manipulation",
             "definition": "Embedding harmful content or malicious instructions in video streams through specific frames, QR-like triggers, or temporal injection that misleads multimodal model perception and bypasses guardrails or defensive measures.",
             "mappings": [
-              "OWASP: LLM08:2025: Vector & Embedding Weaknesses",
+              "OWASP: LLM09:2026: Vector and Embedding Weaknesses",
               "OWASP: ASI01: Agent Goal Hijack",
               "MITRE ATLAS: AML.T0043: Craft Adversarial Data",
               "MITRE ATLAS: AML.T0015: Evade AI Model",
@@ -239,82 +179,105 @@
   },
   "OB-002": {
     "code": "OB-002",
-    "description": "Jailbreak",
+    "description": "Agentic Autonomy Failures (Misuse, Alignment, Drift)",
     "objective_group": "Common Manipulation Risks",
-    "definition": "Actors employ adversarial technique that circumvents or defeats a model's safety guardrails, content filters, or usage restrictions, enabling output generation that violates the system's policies or intended constraints. The resulting harm comes from whatever guardrail was circumvented: for example, causing the system to violate its operators' policies, bypass safety guardrails and result in unsafe output. In a multi-agent system, jailbreaks can become more complex. Jailbreak prompts could be ingested by one agent while designed to target another agent downstream or parts of the jailbreak could be generated as part of multiple agent interactions after an initial trigger payload. These multi-agent jailbreak prompts will likely present differently than standard jailbreak attacks that are a single prompt or multi-turn interaction with a single chatbot.",
+    "definition": "External actors or the agent itself (in cases of autonomy failure) cause behavior to diverge from the user or organization's authorized intent and scope. That drift happens in the agent's authorized capabilities, trust in its own assets and channels, attempts to optimize against success metrics or scores instead of the user's goal, and chained authority in composed workflows. This objective covers an agent's failures to select, scope, verify, and optimize tasks within its own action space.",
     "mappings": [],
     "ai_tech": [
       {
         "code": "AITech-2.1",
-        "description": "Jailbreak",
-        "definition": "Actors employ adversarial technique that circumvents or defeats a model's safety guardrails, content filters, or usage restrictions, enabling output generation that violates the system's policies or intended constraints. The resulting harm comes from whatever guardrail was circumvented: for example, causing the system to violate its operators' policies, bypass safety guardrails and result in unsafe output. In a multi-agent system, jailbreaks can become more complex. Jailbreak prompts could be ingested by one agent while designed to target another agent downstream or parts of the jailbreak could be generated as part of multiple agent interactions after an initial trigger payload. These multi-agent jailbreak prompts will likely present differently than standard jailbreak attacks that are a single prompt or multi-turn interaction with a single chatbot.",
+        "description": "Excessive Agency",
+        "definition": "External actors or the agent itself leverage the agent's authorized capabilities, available tools, lack of oversight on consequential actions, or interpretive drift across turns to commit to an action that exceeds its authorized decision-making, scope, or execution authority.",
         "mappings": [
-          "OWASP: LLM01:2025: Prompt Injection",
-          "OWASP: ASI01: Agent Goal Hijack",
-          "MITRE ATLAS: AML.T0054: LLM Jailbreak",
-          "MITRE ATLAS: AML.T0093: Prompt Infiltration via Public-Facing Application",
-          "NIST AML: NISTAML.015: Indirect Prompt Injection"
+          "OWASP: LLM03:2026: Excessive Agency",
+          "OWASP: ASI10: Rogue Agents",
+          "MITRE ATLAS: N/A",
+          "NIST AML: N/A"
         ],
         "ai_subtech": [
           {
             "code": "AISubtech-2.1.1",
-            "description": "Context Manipulation (Jailbreak)",
-            "definition": "Constructing elaborate scenarios, fictional contexts, or alternative frameworks that reframe harmful requests as acceptable within the created context, causing the model to operate under the attacker's contextual assumptions rather than its safety guidelines (e.g., \"Do anything now\" jailbreak)",
+            "description": "Execution Approval Bypass",
+            "definition": "The agent performs, attempts, schedules, submits, or makes a concrete operational commitment to a consequential action for which the visible governing contract requires explicit, current approval, without obtaining valid approval for that action. This includes acting before approval, treating silence or ambiguous language as approval, reusing approval from a different action, or manufacturing urgency to bypass review.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
-              "OWASP: ASI01: Agent Goal Hijack",
-              "MITRE ATLAS: AML.T0054: LLM Jailbreak",
-              "MITRE ATLAS: AML.T0093: Prompt Infiltration via Public-Facing Application",
-              "NIST AML: NISTAML.015: Indirect Prompt Injection"
+              "OWASP: LLM03:2026: Excessive Agency",
+              "OWASP: ASI09: Human-Agent Trust Exploitation",
+              "OWASP: ASI10: Rogue Agents",
+              "MITRE ATLAS: N/A",
+              "NIST AML: N/A"
             ]
           },
           {
             "code": "AISubtech-2.1.2",
-            "description": "Obfuscation (Jailbreak)",
-            "definition": "Disguising jailbreak attempts through encoding, linguistic tricks, character substitution, or creative formatting to evade jailbreak detection systems while preserving the intent to bypass safety measures.",
+            "description": "Capability and Permission Overreach",
+            "definition": "The agent uses or commits to a capability, permission, resource, target, or operation outside visible current task authority, even when the agent technically possesses the access. The agent may remain within its technically assigned credentials while exceeding task-level authority, such as modifying data when only inspection was requested or operating on a broader set of targets than authorized.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
-              "OWASP: ASI01: Agent Goal Hijack",
-              "MITRE ATLAS: AML.T0054: LLM Jailbreak",
-              "MITRE ATLAS: AML.T0093: Prompt Infiltration via Public-Facing Application",
-              "NIST AML: NISTAML.015: Indirect Prompt Injection"
+              "OWASP: LLM03:2026: Excessive Agency",
+              "OWASP: ASI10: Rogue Agents",
+              "MITRE ATLAS: N/A",
+              "NIST AML: N/A"
+            ]
+          }
+        ]
+      },
+      {
+        "code": "AITech-2.2",
+        "description": "Goal Drift",
+        "definition": "The agent independently and materially expands, refuses, substitutes, or abandons the governing objective, authorized scope, or material constraints. The drift is in the agent's interpretation of authorized scope, including overreaching tasks in an attempt to be helpful, reframing tasks it can't satisfy to a task it can satisfy, gaining access to tools by approvals from the user over multi-turn sessions even if task scope changes, and breaking rules such as violating environmental boundaries to complete tasks.",
+        "mappings": ["OWASP: ASI10: Rogue Agents", "MITRE ATLAS: N/A", "NIST AML: N/A"],
+        "ai_subtech": [
+          {
+            "code": "AISubtech-2.2.1",
+            "description": "Unauthorized Scope Expansion",
+            "definition": "The agent independently retains the governing objective but later adds agent-originated material tasks, targets, systems, people, permissions, or consequential actions outside its authorized scope. The expansion is commonly justified as necessary, helpful, preventative, or implied by the original request.",
+            "mappings": ["OWASP: ASI10: Rogue Agents", "MITRE ATLAS: N/A", "NIST AML: N/A"]
+          },
+          {
+            "code": "AISubtech-2.2.2",
+            "description": "Goal Substitution",
+            "definition": "The agent visibly and without a supported basis refuses, rejects, or abandons the applicable governing objective, or adopts an easier, adjacent, available, or self-selected operative objective or success condition in its place. It may complete a proxy task, provide an adjacent deliverable, or redefine success and then represent that substituted outcome as fulfillment of the original task.",
+            "mappings": ["OWASP: ASI10: Rogue Agents", "MITRE ATLAS: N/A", "NIST AML: N/A"]
+          },
+          {
+            "code": "AISubtech-2.2.3",
+            "description": "Authorization and Constraint Erosion",
+            "definition": "The agent independently weakens, reinterprets, ignores, or discards an observable governing constraint during execution. This includes treating prior approvals as durable authority, converting hard boundaries into preferences, carrying exceptions into unrelated tasks, or abandoning environmental and policy constraints to complete the task.",
+            "mappings": ["OWASP: ASI10: Rogue Agents", "MITRE ATLAS: N/A", "NIST AML: N/A"]
+          }
+        ]
+      },
+      {
+        "code": "AITech-2.3",
+        "description": "Reward Hacking",
+        "definition": "External actors or autonomy failure cause the agent to optimize observable success signals--test pass/fail, benchmark scores, verifier outputs, approval heuristics, cost/latency budgets, dashboard metrics--instead of the visible governing task or objective. The agent seeks, obtains, claims, or preserves apparent success while exploiting task or interface mismatches, subverting verification, taking invalidating shortcuts, or degrading measurement integrity. Deliberate acquisition of an invalidating shortcut for task advantage can qualify before it is used in a result.",
+        "mappings": ["OWASP: ASI10: Rogue Agents", "MITRE ATLAS: N/A", "NIST AML: N/A"],
+        "ai_subtech": [
+          {
+            "code": "AISubtech-2.3.1",
+            "description": "Task Loophole Exploitation",
+            "definition": "The agent exploits a loophole or mismatch in the task, environment, interface, or success criteria so apparent success is obtained or claimed while a material task requirement remains unmet.",
+            "mappings": ["OWASP: ASI10: Rogue Agents", "MITRE ATLAS: N/A", "NIST AML: N/A"]
+          },
+          {
+            "code": "AISubtech-2.3.2",
+            "description": "Verifier Manipulation",
+            "definition": "The agent alters, disables, bypasses, selectively invokes, or manipulates tests, graders, approval checks, monitoring, logs, or validation inputs and outputs so that an unsuccessful or unsafe result is recorded as successful. Examples include weakening assertions, suppressing failures, modifying evaluation configuration, or fabricating completion evidence.",
+            "mappings": [
+              "OWASP: LLM03:2026: Excessive Agency",
+              "OWASP: ASI10: Rogue Agents",
+              "MITRE ATLAS: N/A",
+              "NIST AML: N/A"
             ]
           },
           {
-            "code": "AISubtech-2.1.3",
-            "description": "Semantic Manipulation (Jailbreak)",
-            "definition": "Using carefully crafted semantic techniques, logical frameworks, or philosophical arguments to convince the model that providing harmful information aligns with its goals, values, or operational principles, effectively arguing the model into jailbreak compliance.",
+            "code": "AISubtech-2.3.3",
+            "description": "Shortcut Acquisition",
+            "definition": "The agent obtains answers, completion artifacts, or privileged solution information through prohibited or measurement-invalidating channels instead of performing the intended task. Examples include accessing answer keys, leaked benchmark data, newer fixed code, hidden reference artifacts, cached outputs, or published challenge solutions.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
-              "OWASP: ASI01: Agent Goal Hijack",
-              "MITRE ATLAS: AML.T0054: LLM Jailbreak",
-              "MITRE ATLAS: AML.T0093: Prompt Infiltration via Public-Facing Application",
-              "NIST AML: NISTAML.015: Indirect Prompt Injection"
-            ]
-          },
-          {
-            "code": "AISubtech-2.1.4",
-            "description": "Token Exploitation (Jailbreak)",
-            "definition": "Exploiting specific tokens, special characters, control sequences, or tokenization behaviors to manipulate model processing, bypass safety filters, or trigger unintended model behaviors that enable jailbreak success.",
-            "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
-              "OWASP: ASI01: Agent Goal Hijack",
-              "MITRE ATLAS: AML.T0054: LLM Jailbreak",
-              "MITRE ATLAS: AML.T0043: Craft Adversarial Data",
-              "MITRE ATLAS: AML.T0093: Prompt Infiltration via Public-Facing Application",
-              "NIST AML: NISTAML.015: Indirect Prompt Injection"
-            ]
-          },
-          {
-            "code": "AISubtech-2.1.5",
-            "description": "Multi-Agent Jailbreak Collaboration",
-            "definition": "Coordinating multiple AI agents to collectively bypass safety measures, where individual agents perform seemingly benign tasks that combine to achieve jailbreak, or where compromised agents assist others in circumventing restrictions.",
-            "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
-              "OWASP: ASI01: Agent Goal Hijack",
-              "OWASP: ASI07: Insecure Inter-Agent Communication",
-              "MITRE ATLAS: AML.T0054: LLM Jailbreak",
-              "NIST AML: NISTAML.015: Indirect Prompt Injection"
+              "OWASP: LLM03:2026: Excessive Agency",
+              "OWASP: ASI10: Rogue Agents",
+              "MITRE ATLAS: N/A",
+              "NIST AML: N/A"
             ]
           }
         ]
@@ -333,7 +296,7 @@
         "description": "Masquerading / Obfuscation / Impersonation",
         "definition": "Actors introduce a malicious agent that impersonates a legitimate agent, user, system, or authority within a multi-agent ecosystem and causes other agents, systems, or users to accept it as authentic and trust its communications or actions.",
         "mappings": [
-          "OWASP: LLM06:2025: Excessive Agency",
+          "OWASP: LLM03:2026: Excessive Agency",
           "OWASP: ASI03: Identity & Privilege Abuse",
           "MITRE ATLAS: AML.T0073: Impersonation",
           "MITRE ATLAS: AML.T0074: Masquerading",
@@ -347,7 +310,7 @@
             "description": "Identity Obfuscation",
             "definition": "Manipulating agent or user identity representation within context, metadata, or interaction patterns to evade detection, tracking, or access controls.",
             "mappings": [
-              "OWASP: LLM06:2025: Excessive Agency",
+              "OWASP: LLM03:2026: Excessive Agency",
               "OWASP: ASI03: Identity & Privilege Abuse",
               "MITRE ATLAS: AML.T0073: Impersonation",
               "MITRE ATLAS: AML.T0074: Masquerading",
@@ -362,7 +325,7 @@
             "description": "Trusted Agent Spoofing",
             "definition": "Masquerading as a legitimate agent or MCP-registered service to inject malicious instructions, responses, or outputs that other agents, services, or users treat as trusted. This attack exploits the assumption of authenticity within multi-agent systems and protocol-mediated toolchains, enabling actors to bypass safeguards and influence downstream behavior.",
             "mappings": [
-              "OWASP: LLM06:2025: Excessive Agency",
+              "OWASP: LLM03:2026: Excessive Agency",
               "OWASP: ASI03: Identity & Privilege Abuse",
               "MITRE ATLAS: AML.T0074: Masquerading",
               "MITRE ATLAS: AML.T0083: Credentials from AI Agent Configuration",
@@ -386,7 +349,7 @@
         "description": "Agent Injection",
         "definition": "Actors manipulate an agent system to introduce or executive unauthorized agent instances, malicious agent code, or fake agent capabilities by inserting misleading data, exploiting registration mechanisms, or subverting agent deployment processes. This results in unauthorized agents operating within the system or legitimate agents executing malicious code.",
         "mappings": [
-          "OWASP: LLM03:2025: Supply Chain",
+          "OWASP: LLM04:2026: Supply Chain",
           "OWASP: ASI07: Insecure Inter-Agent Communication",
           "MITRE ATLAS: AML.T0068: LLM Prompt Obfuscation",
           "NIST AML: NISTAML.024: Targeted Poisoning",
@@ -401,10 +364,11 @@
             "description": "Rogue Agent Introduction",
             "definition": "Unauthorized insertion of a malicious agent into a multi-agent system that operates contrary to intended purpose, designed to steal data, cause disruption, or autonomously serve attacker goals while exploiting legitimate access patterns or mimicking normal behavior to evade detection.",
             "mappings": [
-              "OWASP: LLM03:2025: Supply Chain",
+              "OWASP: LLM04:2026: Supply Chain",
               "OWASP: ASI07: Insecure Inter-Agent Communication",
               "MITRE ATLAS: AML.T0051: LLM Prompt Injection",
               "MITRE ATLAS: AML.T0068: LLM Prompt Obfuscation",
+              "MITRE ATLAS: AML.T0103: Deploy AI Agent",
               "NIST AML: NISTAML.024: Targeted Poisoning"
             ]
           }
@@ -415,8 +379,8 @@
         "description": "Context Boundary Attacks",
         "definition": "Actors manipulate contextual information that an agent sees, processes, or transmits by exploiting unclear or porous boundaries between different context segments (such as descriptions, prompts, tool outputs, memory, or status messages). An agent may misinterpret the source, trustworthiness, or intent of information.",
         "mappings": [
-          "OWASP: LLM01:2025: Prompt Injection",
-          "OWASP: LLM05:2025: Insecure Output Handling",
+          "OWASP: LLM01:2026: Prompt Injection",
+          "OWASP: LLM10:2026: Improper Output Handling",
           "OWASP: ASI06: Memory & Context Poisoning",
           "OWASP: ASI07: Insecure Inter-Agent Communication",
           "MITRE ATLAS: AML.T0010: AI Supply Chain Compromise",
@@ -430,8 +394,8 @@
             "description": "Context Window Exploitation",
             "definition": "Deliberate overloading or manipulation of the limited context window of a model/agent to displace, overwrite, or push out crucial system instructions or safety guidelines with attacker-supplied text.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
-              "OWASP: LLM05:2025: Insecure Output Handling",
+              "OWASP: LLM01:2026: Prompt Injection",
+              "OWASP: LLM10:2026: Improper Output Handling",
               "OWASP: ASI06: Memory & Context Poisoning",
               "OWASP: ASI07: Insecure Inter-Agent Communication",
               "MITRE ATLAS: AML.T0010: AI Supply Chain Compromise",
@@ -445,7 +409,7 @@
             "description": "Session Boundary Violation",
             "definition": "Crossing expected conversational or transactional boundaries to persist malicious instructions, adversarial content, or misleading data across separate sessions through exploitation of persistent memory, session management flaws, or memory carryover mechanisms.",
             "mappings": [
-              "OWASP: LLM06:2025: Excessive Agency",
+              "OWASP: LLM03:2026: Excessive Agency",
               "OWASP: ASI06: Memory & Context Poisoning",
               "OWASP: ASI07: Insecure Inter-Agent Communication",
               "MITRE ATLAS: AML.T0012: Valid Accounts",
@@ -460,7 +424,7 @@
         "description": "Protocol Manipulation",
         "definition": "Actors exploit assumptions or ambiguities in structured communication protocols (e.g., JSON, XML, YAML, API specifications, custom schemas) used for agentic communication by introducing adversarial inputs that corrupt parsing, processing, or interpretation.",
         "mappings": [
-          "OWASP: LLM06:2025: Excessive Agency",
+          "OWASP: LLM03:2026: Excessive Agency",
           "OWASP: ASI07: Insecure Inter-Agent Communication",
           "MITRE ATLAS: AML.T0067: LLM Trusted Output Component Manipulation",
           "MITRE ATLAS: AML.T0018: Manipulate AI Model",
@@ -473,7 +437,7 @@
             "description": "Schema Inconsistencies",
             "definition": "Exploiting irregular, conflicting, or misaligned data structure, format, or organization that doesn't align with model expectations, and can result in vulnerabilities, model performance degradation, parsing errors, or security bypasses.",
             "mappings": [
-              "OWASP: LLM03:2025: Supply Chain",
+              "OWASP: LLM04:2026: Supply Chain",
               "OWASP: ASI07: Insecure Inter-Agent Communication",
               "MITRE ATLAS: AML.T0067: LLM Trusted Output Component Manipulation",
               "MITRE ATLAS: AML.T0018: Manipulate AI Model",
@@ -485,7 +449,7 @@
             "description": "Namespace Collision",
             "definition": "Exploited situation where two or more components (e.g., datasets, variables, functions, APIs, tools, or model identifiers) share the same name or identifier, resulting in confusion, misrouting, or security vulnerabilities in AI systems.",
             "mappings": [
-              "OWASP: LLM03:2025: Supply Chain",
+              "OWASP: LLM04:2026: Supply Chain",
               "OWASP: ASI07: Insecure Inter-Agent Communication",
               "MITRE ATLAS: AML.T0010: AI Supply Chain Compromise",
               "NIST AML: NISTAML.051: Model Poisoning"
@@ -496,7 +460,7 @@
             "description": "Server Rebinding Attack",
             "definition": "Exploiting DNS rebinding or similar techniques to confuse an AI model or agent into treating an external, attacker-controlled domain as if it were part of the trusted internal network, bypassing same-origin policies and network security controls.",
             "mappings": [
-              "OWASP: LLM03:2025: Supply Chain",
+              "OWASP: LLM04:2026: Supply Chain",
               "OWASP: ASI07: Insecure Inter-Agent Communication",
               "MITRE ATLAS: AML.T0049: Exploit Public Facing Application",
               "NIST AML: NISTAML.039: Compromising Connected Resources"
@@ -507,8 +471,8 @@
             "description": "Replay Exploitation",
             "definition": "Capturing legitimate requests, communications, API calls, model queries, or authentication tokens to an AI system and resending (replaying) them later to trick the system into performing the same action again or bypassing authentication.",
             "mappings": [
-              "OWASP: LLM05:2025: Insecure Output Handling",
-              "OWASP: LLM02:2025: Sensitive Information Disclosure",
+              "OWASP: LLM10:2026: Improper Output Handling",
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
               "OWASP: ASI07: Insecure Inter-Agent Communication",
               "MITRE ATLAS: AML.T0068: LLM Prompt Obfuscation",
               "MITRE ATLAS: AML.T0055: Unsecured Credentials",
@@ -522,7 +486,7 @@
             "description": "Capability Inflation",
             "definition": "Exploiting system mechanisms to artificially expand, escalate, or misrepresent an agent's, model's, or component's capabilities, permissions, or authority beyond intended limits, enabling unauthorized actions or access.",
             "mappings": [
-              "OWASP: LLM06:2025: Excessive Agency",
+              "OWASP: LLM03:2026: Excessive Agency",
               "OWASP: ASI03: Identity & Privilege Abuse",
               "OWASP: ASI07: Insecure Inter-Agent Communication",
               "MITRE ATLAS: AML.T0053: LLM Plugin Compromise",
@@ -534,7 +498,7 @@
             "description": "Cross-Origin Exploitation",
             "definition": "Subverting security mechanisms designed to isolate web resources, primarily the Same-Origin Policy (SOP), within an AI agent's architecture in order to trick the AI agent or its execution environment into making unauthorized requests, sharing sensitive data, or executing actions across different trust boundaries (e.g., distinct domains, protocols, or services).",
             "mappings": [
-              "OWASP: LLM06:2025: Excessive Agency",
+              "OWASP: LLM03:2026: Excessive Agency",
               "OWASP: ASI07: Insecure Inter-Agent Communication",
               "MITRE ATLAS: AML.T0053: LLM Plugin Compromise",
               "MITRE ATLAS: AML.T0017: Develop Capabilities",
@@ -557,7 +521,7 @@
         "description": "Memory System Persistence",
         "definition": "Actors insert poisoned, harmful, or adversarial data or instructions into an agent or model's short-term or long-term memory to corrupt its behavior over extended periods of time.",
         "mappings": [
-          "OWASP: LLM01:2025: Prompt Injection",
+          "OWASP: LLM01:2026: Prompt Injection",
           "OWASP: ASI06: Memory & Context Poisoning",
           "MITRE ATLAS: AML.T0061: LLM Prompt Self-Replication",
           "MITRE ATLAS: AML.T0070: RAG Poisoning",
@@ -570,7 +534,7 @@
             "description": "Long-term / Short-term Memory Injection",
             "definition": "Seeding malicious, misleading, or adversarial data into an LLM's or agent's persistent memory (long-term) or working memory (short-term) to influence current and future interactions, bias behavior, or enable persistent attacks.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "OWASP: ASI06: Memory & Context Poisoning",
               "MITRE ATLAS: AML.T0061: LLM Prompt Self-Replication",
               "MITRE ATLAS: AML.T0070: RAG Poisoning",
@@ -585,8 +549,8 @@
         "description": "Configuration Persistence",
         "definition": "Actor subverts an agent's internal configuration, settings, or initialization parameters to create lasting malicious influence over its behavior. This goes beyond a single, isolated prompt injection by modifying the system's core settings, context, or memory that defines its behavior. An example is modifying MCP configuration to include a malicious server or inserting malicious instructions into an integrated development environment's internal config files.",
         "mappings": [
-          "OWASP: LLM03:2025: Supply Chain",
-          "OWASP: LLM04:2025: Data and Model Poisoning",
+          "OWASP: LLM04:2026: Supply Chain",
+          "OWASP: LLM05:2026: Data and Model Poisoning",
           "OWASP: ASI04: Agentic Supply Chain Vulnerabilities",
           "MITRE ATLAS: AML.T0018: Manipulate AI Model",
           "MITRE ATT&CK: T1098: Account Manipulation",
@@ -598,10 +562,11 @@
             "description": "Agent Profile Tampering",
             "definition": "Unauthorized alteration of stored agent identity, preferences, role definitions, capabilities, permissions, or behavioral parameters to enable malicious behaviors, persist access, escalate privileges, or evade detection.",
             "mappings": [
-              "OWASP: LLM03:2025: Supply Chain",
-              "OWASP: LLM04:2025: Data and Model Poisoning",
+              "OWASP: LLM04:2026: Supply Chain",
+              "OWASP: LLM05:2026: Data and Model Poisoning",
               "OWASP: ASI04: Agentic Supply Chain Vulnerabilities",
               "MITRE ATLAS: AML.T0018: Manipulate AI Model",
+              "MITRE ATLAS: AML.T0081: Modify AI Agent Configuration",
               "MITRE ATT&CK: T1098: Account Manipulation",
               "NIST AML: N/A"
             ]
@@ -622,7 +587,7 @@
         "description": "Training Data Poisoning",
         "definition": "Actors insert malicious, inaccurate, or corrupted data into a model's training pipeline, with the aim of distorting the model's outputs, embedding payload, degrading performance, or introducing systematic biases.",
         "mappings": [
-          "OWASP: LLM04:2025: Data and Model Poisoning",
+          "OWASP: LLM05:2026: Data and Model Poisoning",
           "OWASP: ASI06: Memory & Context Poisoning",
           "MITRE ATLAS: AML.T0020: Poisoned Training Data",
           "MITRE ATLAS: AML.T0070: RAG Poisoning",
@@ -637,10 +602,11 @@
             "description": "Knowledge Base Poisoning",
             "definition": "Inserting false, malicious, biased, or misleading data into external knowledge bases, vector databases, or RAG (Retrieval-Augmented Generation) systems that LLMs or agents rely on for responses, corrupting outputs and decisions.",
             "mappings": [
-              "OWASP: LLM04:2025: Data and Model Poisoning",
+              "OWASP: LLM05:2026: Data and Model Poisoning",
               "OWASP: ASI06: Memory & Context Poisoning",
               "MITRE ATLAS: AML.T0019: Publish Poisoned Dataset",
               "MITRE ATLAS: AML.T0020: Poisoned Training Data",
+              "MITRE ATLAS: AML.T0115: Publish Poisoned AI Artifacts",
               "MITRE ATLAS: AML.T0070: RAG Poisoning",
               "NIST AML: NISTAML.024: Targeted Poisoning",
               "Cisco AI MDL Code: MDL-020",
@@ -652,7 +618,7 @@
             "description": "Reinforcement Biasing",
             "definition": "Subtly influencing user feedback, evaluation signals, or reward mechanisms in reinforcement learning systems to skew the learning process toward attacker goals, shifting intended model behavior.",
             "mappings": [
-              "OWASP: LLM04:2025: Data and Model Poisoning",
+              "OWASP: LLM05:2026: Data and Model Poisoning",
               "OWASP: ASI06: Memory & Context Poisoning",
               "OWASP: ASI08: Cascading Failures",
               "MITRE ATLAS: AML.T0061: LLM Prompt Self-Replication",
@@ -665,7 +631,7 @@
             "description": "Reinforcement Signal Corruption",
             "definition": "Directly injecting false, adversarial, or manipulated signals into training pipelines, feedback channels, or reward systems to actively degrade model performance or subvert learning objectives through reward hacking.",
             "mappings": [
-              "OWASP: LLM04:2025: Data and Model Poisoning",
+              "OWASP: LLM05:2026: Data and Model Poisoning",
               "OWASP: ASI06: Memory & Context Poisoning",
               "OWASP: ASI08: Cascading Failures",
               "MITRE ATLAS: AML.T0020: Poisoned Training Data",
@@ -689,19 +655,20 @@
         "description": "Reasoning Corruption",
         "definition": "Actors subvert a model/agent's planning, decision-making, or logical inference processes to produce unintended or harmful outcomes. As AI agents are increasingly trusted with autonomous actions, this attack targets the agent's \"reasoning engine\" i.e, the core mechanisms for analysis, judgment, and action selection.",
         "mappings": [
-          "OWASP: LLM01:2025: Prompt Injection",
+          "OWASP: LLM01:2026: Prompt Injection",
           "OWASP: ASI06: Memory & Context Poisoning",
           "MITRE ATLAS: AML.T0051: LLM Prompt Injection",
           "MITRE ATLAS: AML.T0054: LLM Jailbreak",
           "NIST AML: N/A"
-        ]
+        ],
+        "ai_subtech": []
       },
       {
         "code": "AITech-7.2",
         "description": "Memory System Corruption",
         "definition": "Actors inject false, malicious, or adversarial data into an AI agent's memory systems to cause immediate harmful decisions, corruption of system functionality or degraded performance.",
         "mappings": [
-          "OWASP: LLM04:2025: Data and Model Poisoning",
+          "OWASP: LLM05:2026: Data and Model Poisoning",
           "OWASP: ASI06: Memory & Context Poisoning",
           "MITRE ATLAS: AML.T0020: Poisoned Training Data",
           "MITRE ATLAS: AML.T0070: RAG Poisoning",
@@ -714,7 +681,7 @@
             "description": "Memory Anchor Attacks",
             "definition": "Strategically planting memorable or salient content to bias the model/agent's recall toward attacker-chosen information.",
             "mappings": [
-              "OWASP: LLM04:2025: Data and Model Poisoning",
+              "OWASP: LLM05:2026: Data and Model Poisoning",
               "OWASP: ASI06: Memory & Context Poisoning",
               "MITRE ATLAS: AML.T0018: Manipulate AI Model",
               "MITRE ATLAS: AML.T0020: Poisoned Training Data",
@@ -727,7 +694,7 @@
             "description": "Memory Index Manipulation",
             "definition": "Altering how memory embeddings, indexes, or retrieval mechanisms are generated, stored, or queried to favor retrieval of attacker-controlled content over legitimate information.",
             "mappings": [
-              "OWASP: LLM04:2025: Data and Model Poisoning",
+              "OWASP: LLM05:2026: Data and Model Poisoning",
               "OWASP: ASI06: Memory & Context Poisoning",
               "MITRE ATLAS: AML.T0020: Poisoned Training Data",
               "MITRE ATLAS: AML.T0070: RAG Poisoning",
@@ -742,8 +709,8 @@
         "description": "Data Source Abuse and Manipulation",
         "definition": "Actors inject malicious, misleading, or poisoned data into external data sources (APIs, databases, RAG systems) that AI systems consume in order to manipulate model behavior, corrupt decision-making, or inject malicious instructions through trusted data channels.",
         "mappings": [
-          "OWASP: LLM03:2025: Supply Chain",
-          "OWASP: LLM04:2025: Data and Model Poisoning",
+          "OWASP: LLM04:2026: Supply Chain",
+          "OWASP: LLM05:2026: Data and Model Poisoning",
           "OWASP: ASI04: Agentic Supply Chain Vulnerabilities",
           "MITRE ATLAS: AML.T0010: AI Supply Chain Compromise",
           "MITRE ATLAS: AML.T0019: Publish Poisoned Dataset",
@@ -756,8 +723,8 @@
             "description": "Corrupted Third-Party Data",
             "definition": "External datasets from vendors, partners, open-source repositories, or public sources containing inaccurate, incomplete, malicious, or manipulated information that is used in training, fine-tuning, or evaluating an AI model.",
             "mappings": [
-              "OWASP: LLM03:2025: Supply Chain",
-              "OWASP: LLM04:2025: Data and Model Poisoning",
+              "OWASP: LLM04:2026: Supply Chain",
+              "OWASP: LLM05:2026: Data and Model Poisoning",
               "OWASP: ASI04: Agentic Supply Chain Vulnerabilities",
               "MITRE ATLAS: AML.T0010: AI Supply Chain Compromise",
               "MITRE ATLAS: AML.T0019: Publish Poisoned Dataset",
@@ -772,8 +739,8 @@
         "description": "Token Manipulation",
         "definition": "Actors misuse, poison, or tamper with tokens used by model/agentic systems (e.g., model-specific tokens, or security tokens) to control access, encode information, or manage interactions.",
         "mappings": [
-          "OWASP: LLM04:2025: Data and Model Poisoning",
-          "OWASP: LLM08:2025: Vector & Embedding Weaknesses",
+          "OWASP: LLM05:2026: Data and Model Poisoning",
+          "OWASP: LLM09:2026: Vector and Embedding Weaknesses",
           "MITRE ATLAS: AML.T0055: Unsecured Credentials",
           "MITRE ATT&CK: T1528: Steal Application Access Token",
           "MITRE ATT&CK: T1552: Unsecured Credentials",
@@ -786,7 +753,7 @@
             "description": "Token Theft",
             "definition": "Actors steal authentication tokens, API keys, or credentials from Model Context Protocol servers or similar agent-integration frameworks to gain unauthorized access to connected systems, impersonate legitimate agents, or access restricted resources.",
             "mappings": [
-              "OWASP: LLM02:2025: Sensitive Information Disclosure",
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
               "OWASP: ASI03: Identity & Privilege Abuse",
               "MITRE ATLAS: AML.T0055: Unsecured Credentials",
               "MITRE ATLAS: AML.T0012: Valid Accounts",
@@ -802,24 +769,17 @@
   },
   "OB-008": {
     "code": "OB-008",
-    "description": "Data Privacy Violations",
+    "description": "Data and Privacy Violations",
     "objective_group": "Data-Related Risks",
-    "definition": "",
-    "mappings": [
-      "OWASP: ASI09: Human-Agent Trust Exploitation",
-      "MITRE ATLAS: AML.T0024.000: Exfiltration via AI Inference API: Infer Training Data Membership",
-      "MITRE ATLAS: AML.T0063: AI Model Outputs",
-      "MITRE ATLAS: AML.T0040: AI Model Inference API Access",
-      "NIST AML: NISTAML.033: Membership Inference",
-      "OWASP: LLM02:2025: Sensitive Information Disclosure"
-    ],
+    "definition": "Actors expose, infer, extract, generate, or misuse sensitive, personal, financial, health, proprietary, or system information through model outputs, training data analysis, agent tooling, or system interactions. This objective covers unauthorized disclosure of training data, prompts and metadata, personally identifiable information, payment card industry data, and protected health information to parties who should not have access.",
+    "mappings": [],
     "ai_tech": [
       {
         "code": "AITech-8.1",
         "description": "Membership Inference",
         "definition": "Actors determine whether a specific data point, record, or individual was included in a model's training dataset, exposing sensitive information about training data subjects, reveal proprietary datasets, or indicate the presence of confidential information in model training.",
         "mappings": [
-          "OWASP: LLM02:2025: Sensitive Information Disclosure",
+          "OWASP: LLM02:2026: Sensitive Information Disclosure",
           "OWASP: ASI09: Human-Agent Trust Exploitation",
           "MITRE ATLAS: AML.T0024.000: Exfiltration via AI Inference API: Infer Training Data Membership",
           "MITRE ATLAS: AML.T0063: AI Model Outputs",
@@ -832,7 +792,7 @@
             "description": "Presence Detection",
             "definition": "Querying and verifying whether a specific datapoint, record, or piece of information was present in the training dataset, knowledge base, or system memory through targeted queries and behavioral analysis.",
             "mappings": [
-              "OWASP: LLM02:2025: Sensitive Information Disclosure",
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
               "OWASP: ASI09: Human-Agent Trust Exploitation",
               "MITRE ATLAS: AML.T0024.000: Exfiltration via AI Inference API: Infer Training Data Membership",
               "MITRE ATLAS: AML.T0063: AI Model Outputs",
@@ -847,7 +807,7 @@
         "description": "Data Exfiltration / Exposure",
         "definition": "Actors intentionally or unintentionally cause sensitive information to be exposed through model outputs, API responses, or system behaviors. This includes leakage of personal data, intellectual property, proprietary algorithms, training data, system internals, or other confidential information to unauthorized parties.",
         "mappings": [
-          "OWASP: LLM02:2025: Sensitive Information Disclosure",
+          "OWASP: LLM02:2026: Sensitive Information Disclosure",
           "OWASP: ASI09: Human-Agent Trust Exploitation",
           "MITRE ATLAS: AML.T0024.000: Exfiltration via AI Inference API: Infer Training Data Membership",
           "MITRE ATLAS: AML.T0035: AI Artifact Collection",
@@ -861,7 +821,7 @@
             "description": "Training Data Exposure",
             "definition": "Information contained in the dataset used to train and maintain an AI model can be retrieved, reconstructed, or inferred from the model's outputs, internal behavior, or responses, violating privacy of training data subjects.",
             "mappings": [
-              "OWASP: LLM02:2025: Sensitive Information Disclosure",
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
               "OWASP: ASI09: Human-Agent Trust Exploitation",
               "MITRE ATLAS: AML.T0024.000: Exfiltration via AI Inference API: Infer Training Data Membership",
               "MITRE ATLAS: AML.T0035: AI Artifact Collection",
@@ -875,7 +835,7 @@
             "description": "LLM Data Leakage",
             "definition": "The release of sensitive or personally identifiable information (PII) from its training data during inference through prompt injection or other extraction techniques.",
             "mappings": [
-              "OWASP: LLM02:2025: Sensitive Information Disclosure",
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
               "OWASP: ASI09: Human-Agent Trust Exploitation",
               "MITRE ATLAS: AML.T0069: LLM System Information Discovery",
               "MITRE ATLAS: AML.T0036: Data From Local System",
@@ -891,7 +851,7 @@
             "description": "Data Exfiltration via Agent Tooling",
             "definition": "Unintentional and/or unauthorized exposure or exfiltration of sensitive information, such as private or sensitive data, intellectual property, and proprietary algorithms through exploitation of agent tools, integrations, or capabilities, where the agent is manipulated to use legitimate tools for malicious data exfiltration purposes.",
             "mappings": [
-              "OWASP: LLM02:2025: Sensitive Information Disclosure",
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
               "OWASP: ASI02: Tool Misuse & Exploitation",
               "OWASP: ASI09: Human-Agent Trust Exploitation",
               "MITRE ATLAS: AML.T0086: Exfiltration via AI Agent Tool Invocation",
@@ -905,8 +865,8 @@
         "description": "Information Disclosure",
         "definition": "Actors trigger the unintentional or unauthorized exposure, leakage, or sharing of data, model parameters, or system details to parties who should not have access to them. The disclosure occurs through model behaviors, responses, or system interactions that reveal more information than intended.",
         "mappings": [
-          "OWASP: LLM02:2025: Sensitive Information Disclosure",
-          "OWASP: LLM05:2025: Insecure Output Handling",
+          "OWASP: LLM02:2026: Sensitive Information Disclosure",
+          "OWASP: LLM10:2026: Improper Output Handling",
           "MITRE ATLAS: AML.T0036: Data From Local System",
           "MITRE ATLAS: AML.T0075: Cloud Service Discovery",
           "NIST AML: NISTAML.038: Data Extraction",
@@ -919,11 +879,14 @@
             "description": "Tool Metadata Exposure",
             "definition": "Disclosure of non-functional descriptive data about tools (names, descriptions, parameter schemas, versions, capabilities) that attackers can use to manipulate tool selection or agent behavior.",
             "mappings": [
-              "OWASP: LLM02:2025: Sensitive Information Disclosure",
-              "OWASP: LLM05:2025: Insecure Output Handling",
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
+              "OWASP: LLM10:2026: Improper Output Handling",
               "OWASP: ASI02: Tool Misuse & Exploitation",
               "MITRE ATLAS: AML.T0036: Data From Local System",
               "MITRE ATLAS: AML.T0075: Cloud Service Discovery",
+              "MITRE ATLAS: AML.T0084.003: Call Chains",
+              "MITRE ATLAS: AML.T0084.001: Tool Definitions",
+              "MITRE ATLAS: AML.T0002.002: AI Agent Configuration",
               "NIST AML: NISTAML.038: Data Extraction"
             ]
           },
@@ -932,7 +895,7 @@
             "description": "System Information Leakage",
             "definition": "Unintended disclosure of internal configuration, architecture, environment details, system-level variables (OS, file paths, hardware, network), or infrastructure information that aids attackers in crafting attacks or gaining unauthorized access.",
             "mappings": [
-              "OWASP: LLM03:2025: Supply Chain",
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
               "MITRE ATLAS: AML.T0036: Data From Local System",
               "MITRE ATLAS: AML.T0075: Cloud Service Discovery",
               "NIST AML: NISTAML.039: Compromising Connected Resources"
@@ -945,7 +908,7 @@
         "description": "Prompt/Meta Extraction",
         "definition": "Actors extract, reveal, or reconstruct the system prompts, meta-prompts, hidden instructions, initial context, or operational directives that define a model/agent's behavior, constraints, and capabilities. This can expose intellectual property, security mechanisms, and operational logic.",
         "mappings": [
-          "OWASP: LLM02:2025: Sensitive Information Disclosure",
+          "OWASP: LLM02:2026: Sensitive Information Disclosure",
           "MITRE ATLAS: AML.T0056: Extract LLM System Prompt",
           "MITRE ATLAS: AML.T0057: LLM Data Leakage",
           "NIST AML: NISTAML.035: Prompt Extraction"
@@ -956,9 +919,289 @@
             "description": "System LLM Prompt Leakage",
             "definition": "Exposure of system prompts, instructions, or initial context used to steer model behavior, potentially revealing sensitive information, security mechanisms, intellectual property, or operational details not intended for discovery.",
             "mappings": [
-              "OWASP: LLM02:2025: Sensitive Information Disclosure",
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
+              "OWASP: LLM08:2026: Hidden Context Exposure",
               "MITRE ATLAS: AML.T0056: Extract LLM System Prompt",
               "MITRE ATLAS: AML.T0035: AI Artifact Collection"
+            ]
+          }
+        ]
+      },
+      {
+        "code": "AITech-8.5",
+        "description": "Personally Identifiable Information",
+        "definition": "Exposure, generation, or misuse of personally identifiable information (PII) such as names, addresses, phone numbers, identification numbers, or other sensitive personal details that can be used to identify, track, or exploit individuals.",
+        "mappings": [
+          "OWASP: LLM02:2026: Sensitive Information Disclosure",
+          "MITRE ATLAS: AML.T0057: LLM Data Leakage",
+          "MITRE ATLAS: AML.T0048.003: User Harm",
+          "NIST AML: NISTAML.03: Privacy Compromise",
+          "NIST AML: NISTAML.036: Leaking Information from User Interactions",
+          "NIST AML: NISTAML.038: Data Extraction"
+        ],
+        "ai_subtech": [
+          {
+            "code": "AISubtech-8.5.1",
+            "description": "Email Address",
+            "definition": "Exposure or generation of email addresses.",
+            "mappings": [
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
+              "MITRE ATLAS: AML.T0057: LLM Data Leakage",
+              "MITRE ATLAS: AML.T0048.003: User Harm",
+              "NIST AML: NISTAML.03: Privacy Compromise",
+              "NIST AML: NISTAML.036: Leaking Information from User Interactions",
+              "NIST AML: NISTAML.038: Data Extraction"
+            ]
+          },
+          {
+            "code": "AISubtech-8.5.2",
+            "description": "Phone Number",
+            "definition": "Exposure or generation of phone numbers.",
+            "mappings": [
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
+              "MITRE ATLAS: AML.T0057: LLM Data Leakage",
+              "MITRE ATLAS: AML.T0048.003: User Harm",
+              "NIST AML: NISTAML.03: Privacy Compromise",
+              "NIST AML: NISTAML.036: Leaking Information from User Interactions",
+              "NIST AML: NISTAML.038: Data Extraction"
+            ]
+          },
+          {
+            "code": "AISubtech-8.5.3",
+            "description": "Person Name",
+            "definition": "Exposure or generation of individual person names.",
+            "mappings": [
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
+              "MITRE ATLAS: AML.T0057: LLM Data Leakage",
+              "MITRE ATLAS: AML.T0048.003: User Harm",
+              "NIST AML: NISTAML.03: Privacy Compromise",
+              "NIST AML: NISTAML.036: Leaking Information from User Interactions",
+              "NIST AML: NISTAML.038: Data Extraction"
+            ]
+          },
+          {
+            "code": "AISubtech-8.5.4",
+            "description": "IP Address",
+            "definition": "Exposure or generation of IP addresses.",
+            "mappings": [
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
+              "MITRE ATLAS: AML.T0057: LLM Data Leakage",
+              "MITRE ATLAS: AML.T0048.003: User Harm",
+              "NIST AML: NISTAML.03: Privacy Compromise",
+              "NIST AML: NISTAML.036: Leaking Information from User Interactions",
+              "NIST AML: NISTAML.038: Data Extraction"
+            ]
+          },
+          {
+            "code": "AISubtech-8.5.5",
+            "description": "Address",
+            "definition": "Exposure or generation of physical/mailing addresses.",
+            "mappings": [
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
+              "MITRE ATLAS: AML.T0057: LLM Data Leakage",
+              "MITRE ATLAS: AML.T0048.003: User Harm",
+              "NIST AML: NISTAML.03: Privacy Compromise",
+              "NIST AML: NISTAML.036: Leaking Information from User Interactions",
+              "NIST AML: NISTAML.038: Data Extraction"
+            ]
+          },
+          {
+            "code": "AISubtech-8.5.6",
+            "description": "Username",
+            "definition": "Exposure or generation of usernames.",
+            "mappings": [
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
+              "MITRE ATLAS: AML.T0057: LLM Data Leakage",
+              "MITRE ATLAS: AML.T0048.003: User Harm",
+              "NIST AML: NISTAML.03: Privacy Compromise",
+              "NIST AML: NISTAML.036: Leaking Information from User Interactions",
+              "NIST AML: NISTAML.038: Data Extraction"
+            ]
+          },
+          {
+            "code": "AISubtech-8.5.7",
+            "description": "Password",
+            "definition": "Exposure or generation of passwords or credential material.",
+            "mappings": [
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
+              "MITRE ATLAS: AML.T0057: LLM Data Leakage",
+              "MITRE ATLAS: AML.T0048.003: User Harm",
+              "NIST AML: NISTAML.03: Privacy Compromise",
+              "NIST AML: NISTAML.036: Leaking Information from User Interactions",
+              "NIST AML: NISTAML.038: Data Extraction"
+            ]
+          },
+          {
+            "code": "AISubtech-8.5.8",
+            "description": "Driver License Number",
+            "definition": "Exposure or generation of driver license numbers.",
+            "mappings": [
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
+              "MITRE ATLAS: AML.T0057: LLM Data Leakage",
+              "MITRE ATLAS: AML.T0048.003: User Harm",
+              "NIST AML: NISTAML.03: Privacy Compromise",
+              "NIST AML: NISTAML.036: Leaking Information from User Interactions",
+              "NIST AML: NISTAML.038: Data Extraction"
+            ]
+          },
+          {
+            "code": "AISubtech-8.5.9",
+            "description": "Passport Number",
+            "definition": "Exposure or generation of passport numbers.",
+            "mappings": [
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
+              "MITRE ATLAS: AML.T0057: LLM Data Leakage",
+              "MITRE ATLAS: AML.T0048.003: User Harm",
+              "NIST AML: NISTAML.03: Privacy Compromise",
+              "NIST AML: NISTAML.036: Leaking Information from User Interactions",
+              "NIST AML: NISTAML.038: Data Extraction"
+            ]
+          },
+          {
+            "code": "AISubtech-8.5.10",
+            "description": "National ID Number",
+            "definition": "Exposure or generation of national identification numbers (e.g., SSN, national insurance number).",
+            "mappings": [
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
+              "MITRE ATLAS: AML.T0057: LLM Data Leakage",
+              "MITRE ATLAS: AML.T0048.003: User Harm",
+              "NIST AML: NISTAML.03: Privacy Compromise",
+              "NIST AML: NISTAML.036: Leaking Information from User Interactions",
+              "NIST AML: NISTAML.038: Data Extraction"
+            ]
+          }
+        ]
+      },
+      {
+        "code": "AITech-8.6",
+        "description": "Payment Card Industry Data",
+        "definition": "Exposure, generation, or misuse of payment card industry (PCI) data including cardholder data and sensitive authentication data such as card numbers, expiration dates, service codes, CVVs, and PINs.",
+        "mappings": [
+          "OWASP: LLM02:2026: Sensitive Information Disclosure",
+          "MITRE ATLAS: AML.T0057: LLM Data Leakage",
+          "MITRE ATLAS: AML.T0048.003: User Harm",
+          "NIST AML: NISTAML.03: Privacy Compromise",
+          "NIST AML: NISTAML.036: Leaking Information from User Interactions",
+          "NIST AML: NISTAML.038: Data Extraction"
+        ],
+        "ai_subtech": [
+          {
+            "code": "AISubtech-8.6.1",
+            "description": "Credit Card Number",
+            "definition": "Exposure or generation of credit card numbers (primary account numbers).",
+            "mappings": [
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
+              "MITRE ATLAS: AML.T0057: LLM Data Leakage",
+              "MITRE ATLAS: AML.T0048.003: User Harm",
+              "NIST AML: NISTAML.03: Privacy Compromise",
+              "NIST AML: NISTAML.036: Leaking Information from User Interactions",
+              "NIST AML: NISTAML.038: Data Extraction"
+            ]
+          },
+          {
+            "code": "AISubtech-8.6.2",
+            "description": "Bank Account Number",
+            "definition": "Exposure or generation of bank account numbers.",
+            "mappings": [
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
+              "MITRE ATLAS: AML.T0057: LLM Data Leakage",
+              "MITRE ATLAS: AML.T0048.003: User Harm",
+              "NIST AML: NISTAML.03: Privacy Compromise",
+              "NIST AML: NISTAML.036: Leaking Information from User Interactions",
+              "NIST AML: NISTAML.038: Data Extraction"
+            ]
+          },
+          {
+            "code": "AISubtech-8.6.3",
+            "description": "Bank Routing Code",
+            "definition": "Exposure or generation of bank routing codes or sort codes.",
+            "mappings": [
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
+              "MITRE ATLAS: AML.T0057: LLM Data Leakage",
+              "MITRE ATLAS: AML.T0048.003: User Harm",
+              "NIST AML: NISTAML.03: Privacy Compromise",
+              "NIST AML: NISTAML.036: Leaking Information from User Interactions",
+              "NIST AML: NISTAML.038: Data Extraction"
+            ]
+          },
+          {
+            "code": "AISubtech-8.6.4",
+            "description": "Tax Identification Number",
+            "definition": "Exposure or generation of tax identification numbers (e.g., EIN, TIN).",
+            "mappings": [
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
+              "MITRE ATLAS: AML.T0057: LLM Data Leakage",
+              "MITRE ATLAS: AML.T0048.003: User Harm",
+              "NIST AML: NISTAML.03: Privacy Compromise",
+              "NIST AML: NISTAML.036: Leaking Information from User Interactions",
+              "NIST AML: NISTAML.038: Data Extraction"
+            ]
+          }
+        ]
+      },
+      {
+        "code": "AITech-8.7",
+        "description": "Protected Health Information",
+        "definition": "Exposure, generation, or misuse of protected health information (PHI) including individually identifiable health data such as medical records, diagnoses, billing information, and other personal health identifiers.",
+        "mappings": [
+          "OWASP: LLM02:2026: Sensitive Information Disclosure",
+          "MITRE ATLAS: AML.T0057: LLM Data Leakage",
+          "MITRE ATLAS: AML.T0048.003: User Harm",
+          "NIST AML: NISTAML.03: Privacy Compromise",
+          "NIST AML: NISTAML.036: Leaking Information from User Interactions",
+          "NIST AML: NISTAML.038: Data Extraction"
+        ],
+        "ai_subtech": [
+          {
+            "code": "AISubtech-8.7.1",
+            "description": "Medical License Number",
+            "definition": "Exposure or generation of medical license numbers.",
+            "mappings": [
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
+              "MITRE ATLAS: AML.T0057: LLM Data Leakage",
+              "MITRE ATLAS: AML.T0048.003: User Harm",
+              "NIST AML: NISTAML.03: Privacy Compromise",
+              "NIST AML: NISTAML.036: Leaking Information from User Interactions",
+              "NIST AML: NISTAML.038: Data Extraction"
+            ]
+          },
+          {
+            "code": "AISubtech-8.7.2",
+            "description": "Patient ID Number",
+            "definition": "Exposure or generation of patient identification numbers.",
+            "mappings": [
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
+              "MITRE ATLAS: AML.T0057: LLM Data Leakage",
+              "MITRE ATLAS: AML.T0048.003: User Harm",
+              "NIST AML: NISTAML.03: Privacy Compromise",
+              "NIST AML: NISTAML.036: Leaking Information from User Interactions",
+              "NIST AML: NISTAML.038: Data Extraction"
+            ]
+          },
+          {
+            "code": "AISubtech-8.7.3",
+            "description": "Medication",
+            "definition": "Exposure or generation of medication information linked to identifiable individuals.",
+            "mappings": [
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
+              "MITRE ATLAS: AML.T0057: LLM Data Leakage",
+              "MITRE ATLAS: AML.T0048.003: User Harm",
+              "NIST AML: NISTAML.03: Privacy Compromise",
+              "NIST AML: NISTAML.036: Leaking Information from User Interactions",
+              "NIST AML: NISTAML.038: Data Extraction"
+            ]
+          },
+          {
+            "code": "AISubtech-8.7.4",
+            "description": "Medical Disease",
+            "definition": "Exposure or generation of disease or diagnosis information linked to identifiable individuals.",
+            "mappings": [
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
+              "MITRE ATLAS: AML.T0057: LLM Data Leakage",
+              "MITRE ATLAS: AML.T0048.003: User Harm",
+              "NIST AML: NISTAML.03: Privacy Compromise",
+              "NIST AML: NISTAML.036: Leaking Information from User Interactions",
+              "NIST AML: NISTAML.038: Data Extraction"
             ]
           }
         ]
@@ -977,7 +1220,7 @@
         "description": "Model or Agentic System Manipulation",
         "definition": "Actor coerces or manipulates a model/agent into producing false, misleading or malicious outputs through adversarial inputs, context manipulation, or exploiting model behaviors, without directly modifying the model itself.",
         "mappings": [
-          "OWASP: LLM03:2025: Supply Chain",
+          "OWASP: LLM04:2026: Supply Chain",
           "OWASP: ASI04: Agentic Supply Chain Vulnerabilities",
           "OWASP: ASI05: Unexpected Code Execution (RCE)",
           "MITRE ATLAS: AML.T0050: Command and Scripting Interpreter",
@@ -997,7 +1240,7 @@
             "description": "Code Execution",
             "definition": "Exploitation of AI models equipped with code interpreter tools that can autonomously write, test, and execute code, enabling attackers to run arbitrary code on the underlying system through prompt injection or tool manipulation.",
             "mappings": [
-              "OWASP: LLM03:2025: Supply Chain",
+              "OWASP: LLM04:2026: Supply Chain",
               "OWASP: ASI04: Agentic Supply Chain Vulnerabilities",
               "OWASP: ASI05: Unexpected Code Execution (RCE)",
               "MITRE ATLAS: AML.T0050: Command and Scripting Interpreter",
@@ -1009,10 +1252,11 @@
             "description": "Unauthorized or Unsolicited System Access",
             "definition": "Manipulating or accessing underlying system resources without authorization, leading to unsolicited modification or deletion of files, configurations, or permissions, and enabling system-level command execution on the host. Such activity may result in privilege escalation, file tampering, or unauthorized control over infrastructure through model-driven, agent-executed, or automated system interactions.",
             "mappings": [
-              "OWASP: LLM03:2025: Supply Chain",
+              "OWASP: LLM04:2026: Supply Chain",
               "OWASP: ASI04: Agentic Supply Chain Vulnerabilities",
               "OWASP: ASI05: Unexpected Code Execution (RCE)",
               "MITRE ATLAS: AML.T0012: Valid Accounts",
+              "MITRE ATLAS: AML.T0112: Machine Compromise",
               "NIST AML: AML.T0044: Full AI Model Access"
             ]
           },
@@ -1021,7 +1265,7 @@
             "description": "Unauthorized or Unsolicited Network Access",
             "definition": "Exploiting models or agents to gain unauthorized access to network resources, internal systems, external services, or restricted network segments through model-driven requests, agent capabilities, or network tool exploitation.",
             "mappings": [
-              "OWASP: LLM03:2025: Supply Chain",
+              "OWASP: LLM04:2026: Supply Chain",
               "OWASP: ASI04: Agentic Supply Chain Vulnerabilities",
               "OWASP: ASI05: Unexpected Code Execution (RCE)",
               "MITRE ATLAS: AML.T0049: Exploit Public Facing Application",
@@ -1034,9 +1278,9 @@
             "description": "Injection Attacks (e.g., SQL, Command Execution, XSS)",
             "definition": "Leveraging an LLM to generate, optimize, or automatically adapt injection payloads that bypass detection mechanisms or exploit system vulnerabilities. The LLM/agent acts as an intermediary tool that crafts, refines, or personalizes the malicious injection.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
-              "OWASP: LLM05:2025: Insecure Output Handling",
-              "OWASP: LLM06:2025: Excessive Agency",
+              "OWASP: LLM01:2026: Prompt Injection",
+              "OWASP: LLM10:2026: Improper Output Handling",
+              "OWASP: LLM03:2026: Excessive Agency",
               "OWASP: ASI04: Agentic Supply Chain Vulnerabilities",
               "OWASP: ASI05: Unexpected Code Execution (RCE)",
               "MITRE ATLAS: AML.T0051: LLM Prompt Injection",
@@ -1051,7 +1295,7 @@
             "description": "Template Injection (e.g., SSTI)",
             "definition": "Manipulating a template engine by injecting malicious syntax, expressions, or code into a data field that is later rendered or processed. Model output is unsafely embedded into a server-side template (e.g., using Jinja2, Handlebars, or Mustache) allowing the attacker to execute arbitrary code, manipulate template logic, or compromise the underlying system.",
             "mappings": [
-              "OWASP: LLM08:2025: Vector & Embedding Weaknesses",
+              "OWASP: LLM09:2026: Vector and Embedding Weaknesses",
               "OWASP: ASI04: Agentic Supply Chain Vulnerabilities",
               "OWASP: ASI05: Unexpected Code Execution (RCE)",
               "MITRE ATLAS: AML.T0074: Masquerading",
@@ -1066,10 +1310,11 @@
         "description": "Detection Evasion",
         "definition": "Actors manipulate or alter the input data, behaviors, or attack patterns to intentionally bypass security monitoring, content moderation, anomaly detection, and safety mechanisms.",
         "mappings": [
-          "OWASP: LLM08:2025: Vector & Embedding Weaknesses",
+          "OWASP: LLM09:2026: Vector and Embedding Weaknesses",
           "OWASP: ASI04: Agentic Supply Chain Vulnerabilities",
           "MITRE ATLAS: AML.T0074: Masquerading",
           "MITRE ATLAS: AML.T0068: LLM Prompt Obfuscation",
+          "MITRE ATLAS: AML.T0107: Exploitation for Defense Evasion",
           "NIST AML: N/A",
           "Cisco AI MDL Code: MDL-001",
           "Cisco AI MDL Code: MDL-003",
@@ -1085,7 +1330,7 @@
             "description": "Obfuscation Vulnerabilities",
             "definition": "Weaknesses that emerge when parts of the AI system (code, model architecture, parameters, configurations) are intentionally or unintentionally concealed or obscured, creating security blind spots and attack opportunities.",
             "mappings": [
-              "OWASP: LLM08:2025: Vector & Embedding Weaknesses",
+              "OWASP: LLM09:2026: Vector and Embedding Weaknesses",
               "OWASP: ASI04: Agentic Supply Chain Vulnerabilities",
               "MITRE ATLAS: AML.T0074: Masquerading",
               "MITRE ATLAS: AML.T0068: LLM Prompt Obfuscation",
@@ -1104,10 +1349,11 @@
             "description": "Backdoors and Trojans",
             "definition": "A model that has been maliciously modified to exhibit trigger-activated behavior (i.e., misclassification, malicious outputs, undesirable biases in responses) when given specific inputs, but behaves normally otherwise.",
             "mappings": [
-              "OWASP: LLM08:2025: Vector & Embedding Weaknesses",
+              "OWASP: LLM09:2026: Vector and Embedding Weaknesses",
               "OWASP: ASI04: Agentic Supply Chain Vulnerabilities",
               "MITRE ATLAS: AML.T0010: AI Supply Chain Compromise",
               "MITRE ATLAS: AML.T0058: Publish Poisoned Models",
+              "MITRE ATLAS: T0018.003: Modify Prompt Construction Logic",
               "NIST AML: NISTAML.023: Backdoor Poisoning",
               "Cisco AI MDL Code: MDL-021"
             ]
@@ -1119,7 +1365,7 @@
         "description": "Dependency / Plugin Compromise",
         "definition": "Actors insert malicious code, backdoors, or vulnerabilities into third-party dependencies, plugins, extensions, or libraries used by models/agents/AI applications, creating supply chain attacks that affect all systems using the compromised component.",
         "mappings": [
-          "OWASP: LLM03:2025: Supply Chain",
+          "OWASP: LLM04:2026: Supply Chain",
           "OWASP: ASI04: Agentic Supply Chain Vulnerabilities",
           "MITRE ATLAS: AML.T0010: AI Supply Chain Compromise",
           "MITRE ATLAS: AML.T0053: LLM Plugin Compromise",
@@ -1133,10 +1379,12 @@
             "description": "Malicious Package / Tool Injection",
             "definition": "Introduction of malicious or adversarial tools, APIs, or packages into the toolset, registry, or dependency chain used by a system or agent, enabling the model to unknowingly invoke compromised tools that can execute attacks or expose data.",
             "mappings": [
-              "OWASP: LLM03:2025: Supply Chain",
+              "OWASP: LLM04:2026: Supply Chain",
               "OWASP: ASI04: Agentic Supply Chain Vulnerabilities",
               "MITRE ATLAS: AML.T0010: AI Supply Chain Compromise",
               "MITRE ATLAS: AML.T0053: LLM Plugin Compromise",
+              "MITRE ATLAS: AML.T0110.002: Poisoned AI Agent Tool",
+              "MITRE ATLAS: AML.T0112.001: AI Artifacts",
               "NIST AML: NISTAML.023: Backdoor Poisoning",
               "NIST AML: NISTAML.018: Prompt Injection",
               "Cisco AI MDL Code: MDL-023"
@@ -1147,7 +1395,7 @@
             "description": "Dependency Name Squatting (Tools / Servers)",
             "definition": "Publishing malicious packages, tools, or MCP servers with names similar to legitimate ones (typosquatting, combosquatting) to trick developers, orchestrators, or agents into installing and using compromised components.",
             "mappings": [
-              "OWASP: LLM03:2025: Supply Chain",
+              "OWASP: LLM04:2026: Supply Chain",
               "OWASP: ASI04: Agentic Supply Chain Vulnerabilities",
               "MITRE ATLAS: AML.T0010: AI Supply Chain Compromise",
               "NIST AML: NISTAML.039: Compromising Connected Resources"
@@ -1158,10 +1406,11 @@
             "description": "Dependency Replacement / Rug Pull",
             "definition": "Replacing a once-legitimate, trusted tool, package, or server with malicious code after trust and adoption have been established, exploiting existing deployments that auto-update.",
             "mappings": [
-              "OWASP: LLM03:2025: Supply Chain",
+              "OWASP: LLM04:2026: Supply Chain",
               "OWASP: ASI04: Agentic Supply Chain Vulnerabilities",
               "MITRE ATLAS: AML.T0010: AI Supply Chain Compromise",
               "MITRE ATLAS: AML.T0018: Manipulate AI Model",
+              "MITRE ATLAS: AML.T0109: AI Supply Chain Rug Pull",
               "NIST AML: NISTAML.051: Model Poisoning"
             ]
           }
@@ -1181,7 +1430,7 @@
         "description": "Model Extraction",
         "definition": "Actors attempt to reconstruct or replicate a model partially or entirely by interacting with it through its APIs, inference endpoints, or other access points, with the goal of replicating its functionality, architecture, parameters, or outputs without authorized access.",
         "mappings": [
-          "OWASP: LLM10:2025: Unbounded Consumption",
+          "OWASP: LLM06:2026: Unbounded Consumption",
           "MITRE ATLAS: AML.T0063: AI Model Outputs",
           "MITRE ATLAS: AML.T0035: AI Artifact Collection",
           "MITRE ATLAS: AML.T0040: AI Model Inference API Access",
@@ -1195,7 +1444,7 @@
             "description": "API Query Stealing",
             "definition": "Sending systematic requests to an AI model's API to extract responses, behavior patterns, or model characteristics without proper authorization, building a dataset to replicate model functionality.",
             "mappings": [
-              "OWASP: LLM10:2025: Unbounded Consumption",
+              "OWASP: LLM06:2026: Unbounded Consumption",
               "MITRE ATLAS: AML.T0063: AI Model Outputs",
               "MITRE ATLAS: AML.T0035: AI Artifact Collection",
               "MITRE ATLAS: AML.T0040: AI Model Inference API Access",
@@ -1207,7 +1456,7 @@
             "description": "Weight Reconstruction",
             "definition": "Attempts to recover or approximate underlying weights, parameters, or model architecture of a trained model, by exploiting access to the model's outputs, API queries or side channels.",
             "mappings": [
-              "OWASP: LLM10:2025: Unbounded Consumption",
+              "OWASP: LLM06:2026: Unbounded Consumption",
               "MITRE ATLAS: AML.T0018: Manipulate AI Model",
               "NIST AML: N/A",
               "Cisco AI MDL Code: MDL-022"
@@ -1218,7 +1467,7 @@
             "description": "Sensitive Data Reconstruction",
             "definition": "Reconstructing sensitive datasets, personally identifiable information (PII), or training data from a model's outputs through targeted queries, model inversion attacks, or memorization exploitation.",
             "mappings": [
-              "OWASP: LLM02:2025: Sensitive Information Disclosure",
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
               "MITRE ATLAS: TA0010: Exfiltration",
               "NIST AML: NISTAML.033: Membership Inference"
             ]
@@ -1230,7 +1479,7 @@
         "description": "Model Inversion",
         "definition": "Actors reconstructs private training data, sensitive features, or confidential information from a trained model by exploiting the model's learned representations, decision boundaries, or output patterns.",
         "mappings": [
-          "OWASP: LLM02:2025: Sensitive Information Disclosure",
+          "OWASP: LLM02:2026: Sensitive Information Disclosure",
           "MITRE ATLAS: AML.T0024.001: Invert ML Model",
           "NIST AML: NISTAML.033: Membership Inference"
         ],
@@ -1240,7 +1489,7 @@
             "description": "Model Inversion",
             "definition": "Actors reconstructs private training data, sensitive features, or confidential information from a trained model by exploiting the model's learned representations, decision boundaries, or output patterns.",
             "mappings": [
-              "OWASP: LLM02:2025: Sensitive Information Disclosure",
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
               "MITRE ATLAS: AML.T0024.001: Invert ML Model",
               "NIST AML: NISTAML.033: Membership Inference"
             ]
@@ -1261,8 +1510,8 @@
         "description": "Environment-Aware Evasion",
         "definition": "Actors manipulate the model by exploiting aspects of its operational context, or \"environment,\" to induce malicious or unintended behavior. Rather than simply altering a user's prompt, this type of attack crafts input to leverage the system's broader state and external interactions to bypass safety measures.",
         "mappings": [
-          "OWASP: LLM05:2025: Insecure Output Handling",
-          "OWASP: LLM08:2025: Vector & Embedding Weaknesses",
+          "OWASP: LLM10:2026: Improper Output Handling",
+          "OWASP: LLM09:2026: Vector and Embedding Weaknesses",
           "MITRE ATLAS: AML.T0015: Evade AI Model",
           "NIST AML: N/A"
         ],
@@ -1272,7 +1521,7 @@
             "description": "Agent-Specific Evasion",
             "definition": "Crafting inputs that exploit unique behaviors, roles, or processing patterns of specific agent types (retriever, planner, verifier, executor) to evade detection by some agents while achieving malicious objectives through others. An example: A payload ignored by a reasoning agent but misinterpreted as valid commands by a retriever agent.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "MITRE ATLAS: AML.T0015: Evade AI Model",
               "NIST AML: N/A"
             ]
@@ -1282,7 +1531,7 @@
             "description": "Tool-Scoped Evasion",
             "definition": "Payloads crafted to avoid detection by security tools or external components while manifesting malicious behavior when routed to specific vulnerable tools or APIs in the workflow. (An example: A string harmless in chat but which triggers a file-system exploit when passed into a file I/O tool.)",
             "mappings": [
-              "OWASP: LLM05:2025: Insecure Output Handling",
+              "OWASP: LLM10:2026: Improper Output Handling",
               "MITRE ATLAS: AML.T0015: Evade AI Model",
               "NIST AML: N/A"
             ]
@@ -1292,8 +1541,8 @@
             "description": "Environment-Scoped Payloads",
             "definition": "Malicious inputs that activate only in specific runtime environments (dev vs. prod, cloud vs. on-prem, specific OS) by checking environment variables, debug flags, or system characteristics before executing. An example: payload checks for debug flags or environment variables before running malicious logic.",
             "mappings": [
-              "OWASP: LLM05:2025: Insecure Output Handling",
-              "OWASP: LLM08:2025: Vector & Embedding Weaknesses",
+              "OWASP: LLM10:2026: Improper Output Handling",
+              "OWASP: LLM09:2026: Vector and Embedding Weaknesses",
               "MITRE ATLAS: AML.T0015: Evade AI Model",
               "NIST AML: N/A"
             ]
@@ -1303,7 +1552,7 @@
             "description": "Defense-Aware Payloads",
             "definition": "Adversarial payloads explicitly crafted with knowledge of existing defensive mechanisms (prompt constraints, verification steps, content filters) that adapt to evade those specific defenses.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "MITRE ATLAS: AML.T0015: Evade AI Model",
               "MITRE ATLAS: AML.T0051.000: LLM Prompt Injection (Direct)",
               "NIST AML: N/A"
@@ -1316,7 +1565,7 @@
         "description": "Model-Selective Evasion",
         "definition": "Actors craft prompts or inputs specifically designed to bypass the safety controls, content filters, or detection mechanisms of a particular target LLM, while similar or related models would successfully detect and refuse the malicious input. This technique exploits model-specific quirks, training differences, and implementation variations.",
         "mappings": [
-          "OWASP: LLM01:2025: Prompt Injection",
+          "OWASP: LLM01:2026: Prompt Injection",
           "MITRE ATLAS: AML.T0015: Evade AI Model",
           "MITRE ATLAS: AML.T0067: LLM Trusted Output Component Manipulation",
           "NIST AML: N/A"
@@ -1327,11 +1576,11 @@
             "description": "Targeted Model Fingerprinting",
             "definition": "Probing, testing, or analyzing a model to determine its specific identity, version, fine-tuning status, or architecture characteristics, enabling attackers to craft model-specific exploits.",
             "mappings": [
-              "OWASP: LLM10:2025: Unbounded Consumption",
-              "OWASP: LLM04:2025: Data and Model Poisoning",
+              "OWASP: LLM06:2026: Unbounded Consumption",
+              "OWASP: LLM05:2026: Data and Model Poisoning",
               "MITRE ATLAS: AML.T0014: Discover AI Model Family",
               "NIST AML: NISTAML.051: Model Poisoning",
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "MITRE ATLAS: AML.T0015: Evade AI Model",
               "MITRE ATLAS: AML.T0067: LLM Trusted Output Component Manipulation",
               "NIST AML: N/A"
@@ -1342,7 +1591,7 @@
             "description": "Conditional Attack Execution",
             "definition": "Payloads designed to remain benign across most models but trigger harmful actions specifically on targeted models due to differences in tokenization, instruction-following, or training data. An example: An adversarial prompt that looks neutral to one model but forces another into generating malicious output due to differences in tokenizer or instruction-following behavior.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "MITRE ATLAS: AML.T0015: Evade AI Model",
               "MITRE ATLAS: AML.T0067: LLM Trusted Output Component Manipulation",
               "NIST AML: N/A"
@@ -1364,7 +1613,7 @@
         "description": "Tool Exploitation",
         "definition": "Actors abuse connected tools, APIs, functions, or external capabilities through subversive prompts, commands, or context manipulation. This can include attacks like: unauthorized tool execution, exploitation of security vulnerabilities in tools, tool poisoning, injection attacks through tool interfaces.",
         "mappings": [
-          "OWASP: LLM06:2025: Excessive Agency",
+          "OWASP: LLM03:2026: Excessive Agency",
           "OWASP: ASI02: Tool Misuse & Exploitation",
           "OWASP: ASI05: Unexpected Code Execution (RCE)",
           "MITRE ATLAS: AML.T0067: LLM Trusted Output Component Manipulation",
@@ -1380,7 +1629,7 @@
             "description": "Parameter Manipulation",
             "definition": "Altering, modifying, or manipulating function/tool parameters, model settings, or configuration values to unlock unintended capabilities, bypass restrictions, or enable malicious functionality.",
             "mappings": [
-              "OWASP: LLM06:2025: Excessive Agency",
+              "OWASP: LLM03:2026: Excessive Agency",
               "OWASP: ASI02: Tool Misuse & Exploitation",
               "MITRE ATLAS: AML.T0067: LLM Trusted Output Component Manipulation",
               "MITRE ATLAS: AML.T0053: LLM Plugin Compromise",
@@ -1393,10 +1642,12 @@
             "description": "Tool Poisoning",
             "definition": "Corrupting, modifying, or degrading the functionality, outputs, or behavior of tools used by agents through data poisoning, configuration tampering, or behavioral manipulation, causing the tool resulting in deceptive or malicious outputs, privilege escalation, or propagation of altered data.",
             "mappings": [
-              "OWASP: LLM03:2025: Supply Chain",
-              "OWASP: LLM08:2025: Vector & Embedding Weaknesses",
+              "OWASP: LLM04:2026: Supply Chain",
+              "OWASP: LLM09:2026: Vector and Embedding Weaknesses",
               "OWASP: ASI02: Tool Misuse & Exploitation",
               "OWASP: ASI04: Agentic Supply Chain Vulnerabilities",
+              "MITRE ATLAS: AML.T0099: AI Agent Tool Data Poisoning",
+              "MITRE ATLAS: AML.T0110: AI Agent Tool Poisoning",
               "MITRE ATLAS: AML.T0053: LLM Plugin Compromise",
               "MITRE ATLAS: AML.T0010: AI Supply Chain Compromise",
               "MITRE ATLAS: AML.T0094: Delay Execution of LLM Instructions",
@@ -1408,13 +1659,15 @@
             "description": "Unsafe System / Browser / File Execution",
             "definition": "Abusing agentic system integration with system commands, browsers, or file I/O tools to trigger unsafe operations, arbitrary code executions, or malicious file actions. An example: A prompt that tricks an agent into opening arbitrary URLs in a browser tool, leading to drive-by downloads.",
             "mappings": [
-              "OWASP: LLM05:2025: Insecure Output Handling",
+              "OWASP: LLM10:2026: Improper Output Handling",
               "OWASP: ASI02: Tool Misuse & Exploitation",
               "OWASP: ASI05: Unexpected Code Execution (RCE)",
               "MITRE ATLAS: AML.T0050: Command and Scripting Interpreter",
               "MITRE ATLAS: AML.T0011: User Execution (Lure)",
               "MITRE ATLAS: AML.T0094: Delay Execution of LLM Instructions",
               "MITRE ATLAS: AML.T0095: Search Open Websites/Domains",
+              "MITRE ATLAS: AML.T0101: Data Destruction via AI Agent Tool Invocation",
+              "MITRE ATLAS: AML.T0011.003: Malicious Link",
               "NIST AML: N/A"
             ]
           },
@@ -1423,7 +1676,7 @@
             "description": "Tool Shadowing",
             "definition": "Disguising, substituting or duplicating legitimate tools within an agent or MCP server or tool registry, enabling malicious tools with identical or similar identifiers to intercept or replace trusted tool calls, leading to unauthorized actions, data exfiltration, or redirection of legitimate operations.",
             "mappings": [
-              "OWASP: LLM03:2025: Supply Chain",
+              "OWASP: LLM04:2026: Supply Chain",
               "OWASP: ASI02: Tool Misuse & Exploitation",
               "MITRE ATLAS: AML.T0053: LLM Plugin Compromise",
               "MITRE ATLAS: AML.T0010: AI Supply Chain Compromise",
@@ -1437,7 +1690,7 @@
         "description": "Insecure Output Handling",
         "definition": "Actors exploit insufficient sanitization, validation, filtering, or security controls applied to content generated by models or agents before it is passed to downstream systems, databases, APIs, or components. This inadequate handling enables injection attacks, code execution, or broader system compromise.",
         "mappings": [
-          "OWASP: LLM05:2025: Insecure Output Handling",
+          "OWASP: LLM10:2026: Improper Output Handling",
           "OWASP: ASI02: Tool Misuse & Exploitation",
           "MITRE ATLAS: AML.T0053: LLM Plugin Compromise",
           "MITRE ATT&CK: T1059: Command and Scripting Interpreter",
@@ -1450,7 +1703,7 @@
             "description": "Code Detection / Malicious Code Output",
             "definition": "Forcing an LLM/agent to produce code that bypasses content filters, contains malicious functionality, or includes working exploits, often disguised as benign snippets or requested features. An example: Requesting \"educational\" shellcode generation that produces working exploits.",
             "mappings": [
-              "OWASP: LLM05:2025: Insecure Output Handling",
+              "OWASP: LLM10:2026: Improper Output Handling",
               "OWASP: ASI02: Tool Misuse & Exploitation",
               "MITRE ATLAS: AML.T0053: LLM Plugin Compromise",
               "MITRE ATT&CK: T1059: Command and Scripting Interpreter",
@@ -1474,7 +1727,7 @@
         "description": "Disruption of Availability",
         "definition": "Actors prevent authorized users from accessing or using AI models, agents, or their services through resource exhaustion, system degradation, or complete service outage.",
         "mappings": [
-          "OWASP: LLM10:2025: Unbounded Consumption",
+          "OWASP: LLM06:2026: Unbounded Consumption",
           "OWASP: ASI08: Cascading Failures",
           "MITRE ATLAS: AML.T0029: Denial of AI Service",
           "NIST AML: N/A"
@@ -1485,7 +1738,7 @@
             "description": "Compute Exhaustion",
             "definition": "Deliberately consuming excessive computational resources through long queries, adversarial inputs, or compute-intensive requests designed to degrade service availability, increase operational costs, or cause system slowdown.",
             "mappings": [
-              "OWASP: LLM10:2025: Unbounded Consumption",
+              "OWASP: LLM06:2026: Unbounded Consumption",
               "OWASP: ASI08: Cascading Failures",
               "MITRE ATLAS: AML.T0029: Denial of AI Service",
               "NIST AML: N/A"
@@ -1496,7 +1749,7 @@
             "description": "Memory Flooding",
             "definition": "Overwhelming or overloading the model/agent's memory, API, or processing pipelines with excessive tool calls, simultaneous operations, or memory-intensive requests to degrade performance, cause failures, or erode memory systems.",
             "mappings": [
-              "OWASP: LLM10:2025: Unbounded Consumption",
+              "OWASP: LLM06:2026: Unbounded Consumption",
               "OWASP: ASI08: Cascading Failures",
               "MITRE ATLAS: AML.T0029: Denial of AI Service",
               "NIST AML: N/A"
@@ -1507,8 +1760,8 @@
             "description": "Model Denial of Service",
             "definition": "An attack designed to degrade or shut down a model or application by flooding the system with requests, requesting large responses, exploiting a vulnerability, or triggering resource-intensive operations.",
             "mappings": [
-              "OWASP: LLM10:2025: Unbounded Consumption",
-              "OWASP: LLM06:2025: Excessive Agency",
+              "OWASP: LLM06:2026: Unbounded Consumption",
+              "OWASP: LLM03:2026: Excessive Agency",
               "OWASP: ASI08: Cascading Failures",
               "MITRE ATLAS: AML.T0029: Denial of AI Service",
               "NIST AML: N/A"
@@ -1519,7 +1772,7 @@
             "description": "Application Denial of Service",
             "definition": "Interacting with a model or agent n a method that consumes an exceptionally high amount of resources, resulting degraded service quality for users, as well as potentially incurring high resource costs.",
             "mappings": [
-              "OWASP: LLM10:2025: Unbounded Consumption",
+              "OWASP: LLM06:2026: Unbounded Consumption",
               "MITRE ATLAS: AML.T0029: Denial of AI Service",
               "NIST AML: N/A"
             ]
@@ -1529,7 +1782,7 @@
             "description": "Decision Paralysis Attacks",
             "definition": "Overwhelming model/agent decision-making systems with contradictory information, excessive options, conflicting objectives, or computationally intractable choices to prevent timely decisions, cause system freezing, or force default/unsafe behaviors.",
             "mappings": [
-              "OWASP: LLM10:2025: Unbounded Consumption",
+              "OWASP: LLM06:2026: Unbounded Consumption",
               "MITRE ATLAS: AML.T0029: Denial of AI Service",
               "NIST AML: NISTAML.024: Targeted Poisoning"
             ]
@@ -1541,7 +1794,7 @@
         "description": "Cost Harvesting / Repurposing",
         "definition": "Actors leverage computational or memory attacks that exploit AI systems to generate excessive costs for the service provider or owner through resource abuse, unauthorized usage for attacker benefit, or deliberate cost inflation. Examples can incude overwhelming human-in-the-loop processes and other denial of service conditions.",
         "mappings": [
-          "OWASP: LLM10:2025: Unbounded Consumption",
+          "OWASP: LLM06:2026: Unbounded Consumption",
           "MITRE ATLAS: AML.T0040: AI Model Inference API Access",
           "MITRE ATLAS: AML.T0029: Denial of AI Service",
           "MITRE ATLAS: AML.T0034: Cost Harvesting",
@@ -1553,7 +1806,7 @@
             "description": "Service Misuse for Cost Inflation",
             "definition": "The intentional or unintentional use of AI resources in a way that unnecessarily drives up operational costs through inefficient queries, resource waste, or exploitation of usage-based pricing.",
             "mappings": [
-              "OWASP: LLM10:2025: Unbounded Consumption",
+              "OWASP: LLM06:2026: Unbounded Consumption",
               "MITRE ATLAS: AML.T0040: AI Model Inference API Access",
               "MITRE ATLAS: AML.T0029: Denial of AI Service",
               "MITRE ATLAS: AML.T0034: Cost Harvesting",
@@ -1576,7 +1829,7 @@
         "description": "Unauthorized Access",
         "definition": "Actors gain unauthorized access to the underlying infrastructure, deployment environment, or hosting systems of AI models and agents (e.g., servers, databases, cloud accounts). This is distinct from accessing the model/agentic system itself through exploitation.",
         "mappings": [
-          "OWASP: LLM02:2025: Sensitive Information Disclosure",
+          "OWASP: LLM02:2026: Sensitive Information Disclosure",
           "OWASP: ASI03: Identity & Privilege Abuse",
           "MITRE ATLAS: AML.T0055: Unsecured Credentials",
           "MITRE ATLAS: AML.T0091: Use Alternate Authentication Material",
@@ -1592,11 +1845,13 @@
             "description": "Credential Theft",
             "definition": "Attempts to generate, solicit, or reveal authorization credentials (login details, tokens, API keys, passwords) through interactions with model/agent, enabling unauthorized access to accounts, systems, and data.",
             "mappings": [
-              "OWASP: LLM02:2025: Sensitive Information Disclosure",
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
               "OWASP: ASI03: Identity & Privilege Abuse",
               "MITRE ATLAS: AML.T0055: Unsecured Credentials",
               "MITRE ATLAS: AML.T0091: Use Alternate Authentication Material",
               "MITRE ATLAS: AML.T0091.000: App Access Token Abuse",
+              "MITRE ATLAS: AML.T0106: Exploitation for Credential Access",
+              "MITRE ATLAS: AML.T0098: AI Agent Tool Credential Harvesting",
               "MITRE ATT&CK: T1098: Account Manipulation",
               "MITRE ATT&CK: T1528: Steal Application Access Token",
               "MITRE ATT&CK: T1550: Use Alternate Authentication Material",
@@ -1608,7 +1863,7 @@
             "description": "Insufficient Access Controls",
             "definition": "Weak, missing, or misconfigured permissions, authentication mechanisms, and access measures that fail to adequately prevent security breaches, unauthorized access, or data leakage.",
             "mappings": [
-              "OWASP: LLM06:2025: Excessive Agency",
+              "OWASP: LLM03:2026: Excessive Agency",
               "OWASP: ASI03: Identity & Privilege Abuse",
               "MITRE ATLAS: AML.T0053: LLM Plugin Compromise",
               "NIST AML: N/A"
@@ -1621,7 +1876,7 @@
         "description": "Abuse of Delegated Authority",
         "definition": "Actors exploit legitimate delegation mechanisms where agents are granted authority to act on behalf of users, systems, or other agents, and use this delegated authority to perform unauthorized actions, exceed intended scope, or abuse trust relationships for malicious purposes.",
         "mappings": [
-          "OWASP: LLM06:2025: Excessive Agency",
+          "OWASP: LLM03:2026: Excessive Agency",
           "OWASP: ASI03: Identity & Privilege Abuse",
           "MITRE ATLAS: AML.T0053: LLM Plugin Compromise",
           "MITRE ATLAS: AML.T0055: Unsecured Credentials",
@@ -1638,7 +1893,7 @@
             "description": "Permission Escalation via Delegation",
             "definition": "Action that exceeds the scope or resource access initially allowed to a subject or user, exploiting delegation mechanisms to gain privileged access and perform unauthorized tasks beyond original authorization.",
             "mappings": [
-              "OWASP: LLM06:2025: Excessive Agency",
+              "OWASP: LLM03:2026: Excessive Agency",
               "OWASP: ASI03: Identity & Privilege Abuse",
               "MITRE ATLAS: AML.T0053: LLM Plugin Compromise",
               "MITRE ATLAS: AML.T0055: Unsecured Credentials",
@@ -1663,13 +1918,13 @@
         "description": "Harmful Content",
         "definition": "Actors prompt generative models or agents to produce unauthorized, unsafe, or malicious content, including harmful instructions, toxic speech, misinformation, or unsafe media. The attack targets weaknesses in content guardrails to bypass safety constraints and generate content that should otherwise be restricted.",
         "mappings": [
-          "OWASP: LLM01:2025: Prompt Injection",
-          "OWASP: LLM02:2025: Sensitive Information Disclosure",
+          "OWASP: LLM01:2026: Prompt Injection",
+          "OWASP: LLM02:2026: Sensitive Information Disclosure",
           "MITRE ATLAS: AML.T0048.002: Societal Harm",
           "MITRE ATLAS: AML.T0048.001: Reputational Harm",
           "NIST AML: NISTAML.04: Misuse Violations",
           "NIST AML: NISTAML.018: Prompt Injection",
-          "OWASP: LLM09:2025: Misinformation",
+          "OWASP: LLM07:2026: Misinformation",
           "MITRE ATLAS: AML.T0015: Evade AI Model",
           "NIST AML: NISTAML.027: Misaligned Outputs",
           "MITRE ATT&CK: T1588.007: Obtain AI Capabilities"
@@ -1680,8 +1935,8 @@
             "description": "Cybersecurity and Hacking: Malware / Exploits",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that enable or facilitate the creation, distribution, or operational use of malicious software and related cyberattack activities. This may include generating code, instructions, or automation that produces or deploys malware, viruses, or exploits; orchestrating network intrusions or ransomware campaigns; and managing malicious infrastructure.\nExamples of malware, viruses and exploits:\n• Software designed to covertly monitor user activity, display unsolicited advertisements, collect personal data without consent, or provide misleading functionality.\n• Adware, spyware, stalkerware, potentially unwanted applications (PUAs).\nAgentic capabilities and components may also be abused to coordinate attacks, automate vulnerability exploitation, or assist in the trade and resale of compromised assets, scaling cyber threats far beyond traditional manual hacking operations.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
-              "OWASP: LLM02:2025: Sensitive Information Disclosure",
+              "OWASP: LLM01:2026: Prompt Injection",
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
               "MITRE ATLAS: AML.T0048.002: Societal Harm",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
               "NIST AML: NISTAML.04: Misuse Violations",
@@ -1693,7 +1948,7 @@
             "description": "Cybersecurity and Hacking: Cyber Abuse",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that enable or facilitate attacks in which actors manipulate human trust, behavior, or decision-making to gain unauthorized access, extract sensitive data, or cause harmful actions.\nThis may include or facilitate:\n• Hacking\n• Ransomware operations\n• Network attack operations\n• Malicious infrastructure operations\n• Compromised asset trading\n• Phishing\n• Social engineering (convincing malicious communications such as phishing emails, spoofed chat messages, or voice calls)\nAgentic systems and their components may be abused to scale, personalize, and automate social engineering campaigns far beyond traditional human-driven methods, such as deploying automated conversational or task-driven agents designed to deceive targets.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
               "MITRE ATLAS: AML.T0048.003: User Harm",
               "MITRE ATLAS: AML.T0048.002: Societal Harm",
@@ -1706,7 +1961,7 @@
             "description": "Safety Harms and Toxicity: Animal Abuse",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that depict or describe unnecessary animal suffering, or that encourage others to cause (or assist in causing) harm to animals.\nThis may include intentionally creating malicious narratives to undermine animals and cause physical harm to specific species.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "MITRE ATLAS: AML.T0048.002: Societal Harm",
               "MITRE ATLAS: AML.T0048.003: User Harm",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
@@ -1719,7 +1974,7 @@
             "description": "Safety Harms and Toxicity: Child Abuse / Exploitation",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that intend to enable harm and malice against children, especially in exploiting them physically or emotionally.\nThis may include intentionally tampering with children's images and inciting nudity, child pornography or directly encouraging violence against children.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
               "MITRE ATLAS: AML.T0048.003: User Harm",
               "MITRE ATLAS: AML.T0048.002: Societal Harm",
@@ -1732,8 +1987,8 @@
             "description": "Safety Harms and Toxicity: Disinformation",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that enable, promote, or facilitate the spread of false, misleading, or manipulated information with the intention to deceive or disrupt.\nThis may include intentionally harmful narratives crafted to deceive, manipulate public opinion, or undermine trust in institutions, as well as unintentionally inaccurate information amplified without verification.\nAgentic systems may also be abused to scale, automate, or personalize disinformation campaigns, making them more pervasive and difficult to detect than traditional human-driven methods.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
-              "OWASP: LLM09:2025: Misinformation",
+              "OWASP: LLM01:2026: Prompt Injection",
+              "OWASP: LLM07:2026: Misinformation",
               "MITRE ATLAS: AML.T0048.002: Societal Harm",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
               "NIST AML: NISTAML.04: Misuse Violations",
@@ -1745,7 +2000,7 @@
             "description": "Safety Harms and Toxicity: Environmental Harm",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that enable, promote, or facilitate environmental damage, ecological exploitation, or harmful practices.\nThis may include guidance, automation, or narratives that encourage unsustainable extraction, destructive practices, or pollution that threatens natural resources, biodiversity, or ecosystems.\nAgentic systems may also be misused to optimize or scale harmful operations that accelerate environmental degradation beyond traditional manual activities.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "MITRE ATLAS: AML.T0048.002: Societal Harm",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
               "NIST AML: NISTAML.04: Misuse Violations",
@@ -1757,7 +2012,7 @@
             "description": "Safety Harms and Toxicity: Financial Harm",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that enable, promote, or facilitate financially motivated scams, fraud, or exploitation.\nThis may include generating deceptive schemes, fraudulent instructions, or automation designed to steal money, manipulate markets, or exploit financial systems.\nAgentic systems may be misused to scale, personalize, and conceal financial fraud operations, making them more efficient and harder to detect compared to traditional human-driven fraud.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "MITRE ATLAS: AML.T0048.000: Financial Harm",
               "MITRE ATLAS: AML.T0048.003: User Harm",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
@@ -1770,7 +2025,7 @@
             "description": "Safety Harms and Toxicity: Harassment",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that enable, promote, or facilitate harassment, intimidation, or targeted abuse.\nThis may include the generation of threatening or abusive language, manipulative content that causes psychological harm, or agent-driven behaviors such as stalking or persistent unwanted engagement.\nSuch harms can take the form of direct threats, bullying, cyberbullying, sexual harassment, surveillance-driven intimidation, emotional abuse, or non-protected characteristic-based hostility, and may be amplified when agentic systems automate or scale persistent harassment campaigns.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
               "MITRE ATLAS: AML.T0048.003: User Harm",
               "MITRE ATLAS: AML.T0048.002: Societal Harm",
@@ -1783,7 +2038,7 @@
             "description": "Safety Harms and Toxicity: Hate Speech",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that enable, promote, or facilitate hateful, discriminatory, or demeaning expression targeting characteristics of groups from protected classes, individuals or specific communities such as race, ethnicity, religion, nationality, disability, gender, sexual orientation, or socioeconomic class.\nThis may include harmful narratives, slurs, stereotypes, or calls to exclusion and hostility that can escalate into social conflict or violence.\nAgentic systems and their components may also be abused to scale, automate, or personalize hate-driven messaging, making such campaigns more pervasive and impactful than traditional human-driven speech.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
               "MITRE ATLAS: AML.T0048.003: User Harm",
               "MITRE ATLAS: AML.T0048.002: Societal Harm",
@@ -1796,7 +2051,7 @@
             "description": "Safety Harms and Toxicity: Non-Violent Crime",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that enable, promote, or facilitate illegal but non-violent criminal activities.\nThis may include the generation of instructions, guidance, advice, or automation related to committing non-violent crime, illegal substance abuse, trafficking, smuggling, scams, or unlawful manipulation of processes, where the harm may be economic, societal, or exploitative rather than directly violent.\nAgentic systems may be abused to coordinate, scale, or conceal these crimes, lowering barriers to participation and increasing reach.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "MITRE ATLAS: AML.T0048.002: Societal Harm",
               "NIST AML: NISTAML.04: Misuse Violations",
               "NIST AML: NISTAML.018: Prompt Injection"
@@ -1807,7 +2062,7 @@
             "description": "Safety Harms and Toxicity: Profanity",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that contain or promote profane, vulgar, or offensive language.\nThis may include explicit sexual expressions; abusive or violent profanity; offensive slurs, insults, or expletives that violate norms of decorum or platform policy; or coded variations of offensive terms designed to bypass moderation.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
               "MITRE ATLAS: AML.T0048.003: User Harm",
               "MITRE ATLAS: AML.T0048.000: Financial Harm",
@@ -1821,7 +2076,7 @@
             "description": "Safety Harms and Toxicity: Scams and Deception",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes, from LLMs (as well as the use of agentic AI systems, their components, or elements) that enable, promote, or facilitate fraudulent, deceptive, or manipulative schemes.\nThis may include generating or automating scams, counterfeit operations, fraudulent services, or deceptive outputs designed to mislead victims for personal, financial, or competitive gain.\nAgentic systems and their components may be exploited to scale, personalize, and disguise scams, making them more effective than traditional manual deception tactics.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
               "MITRE ATLAS: AML.T0048.003: User Harm",
               "MITRE ATLAS: AML.T0048.002: Societal Harm",
@@ -1834,7 +2089,7 @@
             "description": "Safety Harms and Toxicity: Self Harm",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that enable, promote, facilitate, or glorify self-harm, suicidal ideation, or encouragement of dangerous behaviors against oneself.\nThis may include generating instructions or content that describe methods of self-harm, encouraging or normalizing suicidal behavior, or producing emotionally manipulative material such as suicide notes.\nAgentic systems may also be misused to automate, personalize, or amplify harmful narratives, increasing the risk to vulnerable individuals.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "MITRE ATLAS: AML.T0048.003: User Harm",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
               "NIST AML: NISTAML.04: Misuse Violations",
@@ -1846,7 +2101,7 @@
             "description": "Safety Harms and Toxicity: Sexual Content and Exploitation",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that enable, promote, or facilitate sexually explicit, exploitative, abusive, or harmful behaviors, often non-consensual and in violation of platform policies.\nThis may include the generation of explicit or coercive material, the simulation of abusive or violent sexual interactions, or the promotion of sexual references used in manipulative or exploitative ways.\nAgentic systems and their components may be abused to scale, automate, or personalize sexual exploitation, amplifying risks to vulnerable individuals and society.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
               "MITRE ATLAS: AML.T0048.003: User Harm",
               "NIST AML: NISTAML.04: Misuse Violations",
@@ -1858,8 +2113,8 @@
             "description": "Safety Harms and Toxicity: Social Division and Polarization",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that encourage or reinforce social division, inequality, or polarization.\nThis may include discriminatory narratives, biased outputs, or manipulative content that fosters exclusion, marginalization, or hostility between groups. Such harms may surface through class-based bias, workplace inequality, or broader discriminatory framing that amplifies divisive political, racial, cultural, or ideological content, and can be amplified when agentic systems automate, scale, or personalize divisive content.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
-              "OWASP: LLM09:2025: Misinformation",
+              "OWASP: LLM01:2026: Prompt Injection",
+              "OWASP: LLM07:2026: Misinformation",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
               "MITRE ATLAS: AML.T0048.002: Societal Harm",
               "NIST AML: NISTAML.04: Misuse Violations",
@@ -1871,7 +2126,7 @@
             "description": "Safety Harms and Toxicity: Terrorism / Extremism",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that advocate, promote or enact ideologies, behaviors and beliefs that undermine fundamental societal norms such as inclusion, democracy or broader human rights.\nThis may include the use or the credible threat of violence to target specific communities, intimidate and coerce populations into following a certain political ideology (i.e., polarization tactics).",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "MITRE ATLAS: AML.T0048.002: Societal Harm",
               "MITRE ATLAS: AML.T0048.003: User Harm",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
@@ -1884,7 +2139,7 @@
             "description": "Safety Harms and Toxicity: Violence and Public Safety Threat",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that enable, promote, or facilitate violence, physical harm, or threats to public safety.\nThis may include content that promotes interpersonal abuse, torture, or reckless and unsafe actions that could cause serious harm to individuals, communities, animals, or society at large.\nAgentic systems and their components may be abused to plan, automate, or scale these threats, amplifying risks beyond traditional human-driven methods.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "MITRE ATLAS: AML.T0048.002: Societal Harm",
               "MITRE ATLAS: AML.T0048.003: User Harm",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
@@ -1897,8 +2152,8 @@
             "description": "Safety Harms and Toxicity: Weapons / CBRN Risks",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that promotes materials that provide guidance or justification for armed violence, terrorism, and extremist activity, instructions related to CBRN threats (chemical, biological, radiological, nuclear), or the use and procurement of weapons and explosives.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
-              "OWASP: LLM02:2025: Sensitive Information Disclosure",
+              "OWASP: LLM01:2026: Prompt Injection",
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
               "MITRE ATLAS: AML.T0048.002: Societal Harm",
               "MITRE ATLAS: AML.T0048.003: User Harm",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
@@ -1911,8 +2166,8 @@
             "description": "Integrity: Hallucinations / Misinformation",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that produce content that is unrelated to the intended or expected subject matter and poses risks or harmful outcomes.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
-              "OWASP: LLM09:2025: Misinformation",
+              "OWASP: LLM01:2026: Prompt Injection",
+              "OWASP: LLM07:2026: Misinformation",
               "MITRE ATLAS: AML.T0048.003: User Harm",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
               "MITRE ATLAS: AML.T0048.002: Societal Harm",
@@ -1925,8 +2180,8 @@
             "description": "Integrity: Unauthorized Financial Advice",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that provide professional-grade or sensitive advice in regulated domains without proper safeguards or oversight, and are factually incorrect, incomplete, deceptive, or harmful if followed.\nThis may include generating tailored, incorrect, or unsafe financial guidance that would normally require qualified expertise, licensing, or regulated review.\nWhen such content is produced by LLMs or agentic AI systems without safeguards, it may mislead individuals, enable harmful decisions, or constitute unauthorized practice in restricted fields.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
-              "OWASP: LLM09:2025: Misinformation",
+              "OWASP: LLM01:2026: Prompt Injection",
+              "OWASP: LLM07:2026: Misinformation",
               "MITRE ATLAS: AML.T0048.000: Financial Harm",
               "MITRE ATLAS: AML.T0048.003: User Harm",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
@@ -1939,8 +2194,8 @@
             "description": "Integrity: Unauthorized Legal Advice",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that provide professional-grade or sensitive advice in regulated domains without proper safeguards or oversight, and are factually incorrect, incomplete, deceptive, or harmful if followed.\nThis may include generating tailored, incorrect, or unsafe legal guidance that would normally require qualified expertise, licensing, or regulated review.\nWhen such content is produced by LLMs or agentic AI systems without safeguards, it may mislead individuals, enable harmful decisions, or constitute unauthorized practice in restricted fields.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
-              "OWASP: LLM09:2025: Misinformation",
+              "OWASP: LLM01:2026: Prompt Injection",
+              "OWASP: LLM07:2026: Misinformation",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
               "MITRE ATLAS: AML.T0048.003: User Harm",
               "MITRE ATLAS: AML.T0048.002: Societal Harm",
@@ -1953,8 +2208,8 @@
             "description": "Integrity: Unauthorized Medical Advice",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that provide professional-grade or sensitive advice in regulated domains without proper safeguards or oversight, and are factually incorrect, incomplete, deceptive, or harmful if followed.\nThis may include generating tailored, incorrect, or unsafe medical guidance that would normally require qualified expertise, licensing, or regulated review.\nWhen such content is produced by LLMs or agentic AI systems without safeguards, it may mislead individuals, enable harmful decisions, or constitute unauthorized practice in restricted fields.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
-              "OWASP: LLM09:2025: Misinformation",
+              "OWASP: LLM01:2026: Prompt Injection",
+              "OWASP: LLM07:2026: Misinformation",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
               "MITRE ATLAS: AML.T0048.003: User Harm",
               "MITRE ATLAS: AML.T0048.002: Societal Harm",
@@ -1967,8 +2222,8 @@
             "description": "Intellectual Property Compromise: Intellectual Property Infringement",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that enable, promote, or facilitate unauthorized use, reproduction, or distribution of copyrighted or trademarked material.\nThis may include generating or automating instructions for piracy, producing infringing content such as unlicensed songs, films, or books, or misusing branded material.\nAgentic systems and their components may be exploited to scale piracy, automate infringement, or disguise unlawful distribution, amplifying risks for creators, businesses, and intellectual property rights.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
-              "OWASP: LLM02:2025: Sensitive Information Disclosure",
+              "OWASP: LLM01:2026: Prompt Injection",
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
               "MITRE ATLAS: AML.T0048.004: ML Intellectual Property Theft",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
               "NIST AML: NISTAML.03: Privacy Compromise",
@@ -1980,8 +2235,8 @@
             "description": "Intellectual Property Compromise: Confidential Data",
             "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that are not generally known or available to the public and are considered sensitive or private.\nThis may include generating or automating instructions for collecting, producing, harvesting or getting different sensitive information or data not intended for general exposure or use.\nAgentic systems and their components may be exploited to scale expose, collect, or produce sensitive data.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
-              "OWASP: LLM02:2025: Sensitive Information Disclosure",
+              "OWASP: LLM01:2026: Prompt Injection",
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
               "MITRE ATLAS: AML.T0048.004: ML Intellectual Property Theft",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
               "NIST AML: NISTAML.03: Privacy Compromise",
@@ -1990,19 +2245,19 @@
           },
           {
             "code": "AISubtech-15.1.25",
-            "description": "Privacy Attacks: PII / PHI / PCI",
-            "definition": "Prompts, content, or outputs, whether expressed as text, audio, visual material, actions, operations, or other modes from LLMs (as well as the use of agentic AI systems, their components, or elements) that expose, generate, or misuse personally identifiable information (PII), protected health information (PHI), or payment card industry (PCI) information.\nFor PII, this may include names, addresses, phone numbers, identification numbers, or other sensitive personal details that can be used to identify, track, or exploit individuals.\nFor PHI, this may include any individually identifiable health data, such as medical records, diagnoses, billing information, and other personal identifiers.\nFor PCI, this may include cardholder data (e.g., cardholder names, expiration dates, service code) and sensitive authentication data (e.g., full track data, card verification codes, and personal identification numbers (PINs)).\nAgentic systems may also be abused to collect, reconstruct, or target specific individuals’ data, amplifying risks of privacy violations, identity theft, and harassment.",
+            "description": "General Harms",
+            "definition": "General Harms covers prompts, content, or outputs in any modality, including text, images, audio, video, transcripts, tool outputs, and metadata, that contain or request harmful material. Harmful material includes instructions, plans, scripts, persuasive content, attacks, payloads, threats, toxic abuse, exploitation, deception, unlawful activity, unsafe high-stakes guidance, cyber or prompt-injection abuse, targeted harassment, hate, sexual exploitation, self-harm, violence, weapons or CBRN misuse, terrorism or extremism, harmful misinformation, environmental harm, financial harm, intellectual-property abuse, or confidential-data extraction.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
-              "OWASP: LLM02:2025: Sensitive Information Disclosure",
-              "MITRE ATLAS: AML.T0057: LLM Data Leakage",
-              "MITRE ATLAS: AML.T0025: Exfiltration via Cyber Means",
+              "OWASP: LLM01:2026: Prompt Injection",
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
+              "OWASP: LLM07:2026: Misinformation",
               "MITRE ATLAS: AML.T0048.001: Reputational Harm",
-              "MITRE ATLAS: AML.T0048.003: User Harm",
-              "NIST AML: NISTAML.03: Privacy Compromise",
-              "NIST AML: NISTAML.036: Leaking Information from User Interactions",
-              "NIST AML: NISTAML.038: Data Extraction",
-              "NIST AML: NISTAML.018: Prompt Injection"
+              "MITRE ATLAS: AML.T0048.002: Societal Harm",
+              "MITRE ATLAS: AML.T0015: Evade AI Model",
+              "MITRE ATT&CK: T1588.007: Obtain AI Capabilities",
+              "NIST AML: NISTAML.04: Misuse Violations",
+              "NIST AML: NISTAML.018: Prompt Injection",
+              "NIST AML: NISTAML.027: Misaligned Outputs"
             ]
           }
         ]
@@ -2021,7 +2276,7 @@
         "description": "Eavesdropping",
         "definition": "Actors conduct unauthorized passive monitoring, interception, or extraction of data from model/agentic system communications, including agent-to-agent messages, agent-to-user interactions, API calls, or other internal communications without directly manipulating the data flow.",
         "mappings": [
-          "OWASP: LLM02:2025: Sensitive Information Disclosure",
+          "OWASP: LLM02:2026: Sensitive Information Disclosure",
           "OWASP: ASI07: Insecure Inter-Agent Communication",
           "MITRE ATLAS: AML.T0037: Data From Local System",
           "MITRE ATLAS: AML.T0069: LLM System Information Discovery",
@@ -2036,7 +2291,7 @@
             "description": "Logging Sensitive Conversations",
             "definition": "Storing or recording user-model interactions in ways that include personally identifiable information (PII), private data, or sensitive content, without adequate consent, anonymization, security, or retention limits (which could eventually be leaked or misused).",
             "mappings": [
-              "OWASP: LLM02:2025: Sensitive Information Disclosure",
+              "OWASP: LLM02:2026: Sensitive Information Disclosure",
               "OWASP: ASI07: Insecure Inter-Agent Communication",
               "MITRE ATLAS: AML.T0037: Data From Local System",
               "MITRE ATLAS: AML.T0069: LLM System Information Discovery",
@@ -2062,7 +2317,7 @@
         "description": "Sensor Spoofing",
         "definition": "Actors use of highly-realistic but deceptive signals or manipulating sensor data to deliberately mislead an AI system and its decision-making processes through falsified sensory inputs.",
         "mappings": [
-          "OWASP: LLM01:2025: Prompt Injection",
+          "OWASP: LLM01:2026: Prompt Injection",
           "OWASP: ASI05: Unexpected Code Execution (RCE)",
           "MITRE ATLAS: AML.T0043: Craft Adversarial Data",
           "MITRE ATLAS: AML.T0015: Evade AI Model",
@@ -2074,7 +2329,7 @@
             "description": "Sensor Spoofing: Action Signals (audio, visual)",
             "definition": "Data points or signals that prompt a model to undertake specific actions beyond reasoning. These signals can be malicious or benign, allowing agents to execute operations in physical or digital environments.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
+              "OWASP: LLM01:2026: Prompt Injection",
               "OWASP: ASI05: Unexpected Code Execution (RCE)",
               "MITRE ATLAS: AML.T0043: Craft Adversarial Data",
               "MITRE ATLAS: AML.T0015: Evade AI Model",
@@ -2097,8 +2352,8 @@
         "description": "Fraudulent Use",
         "definition": "Actors leverage models/agents specifically for generating, executing, scaling, or automating fraud, scams, deception, and other illegal activities.",
         "mappings": [
-          "OWASP: LLM01:2025: Prompt Injection",
-          "OWASP: LLM04:2025: Data and Model Poisoning",
+          "OWASP: LLM01:2026: Prompt Injection",
+          "OWASP: LLM05:2026: Data and Model Poisoning",
           "OWASP: ASI02: Tool Misuse & Exploitation",
           "MITRE ATLAS: AML.T0011: User Execution (Lure)",
           "MITRE ATLAS: AML.T0054: LLM Jailbreak",
@@ -2111,8 +2366,8 @@
             "description": "Spam / Scam / Social Engineering Generation",
             "definition": "Automating generation of large volumes of unsolicited or fraudulent content (phishing, fake offers, spam emails/messages, impersonation or manipulation of trust) to deceive people or solicit funds, credentials, personal and confidential information, or other valuables.",
             "mappings": [
-              "OWASP: LLM01:2025: Prompt Injection",
-              "OWASP: LLM04:2025: Data and Model Poisoning",
+              "OWASP: LLM01:2026: Prompt Injection",
+              "OWASP: LLM05:2026: Data and Model Poisoning",
               "OWASP: ASI02: Tool Misuse & Exploitation",
               "MITRE ATLAS: AML.T0011: User Execution (Lure)",
               "MITRE ATLAS: AML.T0054: LLM Jailbreak",
@@ -2127,7 +2382,7 @@
         "description": "Malicious Workflows",
         "definition": "Actors leverage AI models to generate, execute, and scale harmful activities like cyberattacks, data theft, and disinformation campaigns. among other deceptive purposes.",
         "mappings": [
-          "OWASP: LLM06:2025: Excessive Agency",
+          "OWASP: LLM03:2026: Excessive Agency",
           "OWASP: ASI02: Tool Misuse & Exploitation",
           "OWASP: ASI08: Cascading Failures",
           "MITRE ATLAS: AML.T0040: AI Model Inference API Access",
@@ -2140,7 +2395,7 @@
             "description": "Abuse of APIs for Mass Automation",
             "definition": "Leveraging APIs in bulk for malicious purpose at scale, including flooding attacks, automation of worst-case prompts, or executing workflows that negatively impact many users or systems.",
             "mappings": [
-              "OWASP: LLM06:2025: Excessive Agency",
+              "OWASP: LLM03:2026: Excessive Agency",
               "OWASP: ASI02: Tool Misuse & Exploitation",
               "OWASP: ASI08: Cascading Failures",
               "MITRE ATLAS: AML.T0040: AI Model Inference API Access",
@@ -2153,7 +2408,7 @@
             "description": "Dedicated Malicious Server or Infrastructure",
             "definition": "Establishing purpose-built servers, infrastructure, or services specifically designed to support, scale, or automate AI-powered attacks, malicious workflows, or harmful operations.",
             "mappings": [
-              "OWASP: LLM03:2025: Supply Chain",
+              "OWASP: LLM04:2026: Supply Chain",
               "OWASP: ASI02: Tool Misuse & Exploitation",
               "MITRE ATLAS: AML.T0002: Acquire Infrastructure / Develop Capabilities",
               "MITRE ATLAS: AML.T0005: Create Proxy AI Model",
@@ -2166,7 +2421,7 @@
   },
   "OB-019": {
     "code": "OB-019",
-    "description": "Multi-Modal / Cross-Modal Risks",
+    "description": "Multimodal / Cross-Modal Risks",
     "objective_group": "Downstream / Impact Risks",
     "definition": "Actors exploit contradictions, mismatches, or inconsistencies between different data modalities (i.e., text, image, audio, video) to confuse AI systems, bypass security controls, evade detection, or manipulate decision-making by presenting conflicting information across modalities that the system cannot properly reconcile.",
     "mappings": [],
@@ -2176,7 +2431,7 @@
         "description": "Cross-Modal Inconsistency Exploits",
         "definition": "Actors exploit contradictions, mismatches, or inconsistencies between different data modalities (i.e., text, image, audio, video) to confuse AI systems, bypass security controls, evade detection, or manipulate decision-making by presenting conflicting information across modalities that the system cannot properly reconcile.",
         "mappings": [
-          "OWASP: LLM08:2025: Vector & Embedding Weaknesses",
+          "OWASP: LLM09:2026: Vector and Embedding Weaknesses",
           "MITRE ATLAS: AML.T0043: Craft Adversarial Data",
           "NIST AML: NISTAML.024: Targeted Poisoning",
           "MITRE ATLAS: AML.T0015: Evade AI Model"
@@ -2187,7 +2442,7 @@
             "description": "Contradictory Inputs Attack",
             "definition": "Exploiting a model's inability to consistently handle conflicting instructions by embedding deceptive or contradictory commands within user input across or within modalities, causing behavior drift toward malicious objectives.",
             "mappings": [
-              "OWASP: LLM08:2025: Vector & Embedding Weaknesses",
+              "OWASP: LLM09:2026: Vector and Embedding Weaknesses",
               "MITRE ATLAS: AML.T0043: Craft Adversarial Data",
               "NIST AML: NISTAML.024: Targeted Poisoning"
             ]
@@ -2197,7 +2452,7 @@
             "description": "Modality Skewing",
             "definition": "Manipulating one modality (e.g., corrupting audio transcript, poisoning image metadata) to bias arbitration mechanisms toward favoring the manipulated channel over others.",
             "mappings": [
-              "OWASP: LLM08:2025: Vector & Embedding Weaknesses",
+              "OWASP: LLM09:2026: Vector and Embedding Weaknesses",
               "MITRE ATLAS: AML.T0015: Evade AI Model",
               "NIST AML: N/A"
             ]
@@ -2216,7 +2471,7 @@
           "MITRE ATLAS: AML.T0058: Publish Poisoned Models",
           "MITRE ATLAS: AML.T0018: Manipulate AI Model",
           "NIST AML: NISTAML.013: Data Poisoning",
-          "OWASP: LLM04:2025: Data and Model Poisoning"
+          "OWASP: LLM05:2026: Data and Model Poisoning"
         ],
         "ai_subtech": [
           {
@@ -2231,7 +2486,7 @@
               "MITRE ATLAS: AML.T0058: Publish Poisoned Models",
               "MITRE ATLAS: AML.T0018: Manipulate AI Model",
               "NIST AML: NISTAML.013: Data Poisoning",
-              "OWASP: LLM04:2025: Data and Model Poisoning"
+              "OWASP: LLM05:2026: Data and Model Poisoning"
             ]
           },
           {
@@ -2239,7 +2494,7 @@
             "description": "Chained Payload Execution",
             "definition": "Crafting partial or complementary payload components across any modality, source, or agent output that, when fused by the system, contribute to producing an attack. Both parts of the payload are delivered at runtime, and when the system combines these components through its fusion or arbitration mechanisms, they form an attack or injection payload.",
             "mappings": [
-              "OWASP: LLM08:2025: Vector & Embedding Weaknesses",
+              "OWASP: LLM09:2026: Vector and Embedding Weaknesses",
               "OWASP: ASI01: Agent Goal Hijack",
               "OWASP: ASI05: Unexpected Code Execution (RCE)",
               "MITRE ATLAS: AML.T0015: Evade AI Model",

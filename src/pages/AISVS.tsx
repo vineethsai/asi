@@ -1,17 +1,11 @@
-/* eslint-disable react-refresh/only-export-components */
-import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { Archive, Download, FileJson, RotateCcw, Search, Target, X } from "lucide-react";
+import PageLayout from "@/components/layout/PageLayout";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Accordion } from "@/components/ui/accordion";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -20,444 +14,559 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { aisvsData } from "../components/components/securityData";
-import SidebarNav from "../components/layout/SidebarNav";
-import { Icon } from "@/components/ui/icon";
-import { Helmet } from "react-helmet";
+import { toast } from "@/components/ui/sonner";
+import { StackedBars } from "@/components/charts/StackedBars";
+import { EmptyState } from "@/components/content/EmptyState";
+import { SeverityBadge } from "@/components/content/SeverityBadge";
+import { SourceNote } from "@/components/content/SourceNote";
+import { ChapterPanel, type VisibleSection } from "@/components/aisvs/ChapterPanel";
+import {
+  AISVS_CHAPTERS,
+  AISVS_LEVELS,
+  REQUIREMENT_IDS_BY_LEVEL,
+  citationOf,
+  normalizeQuery,
+  parseAisvsAnchor,
+  requirementMatches,
+  type AisvsLevel,
+} from "@/components/aisvs/aisvsIndex";
+import {
+  buildAisvsCsv,
+  buildAisvsJson,
+  copyToClipboard,
+  downloadText,
+} from "@/components/aisvs/exportProgress";
+import { useLevelMilestone } from "@/components/aisvs/useLevelMilestone";
+import { focusEntry, highlightElement } from "@/components/taxonomy/deepLink";
+import { AISVS_VERSION, aisvsStats, type AISVSRequirement } from "@/data/aisvs";
+import { SOURCES } from "@/data/sources";
+import { useAisvsProgress } from "@/hooks/useProgress";
 import { usePageTracking } from "@/hooks/useAnalytics";
-import { Search, CheckCircle, ExternalLink, FileText } from "lucide-react";
+import { aisvsLevelBand } from "@/lib/severity";
 
-export const AISVS = () => {
-  // Track AISVS page views
+type StatusFilter = "all" | "open" | "done";
+
+const uniq = (xs: string[]) => [...new Set(xs)];
+
+/** Chapters and sections that contain a search hit (for auto-expanding on search). */
+function searchHits(q: string): { chapters: string[]; sections: string[] } {
+  const chapters: string[] = [];
+  const sections: string[] = [];
+  if (!q) return { chapters, sections };
+  for (const ch of AISVS_CHAPTERS) {
+    const chapterHit =
+      ch.name.toLowerCase().includes(q) || ch.description.toLowerCase().includes(q);
+    let any = false;
+    for (const s of ch.subCategories) {
+      const hit =
+        chapterHit ||
+        s.name.toLowerCase().includes(q) ||
+        s.requirements.some((r) => requirementMatches(r, q));
+      if (hit) {
+        sections.push(s.code);
+        any = true;
+      }
+    }
+    if (any) chapters.push(ch.code);
+  }
+  return { chapters, sections };
+}
+
+/** Rewrite the hash without a router navigation (keeps the entry shareable, no re-scroll). */
+function writeHash(code: string | null) {
+  if (typeof window === "undefined") return;
+  const { pathname, search } = window.location;
+  window.history.replaceState(
+    window.history.state,
+    "",
+    `${pathname}${search}${code ? `#${code}` : ""}`,
+  );
+}
+
+function AisvsPage() {
   usePageTracking("AISVS - AI Security Verification Standard", {
     page_type: "aisvs",
     content_category: "security_standards",
   });
 
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [selectedLevel, setSelectedLevel] = useState<string>("all");
+  const total = aisvsStats.requirements;
+  const {
+    checked,
+    count,
+    pct,
+    toggle,
+    setMany,
+    reset,
+    showArchivedNotice,
+    archivedCount,
+    dismissArchivedNotice,
+  } = useAisvsProgress(total);
 
-  const [checkedRequirements, setCheckedRequirements] = useState<Set<string>>(() => {
-    try {
-      const saved = localStorage.getItem("aisvs-checked-requirements");
-      return saved ? new Set(JSON.parse(saved)) : new Set();
-    } catch {
-      return new Set();
+  const [rawQuery, setRawQuery] = useState("");
+  const [chapterFilter, setChapterFilter] = useState<string>("all");
+  const [levelFilter, setLevelFilter] = useState<AisvsLevel | null>(null);
+  const [status, setStatus] = useState<StatusFilter>("all");
+  /** Rows checked while "not verified" is active stay visible until the filters change. */
+  const [sticky, setSticky] = useState<Set<string>>(() => new Set());
+  const [openChapters, setOpenChapters] = useState<string[]>([]);
+  const [openSections, setOpenSections] = useState<string[]>([]);
+
+  const q = normalizeQuery(rawQuery);
+  const filtersActive = !!q || chapterFilter !== "all" || levelFilter !== null || status !== "all";
+
+  // Filters changed → drop sticky rows.
+  useEffect(() => setSticky(new Set()), [q, chapterFilter, levelFilter, status]);
+
+  const handleToggle = useCallback(
+    (id: string) => {
+      if (status === "open" && !checked.has(id)) {
+        setSticky((prev) => new Set(prev).add(id));
+      }
+      toggle(id);
+    },
+    [status, checked, toggle],
+  );
+
+  const handleSetMany = useCallback(
+    (ids: readonly string[], done: boolean) => {
+      if (done && status === "open") setSticky((prev) => new Set([...prev, ...ids]));
+      setMany(ids, done);
+    },
+    [status, setMany],
+  );
+
+  // ── Search: auto-expand hits, restore the previous expansion when cleared ──
+  const preSearch = useRef<{ chapters: string[]; sections: string[] } | null>(null);
+  useEffect(() => {
+    if (q) {
+      if (!preSearch.current)
+        preSearch.current = { chapters: openChapters, sections: openSections };
+      const hits = searchHits(q);
+      setOpenChapters(hits.chapters);
+      setOpenSections(hits.sections);
+    } else if (preSearch.current) {
+      setOpenChapters(preSearch.current.chapters);
+      setOpenSections(preSearch.current.sections);
+      preSearch.current = null;
     }
-  });
+    // Only the query drives this; the expansion state is read as a snapshot.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
 
-  // Convert AISVS data to array for easier processing
-  const categories = Object.values(aisvsData);
+  // ── Deep links: #C5 · #C5.1 · #C5.1.2 (also V-prefixed and bare numbers) ──
+  const location = useLocation();
+  useEffect(() => {
+    const anchor = parseAisvsAnchor(location.hash);
+    if (!anchor) return;
+    setRawQuery("");
+    setChapterFilter("all");
+    setLevelFilter(null);
+    setStatus("all");
+    preSearch.current = null;
+    setOpenChapters((prev) => uniq([...prev, anchor.chapter]));
+    if (anchor.section) setOpenSections((prev) => uniq([...prev, anchor.section!]));
+    void focusEntry(anchor.target, { block: anchor.requirement ? "center" : "start" });
+    // location.key changes on every navigation, so a repeated palette jump re-focuses.
+  }, [location.key, location.hash]);
 
-  // Filter categories based on search and filters
-  const filteredCategories = useMemo(() => {
-    return categories.filter((category) => {
-      const matchesSearch =
-        searchTerm === "" ||
-        category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        category.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        category.subCategories.some(
-          (subCat) =>
-            subCat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            subCat.requirements.some(
-              (req) =>
-                req.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                req.description.toLowerCase().includes(searchTerm.toLowerCase()),
-            ),
-        );
+  const onChaptersChange = useCallback(
+    (next: string[]) => {
+      const opened = next.find((c) => !openChapters.includes(c));
+      if (opened) writeHash(opened);
+      setOpenChapters(next);
+    },
+    [openChapters],
+  );
 
-      const matchesCategory = selectedCategory === "all" || category.id === selectedCategory;
+  const onSectionsChange = useCallback(
+    (chapter: string, next: string[]) => {
+      const opened = next.find((s) => !openSections.includes(s));
+      if (opened) writeHash(opened);
+      const others = openSections.filter((s) => !s.startsWith(`${chapter}.`));
+      setOpenSections(uniq([...others, ...next]));
+    },
+    [openSections],
+  );
 
-      // Check if category has any requirements matching the level filter
-      const hasMatchingLevel =
-        selectedLevel === "all" ||
-        category.subCategories.some((subCat) =>
-          subCat.requirements.some((req) => req.level.toString() === selectedLevel),
-        );
-
-      return matchesSearch && matchesCategory && hasMatchingLevel;
+  const onAnchor = useCallback((code: string) => {
+    writeHash(code);
+    const el = document.getElementById(code);
+    if (el) highlightElement(el);
+    const url = `${window.location.origin}${window.location.pathname}#${code}`;
+    void copyToClipboard(url).then((ok) => {
+      if (ok) toast.success(`Link to ${code} copied`);
     });
-  }, [categories, searchTerm, selectedCategory, selectedLevel]);
+  }, []);
 
-  const handleMobileMenuToggle = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
-
-  const handleMobileMenuClose = () => {
-    setIsMobileMenuOpen(false);
-  };
-
-  // Toggle requirement check
-  const toggleRequirement = (requirementId: string) => {
-    const newChecked = new Set(checkedRequirements);
-    if (newChecked.has(requirementId)) {
-      newChecked.delete(requirementId);
-    } else {
-      newChecked.add(requirementId);
-    }
-    setCheckedRequirements(newChecked);
-    localStorage.setItem("aisvs-checked-requirements", JSON.stringify([...newChecked]));
-  };
-
-  // Calculate progress
-  const totalRequirements = categories.reduce((total, category) => {
-    return (
-      total +
-      category.subCategories.reduce((catTotal, subCat) => catTotal + subCat.requirements.length, 0)
+  const onCopy = useCallback((req: AISVSRequirement) => {
+    const citation = citationOf(req);
+    void copyToClipboard(citation).then((ok) =>
+      ok ? toast.success(`Copied ${citation}`) : toast.error("Could not copy to the clipboard"),
     );
-  }, 0);
+  }, []);
 
-  const completedRequirements = checkedRequirements.size;
-  const progressPercentage =
-    totalRequirements > 0 ? (completedRequirements / totalRequirements) * 100 : 0;
-
-  // Get level badge color
-  const getLevelBadgeColor = (level: number) => {
-    switch (level) {
-      case 1:
-        return "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800";
-      case 2:
-        return "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800";
-      case 3:
-        return "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800";
-      default:
-        return "bg-gray-100 dark:bg-gray-800/30 text-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700";
+  // ── Visible tree ──
+  const visible = useMemo(() => {
+    const out: { chapter: (typeof AISVS_CHAPTERS)[number]; sections: VisibleSection[] }[] = [];
+    for (const ch of AISVS_CHAPTERS) {
+      if (chapterFilter !== "all" && ch.code !== chapterFilter) continue;
+      const chapterHit =
+        !!q && (ch.name.toLowerCase().includes(q) || ch.description.toLowerCase().includes(q));
+      const sections: VisibleSection[] = [];
+      for (const section of ch.subCategories) {
+        const sectionHit = chapterHit || (!!q && section.name.toLowerCase().includes(q));
+        const requirements = section.requirements.filter((r) => {
+          if (levelFilter !== null && r.level !== levelFilter) return false;
+          if (status === "done" && !checked.has(r.id)) return false;
+          if (status === "open" && checked.has(r.id) && !sticky.has(r.id)) return false;
+          return !q || sectionHit || requirementMatches(r, q);
+        });
+        if (requirements.length) sections.push({ section, requirements });
+      }
+      if (sections.length) out.push({ chapter: ch, sections });
     }
+    return out;
+  }, [q, chapterFilter, levelFilter, status, checked, sticky]);
+
+  const shownCount = visible.reduce(
+    (n, c) => n + c.sections.reduce((m, s) => m + s.requirements.length, 0),
+    0,
+  );
+
+  // ── Levels & milestone ──
+  const levelDone = useMemo(
+    () =>
+      Object.fromEntries(
+        AISVS_LEVELS.map((l) => [
+          l,
+          REQUIREMENT_IDS_BY_LEVEL[l].reduce((n, id) => n + (checked.has(id) ? 1 : 0), 0),
+        ]),
+      ) as Record<AisvsLevel, number>,
+    [checked],
+  );
+  const l1Total = REQUIREMENT_IDS_BY_LEVEL[1].length;
+  const l1Complete = l1Total > 0 && levelDone[1] === l1Total;
+  const l1Left = l1Total - levelDone[1];
+
+  const shareMilestone = useCallback(() => {
+    const text = `I verified all ${l1Total} OWASP AISVS ${AISVS_VERSION} Level 1 requirements.`;
+    const url = `${window.location.origin}${window.location.pathname}`;
+    if (typeof navigator.share === "function") {
+      void navigator.share({ title: "AISVS Level 1 complete", text, url }).catch(() => {});
+      return;
+    }
+    void copyToClipboard(`${text} ${url}`).then((ok) => ok && toast.success("Copied to share"));
+  }, [l1Total]);
+  useLevelMilestone(1, levelDone[1], l1Total, shareMilestone);
+
+  const applyL1Preset = useCallback(() => {
+    const active = levelFilter === 1 && status === "open" && !q && chapterFilter === "all";
+    if (active) {
+      setLevelFilter(null);
+      setStatus("all");
+      return;
+    }
+    setRawQuery("");
+    setChapterFilter("all");
+    setLevelFilter(1);
+    setStatus("open");
+    // Expand everything that still has open L1 requirements.
+    const chapters: string[] = [];
+    const sections: string[] = [];
+    for (const ch of AISVS_CHAPTERS) {
+      for (const s of ch.subCategories) {
+        if (s.requirements.some((r) => r.level === 1 && !checked.has(r.id))) {
+          sections.push(s.code);
+          if (!chapters.includes(ch.code)) chapters.push(ch.code);
+        }
+      }
+    }
+    setOpenChapters(chapters);
+    setOpenSections(sections);
+  }, [levelFilter, status, q, chapterFilter, checked]);
+  const presetActive = levelFilter === 1 && status === "open" && !q && chapterFilter === "all";
+
+  const clearFilters = useCallback(() => {
+    setRawQuery("");
+    setChapterFilter("all");
+    setLevelFilter(null);
+    setStatus("all");
+  }, []);
+
+  const exportCsv = () =>
+    downloadText(
+      `aisvs-${AISVS_VERSION}-progress.csv`,
+      "text/csv;charset=utf-8",
+      buildAisvsCsv(checked),
+    );
+  const exportJson = () =>
+    downloadText(
+      `aisvs-${AISVS_VERSION}-progress.json`,
+      "application/json",
+      buildAisvsJson(checked),
+    );
+  const resetProgress = () => {
+    if (window.confirm(`Clear all ${count} AISVS checkmarks stored in this browser?`)) reset();
   };
+
+  const levelBars = AISVS_LEVELS.map((l) => ({
+    id: `L${l}`,
+    label: `Level ${l}`,
+    done: levelDone[l],
+    total: REQUIREMENT_IDS_BY_LEVEL[l].length,
+    band: aisvsLevelBand(l),
+    hint:
+      l === 1
+        ? "Baseline for every AI system"
+        : l === 2
+          ? "Standard assurance (adds to Level 1)"
+          : "High assurance (adds to Levels 1 and 2)",
+  }));
 
   return (
-    <>
-      <Helmet>
-        <title>OWASP AISVS - AI Agents Security Verification Standard | AI Security Controls</title>
-        <meta
-          name="description"
-          content="Interactive OWASP AI Security Verification Standard (AISVS) for AI agents with comprehensive security controls, verification requirements, and secure development practices for agentic systems and LLM applications."
-        />
-        <meta
-          name="keywords"
-          content="OWASP AISVS, AI agents security verification, AI security controls, AI agent security standards, secure AI development, AI security requirements, agentic systems security, LLM security verification, AI governance controls, machine learning security, AI risk management"
-        />
-        <link rel="canonical" href="https://agenticsecurity.info/aisvs" />
-
-        {/* Open Graph */}
-        <meta property="og:title" content="OWASP AISVS - AI Security Verification Standard" />
-        <meta
-          property="og:description"
-          content="Interactive OWASP AI Security Verification Standard with comprehensive controls mapped to security threats."
-        />
-        <meta property="og:url" content="https://agenticsecurity.info/#/aisvs" />
-        <meta property="og:type" content="website" />
-
-        {/* Twitter Card */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="OWASP AISVS - AI Security Verification Standard" />
-        <meta
-          name="twitter:description"
-          content="Interactive OWASP AI Security Verification Standard with comprehensive controls mapped to security threats."
-        />
-
-        {/* Structured Data */}
-        <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "TechArticle",
-            headline: "OWASP AISVS - AI Security Verification Standard",
-            description:
-              "Interactive OWASP AI Security Verification Standard with comprehensive controls mapped to security threats.",
-            url: "https://agenticsecurity.info/#/aisvs",
-            publisher: {
-              "@type": "Organization",
-              name: "OWASP",
-              url: "https://owasp.org",
-            },
-            about: {
-              "@type": "Thing",
-              name: "AI Security Verification",
-            },
-          })}
-        </script>
-      </Helmet>
-
-      <div className="min-h-screen bg-background">
-        <Header onMobileMenuToggle={handleMobileMenuToggle} isMobileMenuOpen={isMobileMenuOpen} />
-
-        {/* Mobile Navigation Sidebar */}
-        <SidebarNav type="controls" isOpen={isMobileMenuOpen} onClose={handleMobileMenuClose} />
-
-        <main id="main-content" className="container mx-auto px-4 py-8">
-          {/* Header Section */}
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold tracking-tight">OWASP AISVS</h1>
-            <p className="mt-1 text-muted-foreground">
-              AI Security Verification Standard — comprehensive framework for verifying the security
-              of AI systems.
-            </p>
-
-            {/* Progress Card */}
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5" />
-                  Implementation Progress
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4">
-                  <Progress value={progressPercentage} className="flex-1" />
-                  <div className="text-sm font-medium">
-                    {completedRequirements}/{totalRequirements} ({Math.round(progressPercentage)}%)
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Track your progress implementing AISVS requirements across all categories and
-                  subcategories.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Controls and Filters */}
-          <div className="flex flex-wrap gap-3 mb-6">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+    <PageLayout
+      title="OWASP AISVS"
+      description={`Interactive OWASP AI Security Verification Standard (AISVS) ${AISVS_VERSION}: ${aisvsStats.requirements} verification requirements in ${aisvsStats.chapters} chapters by level, with progress tracking and export.`}
+      canonicalPath="/aisvs"
+      keywords="OWASP AISVS, AI security verification standard, AI agent security requirements, AISVS 1.01, AI security controls, LLM security verification, agentic systems security"
+      jsonLd={{
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        headline: `OWASP AISVS ${AISVS_VERSION} — AI Security Verification Standard`,
+        description:
+          "Interactive OWASP AI Security Verification Standard with verification requirements by level and the controls that cite them.",
+        url: "https://agenticsecurity.info/aisvs",
+        isBasedOn: SOURCES.aisvs.url,
+        publisher: { "@type": "Organization", name: "OWASP", url: "https://owasp.org" },
+        about: { "@type": "Thing", name: "AI Security Verification" },
+      }}
+    >
+      <PageHeader
+        eyebrow="Verify"
+        title="OWASP AISVS"
+        description="The AI Security Verification Standard: testable requirements at three assurance levels. Check off what you have verified; progress stays in this browser."
+        source={SOURCES.aisvs}
+        stats={[
+          { label: "chapters", value: aisvsStats.chapters },
+          { label: "requirements", value: aisvsStats.requirements },
+          {
+            label: "Level 1",
+            value: aisvsStats.byLevel[0],
+            hint: "Baseline requirements every AI system should meet",
+          },
+          { label: "Level 2", value: aisvsStats.byLevel[1], hint: "Standard assurance" },
+          { label: "Level 3", value: aisvsStats.byLevel[2], hint: "High assurance" },
+          {
+            label: "verified",
+            value: `${Math.round(pct)}%`,
+            hint: `${count} of ${total} requirements checked in this browser`,
+          },
+        ]}
+        actions={
+          <>
+            <Button type="button" variant="outline" size="sm" onClick={exportCsv}>
+              <Download className="mr-1.5 h-4 w-4" aria-hidden />
+              CSV
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={exportJson}>
+              <FileJson className="mr-1.5 h-4 w-4" aria-hidden />
+              JSON
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={resetProgress}
+              disabled={count === 0}
+            >
+              <RotateCcw className="mr-1.5 h-4 w-4" aria-hidden />
+              Reset
+            </Button>
+          </>
+        }
+        filters={
+          <>
+            <div className="relative min-w-[14rem] flex-1">
+              <label htmlFor="aisvs-search" className="sr-only">
+                Search requirement text, chapters and sections
+              </label>
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
               <Input
-                placeholder="Search categories, subcategories, requirements, or descriptions..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                id="aisvs-search"
+                type="search"
+                placeholder="Search requirements (text or id, e.g. C9.4)…"
+                value={rawQuery}
+                onChange={(e) => setRawQuery(e.target.value)}
+                className="pl-9"
               />
             </div>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="All Categories" />
+            <Select value={chapterFilter} onValueChange={setChapterFilter}>
+              <SelectTrigger className="w-full sm:w-[13rem]" aria-label="Filter by chapter">
+                <SelectValue placeholder="All chapters" />
               </SelectTrigger>
-              <SelectContent className="z-[9999] bg-popover border shadow-lg">
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.code} - {category.name.split(" &")[0]}
+              <SelectContent>
+                <SelectItem value="all">All chapters</SelectItem>
+                {AISVS_CHAPTERS.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>
+                    {c.code} · {c.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Select value={selectedLevel} onValueChange={setSelectedLevel}>
-              <SelectTrigger className="w-full sm:w-[150px]">
-                <SelectValue placeholder="All Levels" />
+            <Select
+              value={levelFilter === null ? "all" : String(levelFilter)}
+              onValueChange={(v) => setLevelFilter(v === "all" ? null : (Number(v) as AisvsLevel))}
+            >
+              <SelectTrigger className="w-full sm:w-[9.5rem]" aria-label="Filter by level">
+                <SelectValue placeholder="All levels" />
               </SelectTrigger>
-              <SelectContent className="z-[9999] bg-popover border shadow-lg">
-                <SelectItem value="all">All Levels</SelectItem>
-                <SelectItem value="1">Level 1</SelectItem>
-                <SelectItem value="2">Level 2</SelectItem>
-                <SelectItem value="3">Level 3</SelectItem>
+              <SelectContent>
+                <SelectItem value="all">All levels</SelectItem>
+                {AISVS_LEVELS.map((l) => (
+                  <SelectItem key={l} value={String(l)}>
+                    Level {l} only
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-          </div>
+            <Select value={status} onValueChange={(v) => setStatus(v as StatusFilter)}>
+              <SelectTrigger className="w-full sm:w-[10.5rem]" aria-label="Filter by status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Any status</SelectItem>
+                <SelectItem value="open">Not verified</SelectItem>
+                <SelectItem value="done">Verified</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              type="button"
+              variant={presetActive ? "default" : "outline"}
+              size="sm"
+              aria-pressed={presetActive}
+              onClick={applyL1Preset}
+              className="h-10"
+            >
+              <Target className="mr-1.5 h-4 w-4" aria-hidden />
+              Verify to L1
+              <span className="ml-1.5 tabular-nums opacity-80">
+                · {l1Left === 0 ? "done" : `${l1Left} left`}
+              </span>
+            </Button>
+            {filtersActive && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="h-10"
+              >
+                <X className="mr-1 h-4 w-4" aria-hidden />
+                Clear
+              </Button>
+            )}
+          </>
+        }
+      >
+        {l1Complete && (
+          <SeverityBadge band="low" size="md" label="Level 1 complete" className="w-fit" />
+        )}
+      </PageHeader>
 
-          {/* AISVS Categories */}
-          <div className="space-y-6">
-            {filteredCategories.map((category) => {
-              const categoryProgress = category.subCategories.reduce((total, subCat) => {
-                return (
-                  total +
-                  subCat.requirements.filter((req) => checkedRequirements.has(req.id)).length
-                );
-              }, 0);
-              const categoryTotal = category.subCategories.reduce(
-                (total, subCat) => total + subCat.requirements.length,
-                0,
-              );
-              const categoryPercentage =
-                categoryTotal > 0 ? (categoryProgress / categoryTotal) * 100 : 0;
+      {showArchivedNotice && (
+        <Alert className="mb-6">
+          <Archive className="h-4 w-4" aria-hidden />
+          <AlertTitle>Your earlier AISVS progress was archived</AlertTitle>
+          <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              AISVS was updated to {AISVS_VERSION}; {archivedCount} previous checkmark
+              {archivedCount === 1 ? " was" : "s were"} archived because the old requirement ids no
+              longer exist. Your archive is kept in the progress export.
+            </span>
+            <Button type="button" size="sm" variant="outline" onClick={dismissArchivedNotice}>
+              Dismiss
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
-              return (
-                <Card key={category.id} className="overflow-hidden">
-                  <Accordion type="single" collapsible className="w-full">
-                    <AccordionItem value={category.id}>
-                      <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                        <div className="flex items-start justify-between w-full">
-                          <div className="flex items-start gap-3">
-                            <Icon name={category.icon} color={category.color} size={24} />
-                            <div className="flex-1 text-left">
-                              <CardTitle className="text-xl mb-2">
-                                {category.code}: {category.name}
-                              </CardTitle>
-                              <p className="text-sm opacity-90">{category.description}</p>
+      <section aria-labelledby="aisvs-progress-heading" className="mb-6">
+        <h2 id="aisvs-progress-heading" className="sr-only">
+          Progress
+        </h2>
+        <StackedBars
+          title="Progress by level"
+          description="AISVS levels are cumulative: verifying to Level 2 means all Level 1 and Level 2 requirements. Select a level to filter the list."
+          ariaLabel="AISVS requirements verified per level"
+          data={levelBars}
+          selectedId={levelFilter ? `L${levelFilter}` : null}
+          onSelect={(id) => setLevelFilter(id ? (Number(id.slice(1)) as AisvsLevel) : null)}
+          doneLabel="verified"
+        />
+      </section>
 
-                              {/* Progress for this category */}
-                              <div className="mt-3 flex items-center gap-2">
-                                <Progress value={categoryPercentage} className="flex-1 h-2" />
-                                <span className="text-xs font-medium">
-                                  {categoryProgress}/{categoryTotal}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="px-6 pb-4">
-                        <Accordion type="multiple" className="w-full">
-                          {category.subCategories.map((subCategory) => (
-                            <AccordionItem key={subCategory.id} value={subCategory.id}>
-                              <AccordionTrigger className="hover:no-underline">
-                                <div className="flex items-center gap-3 text-left">
-                                  <Badge variant="outline" className="text-xs">
-                                    {subCategory.code}
-                                  </Badge>
-                                  <div>
-                                    <div className="font-medium">{subCategory.name}</div>
-                                    <div className="text-sm text-muted-foreground mt-1">
-                                      {subCategory.requirements.length} requirement
-                                      {subCategory.requirements.length !== 1 ? "s" : ""}
-                                    </div>
-                                  </div>
-                                </div>
-                              </AccordionTrigger>
-                              <AccordionContent className="px-4 pb-4">
-                                <div className="space-y-3">
-                                  {subCategory.requirements
-                                    .filter(
-                                      (req) =>
-                                        selectedLevel === "all" ||
-                                        req.level.toString() === selectedLevel,
-                                    )
-                                    .map((requirement) => {
-                                      const isChecked = checkedRequirements.has(requirement.id);
+      <section aria-labelledby="aisvs-chapters-heading">
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="aisvs-chapters-heading" className="text-lg font-semibold">
+            Chapters
+          </h2>
+          <p className="text-sm text-muted-foreground" aria-live="polite">
+            Showing {shownCount} of {total} requirements
+          </p>
+        </div>
 
-                                      return (
-                                        <div
-                                          key={requirement.id}
-                                          className="flex items-start gap-3 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                                        >
-                                          <Checkbox
-                                            id={requirement.id}
-                                            checked={isChecked}
-                                            onCheckedChange={() =>
-                                              toggleRequirement(requirement.id)
-                                            }
-                                            className="mt-0.5"
-                                          />
-                                          <div className="flex-1 space-y-2">
-                                            <div className="flex items-center gap-2">
-                                              <Badge
-                                                className={`text-xs ${getLevelBadgeColor(requirement.level)}`}
-                                              >
-                                                Level {requirement.level}
-                                              </Badge>
-                                              {requirement.role && (
-                                                <Badge variant="outline" className="text-xs">
-                                                  {requirement.role}
-                                                </Badge>
-                                              )}
-                                            </div>
-                                            <label
-                                              htmlFor={requirement.id}
-                                              className={`block cursor-pointer ${
-                                                isChecked
-                                                  ? "line-through text-muted-foreground"
-                                                  : ""
-                                              }`}
-                                            >
-                                              <div className="font-medium text-sm mb-1">
-                                                {requirement.code}: {requirement.title}
-                                              </div>
-                                              <div className="text-sm text-muted-foreground">
-                                                {requirement.description}
-                                              </div>
-                                            </label>
-                                            {isChecked && (
-                                              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 float-right" />
-                                            )}
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                </div>
-                              </AccordionContent>
-                            </AccordionItem>
-                          ))}
-                        </Accordion>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                </Card>
-              );
-            })}
-          </div>
+        {visible.length === 0 ? (
+          <EmptyState
+            title="No requirements match"
+            description={
+              status === "open" && levelFilter === 1
+                ? "Every Level 1 requirement is verified."
+                : "Try a different search or clear the filters."
+            }
+            action={{ label: "Clear filters", onClick: clearFilters }}
+          />
+        ) : (
+          <Accordion
+            type="multiple"
+            value={openChapters}
+            onValueChange={onChaptersChange}
+            className="space-y-3"
+          >
+            {visible.map(({ chapter, sections }) => (
+              <ChapterPanel
+                key={chapter.code}
+                chapter={chapter}
+                sections={sections}
+                checked={checked}
+                query={q}
+                filtered={filtersActive}
+                openSections={openSections.filter((s) => s.startsWith(`${chapter.code}.`))}
+                onOpenSectionsChange={onSectionsChange}
+                onToggle={handleToggle}
+                onSetMany={handleSetMany}
+                onCopy={onCopy}
+                onAnchor={onAnchor}
+                levelFilter={levelFilter}
+                onLevelSelect={setLevelFilter}
+              />
+            ))}
+          </Accordion>
+        )}
+      </section>
 
-          {/* Summary Section */}
-          <Card className="mt-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                AISVS Implementation Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-6 text-sm text-muted-foreground mb-6">
-                <span>
-                  <strong className="text-foreground">{categories.length}</strong> Security
-                  Categories
-                </span>
-                <span>
-                  <strong className="text-foreground">
-                    {categories.reduce((total, cat) => total + cat.subCategories.length, 0)}
-                  </strong>{" "}
-                  Subcategories
-                </span>
-                <span>
-                  <strong className="text-foreground">{totalRequirements}</strong> Total
-                  Requirements
-                </span>
-                <span>
-                  <strong className="text-foreground">{completedRequirements}</strong> Completed
-                </span>
-              </div>
-
-              <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  The OWASP AISVS provides a structured approach to AI security verification with
-                  comprehensive subcategories and detailed requirements at multiple maturity levels.
-                  Use this interactive tool to track your implementation progress and ensure
-                  comprehensive coverage of AI security requirements. Each category addresses
-                  specific security threats identified in our threat model.
-                </p>
-              </div>
-
-              {/* References Section */}
-              <div className="mt-6">
-                <h3 className="text-lg font-semibold mb-3">Key References</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Link
-                    to="https://github.com/OWASP/AISVS"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 p-3 rounded-lg border hover:bg-accent/50 transition-colors"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    <span className="text-sm">OWASP AISVS GitHub Repository</span>
-                  </Link>
-                  <Link
-                    to="https://www.nist.gov/itl/ai-risk-management-framework"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 p-3 rounded-lg border hover:bg-accent/50 transition-colors"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    <span className="text-sm">NIST AI Risk Management Framework</span>
-                  </Link>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </main>
-
-        <Footer />
-      </div>
-    </>
+      <footer className="mt-8 space-y-1 border-t pt-4">
+        <SourceNote source={SOURCES.aisvs} />
+        <p className="text-xs text-muted-foreground">
+          Requirement text is quoted verbatim from AISVS {AISVS_VERSION}. Control links show which
+          of this site&apos;s controls cite a requirement; that mapping is editorial. Cite a
+          requirement as {citationOf(AISVS_CHAPTERS[0].subCategories[0].requirements[0])}.
+        </p>
+      </footer>
+    </PageLayout>
   );
-};
+}
 
-export default AISVS;
+export default AisvsPage;
