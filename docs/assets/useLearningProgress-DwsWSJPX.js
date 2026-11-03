@@ -1,1 +1,0 @@
-import{r as o}from"./react-wmot85l4.js";import{u as e}from"./progress-D_pcX5mZ.js";import{s as t}from"./learningPath-Dw1YSA0E.js";function u(){const r=e(s=>s.path);return o.useMemo(()=>t(r),[r])}export{u};
