@@ -11,6 +11,7 @@ import { NIST_AISVS_REMAP } from "@/data/nistAisvsRemap";
 import { aisvsStats } from "@/data/aisvs";
 import { KC_LIST } from "@/data/kc";
 import { NAV_ITEMS } from "@/config/navigation";
+import { CROSSWALK_EXTERNAL_FRAMEWORKS } from "@/components/taxonomy/overview/crosswalkGroups";
 import { riskBand, type SeverityBand } from "@/lib/severity";
 
 function countNodes(nodes: readonly ComponentNode[]): number {
@@ -37,7 +38,8 @@ export const SITE_STATS = {
   keyComponents: KC_LIST.length,
   /** Every node in the KC tree (KCs + sub-components). */
   componentNodes: countNodes(frameworkData),
-  taxonomyFrameworks: TAXONOMY_FRAMEWORKS.length,
+  /** External frameworks in the Taxonomy crosswalk (Agentic, LLM Top 10, Cisco, AIVSS, AIUC-1). */
+  taxonomyFrameworks: CROSSWALK_EXTERNAL_FRAMEWORKS.length,
   nistSubcategories: Object.keys(NIST_AISVS_REMAP).length,
 } as const;
 

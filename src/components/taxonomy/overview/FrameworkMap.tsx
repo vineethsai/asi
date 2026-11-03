@@ -16,16 +16,27 @@ export interface FrameworkMapProps {
 }
 
 const W = 700;
-const H = 440;
+const H = 480;
 const CX = W / 2;
 const CY = H / 2 + 6;
 const R = 160;
 const NODE_R = 38;
 
+/**
+ * Ring order (clockwise from the top). With six frameworks three pairs sit opposite each other
+ * and their edges cross the centre; this order keeps only one linked pair opposite
+ * (Agentic ↔ LLM), so no two count labels collide in the middle.
+ */
+const RING: CrosswalkFramework[] = ["asi", "tm", "cisco", "llm", "aivss", "aiuc1"];
+const RING_GROUPS = [
+  ...RING.filter((id) => CROSSWALK_GROUPS.some((g) => g.id === id)),
+  ...CROSSWALK_GROUPS.map((g) => g.id).filter((id) => !RING.includes(id)),
+];
+
 const POS = Object.fromEntries(
-  CROSSWALK_GROUPS.map((g, i) => {
-    const a = -Math.PI / 2 + (i * 2 * Math.PI) / CROSSWALK_GROUPS.length;
-    return [g.id, { x: CX + R * Math.cos(a), y: CY + R * Math.sin(a) }];
+  RING_GROUPS.map((id, i) => {
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / RING_GROUPS.length;
+    return [id, { x: CX + R * Math.cos(a), y: CY + R * Math.sin(a) }];
   }),
 ) as Record<CrosswalkFramework, { x: number; y: number }>;
 
@@ -49,7 +60,10 @@ function curve(a: CrosswalkFramework, b: CrosswalkFramework, i: number) {
   const dx = t.x - s.x;
   const dy = t.y - s.y;
   const len = Math.hypot(dx, dy) || 1;
-  const off = (i % 2 ? -1 : 1) * 18;
+  // Bow every edge towards the ring centre, so its count label stays clear of the framework
+  // labels outside the ring; edges through the centre alternate sides.
+  const toCentre = (-dy / len) * (CX - mx) + (dx / len) * (CY - my);
+  const off = (Math.abs(toCentre) > 1e-6 ? Math.sign(toCentre) : i % 2 ? -1 : 1) * 18;
   const qx = mx + (-dy / len) * off;
   const qy = my + (dx / len) * off;
   return {
@@ -60,7 +74,8 @@ function curve(a: CrosswalkFramework, b: CrosswalkFramework, i: number) {
 }
 
 /**
- * Framework interconnection map (§6.8, §9): five frameworks, edge width = mapping statements.
+ * Framework interconnection map (§6.8, §9): one node per crosswalk framework, edge width =
+ * mapping statements.
  * Hover, keyboard focus or a first tap highlights a framework's connections (listed in the caption);
  * click, Enter or a second tap opens it. Edges draw in on first view (reduced motion: static).
  */
@@ -126,7 +141,7 @@ export function FrameworkMap({ onOpen }: FrameworkMapProps) {
     <ChartFrame
       title="Framework interconnection map"
       description="Edge width and labels show mapping statements between frameworks. Hover, focus or tap a framework to see its links; click, press Enter or tap again to open it."
-      ariaLabel="Network of five security frameworks connected by the number of mappings between them"
+      ariaLabel={`Network of ${CROSSWALK_GROUPS.length} security frameworks connected by the number of mappings between them`}
       interactive
       table={{
         columns: ["Framework A", "Framework B", "Mappings"],

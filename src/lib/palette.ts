@@ -2,7 +2,7 @@
  * Colour palettes for charts and categorical encodings (IMPROVEMENT_PLAN.md §9 colour rules).
  *
  * - KC palette (6)          → `KC_PALETTE.kc1` … `kc6`     (mirrors src/data/kc.ts)
- * - Framework palette        → `FRAMEWORK_PALETTE.asi | tm | cisco | aivss | aiuc1 | nist`
+ * - Framework palette        → `FRAMEWORK_PALETTE.asi | tm | cisco | aivss | aiuc1 | nist | llm`
  * - NIST function palette    → `NIST_FUNCTION_PALETTE.GOVERN | MAP | MEASURE | MANAGE`
  * - MAESTRO layers (7)       → `MAESTRO_PALETTE[1]` … `[7]` (mirrors threat-modeler/types.ts)
  * - Severity ramp            → `SEVERITY_RAMP` (info → critical, ordinal)
@@ -67,7 +67,7 @@ export function kcColor(idOrCode: string | null | undefined, alpha?: number): st
 
 // ─── Frameworks ────────────────────────────────────────────────────────────
 
-export type FrameworkId = "asi" | "tm" | "cisco" | "aivss" | "aiuc1" | "nist";
+export type FrameworkId = "asi" | "tm" | "cisco" | "aivss" | "aiuc1" | "nist" | "llm";
 
 /**
  * The five framework families of the cross-framework views (OWASP Agentic Top 10, OWASP Threats &
@@ -81,8 +81,13 @@ export const FRAMEWORK_PALETTE: Readonly<Record<FrameworkId, PaletteToken>> = {
   aivss: token("aivss", "OWASP AIVSS", "--fw-aivss", "38 92% 50%", "43 96% 56%"),
   aiuc1: token("aiuc1", "AIUC-1", "--fw-aiuc1", "160 84% 39%", "158 64% 52%"),
   nist: token("nist", "NIST AI RMF", "--fw-nist", "221 83% 53%", "213 94% 68%"),
+  // Lime: the widest free hue gap (amber 38° … emerald 160°). A violet would be
+  // indistinguishable from T&M (258°), its neighbour in the Sankey.
+  llm: token("llm", "OWASP LLM Top 10", "--fw-llm", "85 85% 35%", "83 78% 55%"),
 };
 
+/** Fallback cycle for generic charts (and control colours); `llm` is left out so existing colour
+ * assignments do not shift. */
 export const FRAMEWORK_ORDER: readonly FrameworkId[] = [
   "asi",
   "tm",
@@ -110,6 +115,10 @@ export function frameworkToken(id: string): PaletteToken | undefined {
     nist: "nist",
     nistrmf: "nist",
     nistairmf: "nist",
+    llm: "llm",
+    llmtop10: "llm",
+    owaspllm: "llm",
+    owaspllmtop10: "llm",
   };
   const fw = alias[k];
   return fw ? FRAMEWORK_PALETTE[fw] : undefined;

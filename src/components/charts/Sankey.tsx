@@ -13,7 +13,8 @@
  * Props:
  *   nodes: { id; label; group; color?; href? }[]
  *   links: { source; target; value; label? }[]     — duplicates are summed; right-to-left links are flipped
- *   groups: { id; label; color? }[]                 — column order
+ *   groups: { id; label; short?; color? }[]         — column order; `short` is the column header
+ *                                                     when `label` does not fit the column gap
  *   ariaLabel: string; title?; description?; legend?; toolbar?
  *   colorBy?: "source" | "target" (default "source")
  *   pinnedId? / defaultPinnedId? / onPinChange?(id | null); onNodeClick?(node)
@@ -74,6 +75,8 @@ export interface SankeyLinkDatum {
 export interface SankeyGroup {
   id: string;
   label: string;
+  /** Shorter column header used when `label` is wider than the column gap. */
+  short?: string;
   color?: string;
 }
 
@@ -519,7 +522,17 @@ export function Sankey({
       });
     nodeSel.select("title").text((d) => `${d.label}: ${d.value ?? 0} ${valueLabel}`);
 
-    // Column headers
+    // Column headers: full label when it fits the space the column owns, else `short`, else
+    // truncated (11 px bold uppercase + 0.04em tracking ≈ 0.72em per character).
+    const headerBudget = (i: number) =>
+      i === 0 ? leftPad + nodeWidth : i === lastIdx ? rightPad + nodeWidth : colGap - 12;
+    const headerText = (g: SankeyGroup, i: number) => {
+      const per = 11 * 0.72;
+      const budget = headerBudget(i);
+      if (g.label.length * per <= budget) return g.label;
+      if (g.short && g.short.length * per <= budget) return g.short;
+      return truncate(g.short ?? g.label, Math.max(4, Math.floor(budget / per)));
+    };
     const cols = layout
       ? visibleGroups.map((g, i) => {
           const any = (layout.nodes as SNode[]).find((n) => n.col === i);
@@ -541,7 +554,7 @@ export function Sankey({
       .style("letter-spacing", "0.04em")
       .style("text-transform", "uppercase")
       .style("fill", (d) => groupColor.get(d.g.id) ?? "hsl(var(--muted-foreground))")
-      .text((d) => d.g.label);
+      .text((d) => headerText(d.g, d.i));
   }, [
     layout,
     measured,
@@ -556,6 +569,7 @@ export function Sankey({
     leftPad,
     rightPad,
     midBudget,
+    colGap,
     lastIdx,
     nodeWidth,
     valueLabel,

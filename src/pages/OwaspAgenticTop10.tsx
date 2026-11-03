@@ -25,6 +25,7 @@ import {
 import { mitigationsData, threatsData } from "@/components/components/securityData";
 import { coreRiskScores } from "@/components/components/aivssCalcData";
 import { findCiscoNode } from "@/components/components/ciscoTaxonomyData";
+import { findLlmTop10Entry } from "@/components/components/owaspLlmTop10Data";
 import { ATLAS_NAMES, getAtlasForAsi } from "@/data/atlasCrosswalk";
 import { scenariosForAsi } from "@/data/scenarios";
 import { ScenarioLinks } from "@/components/scenarios/ScenarioLinks";
@@ -140,9 +141,19 @@ function EntryCrossRefs({ entry }: { entry: AgenticTop10Entry }) {
       )}
       {entry.relatedLLMTop10.length > 0 && (
         <ChipRow label="LLM Top 10">
-          {entry.relatedLLMTop10.map((ref) => (
-            <Chip key={ref}>{ref}</Chip>
-          ))}
+          {entry.relatedLLMTop10.map((ref) => {
+            const llm = findLlmTop10Entry(ref);
+            return (
+              <Chip
+                key={ref}
+                to={taxonomyHref("llm-top10", llm?.id)}
+                tone={FRAMEWORK_PALETTE.llm}
+                title={llm ? `${ref} → ${llm.code} ${llm.name}` : ref}
+              >
+                {ref}
+              </Chip>
+            );
+          })}
         </ChipRow>
       )}
     </div>

@@ -24,7 +24,7 @@ describe("palette tokens", () => {
   it("exposes CSS-var tokens with fallbacks", () => {
     expect(KC_PALETTE.kc1.css).toBe("hsl(var(--kc-1, 217 91% 60%))");
     expect(Object.keys(KC_PALETTE)).toEqual([...KC_ORDER]);
-    expect(Object.keys(FRAMEWORK_PALETTE)).toHaveLength(6);
+    expect(Object.keys(FRAMEWORK_PALETTE)).toHaveLength(7);
     expect(Object.keys(MAESTRO_PALETTE)).toHaveLength(7);
     expect(SEVERITY_RAMP.map((t) => t.key)).toEqual(["info", "low", "medium", "high", "critical"]);
     expect(withAlpha(KC_PALETTE.kc2, 0.25)).toBe("hsl(var(--kc-2, 142 71% 45%) / 0.25)");
@@ -33,6 +33,7 @@ describe("palette tokens", () => {
     expect(maestroColor(4)).toContain("--maestro-4");
     expect(frameworkToken("owasp-agentic")?.key).toBe("asi");
     expect(frameworkToken("AIUC-1")?.key).toBe("aiuc1");
+    expect(frameworkToken("llm-top10")?.css).toBe("hsl(var(--fw-llm, 85 85% 35%))");
   });
 
   it("sequentialColor quantises and keeps zero muted", () => {

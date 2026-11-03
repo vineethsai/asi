@@ -12,6 +12,11 @@
  *   ASI ↔ AIUC-1  active AIUC-1 requirements of the principle whose ASI mapping is the entry
  *   AIVSS ↔ AIUC-1 active AIUC-1 requirements of the principle that list the risk (primary or
  *                 secondary)
+ *   LLM ↔ ASI     1 per primary pair in the OWASP Top 10 for LLM Applications 2026 Appendix A
+ *   LLM ↔ Cisco   Cisco techniques + sub-techniques under the objective that carry
+ *                 "OWASP: LLMxx:2026" in Cisco's own taxonomy file
+ *   LLM ↔ T&M     1 per pair in llmTop10Data.relatedThreats (this site's editorial mapping;
+ *                 labelled "editorial")
  */
 import { agenticTop10Data } from "@/components/components/owaspAgenticTop10Data";
 import { threatsData } from "@/components/components/securityData";
@@ -22,71 +27,22 @@ import {
   coreRiskScores,
 } from "@/components/components/aivssCalcData";
 import { aiuc1Principles, isAiuc1RequirementActive } from "@/components/components/aiuc1Data";
-import { FRAMEWORK_PALETTE, type FrameworkId } from "@/lib/palette";
+import { llmTop10Data, OWASP_LLM_TOP10_EDITION } from "@/components/components/owaspLlmTop10Data";
+import {
+  CROSSWALK_GROUPS,
+  type CrosswalkFramework,
+  type CrosswalkLink,
+  type CrosswalkNode,
+} from "./crosswalkGroups";
 
-export type CrosswalkFramework = Extract<FrameworkId, "asi" | "tm" | "cisco" | "aivss" | "aiuc1">;
-
-export interface CrosswalkGroup {
-  id: CrosswalkFramework;
-  label: string;
-  short: string;
-  /** Taxonomy tab for the framework ("overview" for the T&M threat catalog → /threats). */
-  tab: string;
-  color: string;
-}
-
-export interface CrosswalkNode {
-  id: string;
-  label: string;
-  group: CrosswalkFramework;
-  href: string;
-  code: string;
-}
-
-export interface CrosswalkLink {
-  source: string;
-  target: string;
-  value: number;
-  label?: string;
-}
-
-export const CROSSWALK_GROUPS: CrosswalkGroup[] = [
-  {
-    id: "asi",
-    label: "OWASP Agentic Top 10",
-    short: "OWASP Agentic",
-    tab: "owasp-agentic",
-    color: FRAMEWORK_PALETTE.asi.css,
-  },
-  {
-    id: "tm",
-    label: "OWASP Threats & Mitigations",
-    short: "OWASP T&M",
-    tab: "overview",
-    color: FRAMEWORK_PALETTE.tm.css,
-  },
-  {
-    id: "cisco",
-    label: "Cisco AI Taxonomy",
-    short: "Cisco",
-    tab: "cisco",
-    color: FRAMEWORK_PALETTE.cisco.css,
-  },
-  {
-    id: "aivss",
-    label: "OWASP AIVSS",
-    short: "AIVSS",
-    tab: "aivss",
-    color: FRAMEWORK_PALETTE.aivss.css,
-  },
-  {
-    id: "aiuc1",
-    label: "AIUC-1",
-    short: "AIUC-1",
-    tab: "aiuc-1",
-    color: FRAMEWORK_PALETTE.aiuc1.css,
-  },
-];
+export {
+  CROSSWALK_EXTERNAL_FRAMEWORKS,
+  CROSSWALK_GROUPS,
+  type CrosswalkFramework,
+  type CrosswalkGroup,
+  type CrosswalkLink,
+  type CrosswalkNode,
+} from "./crosswalkGroups";
 
 const tax = (tab: string, entry?: string) =>
   `/taxonomy?tab=${tab}${entry ? `&entry=${encodeURIComponent(entry)}` : ""}`;
@@ -149,6 +105,16 @@ function build() {
       label: `AIUC-1 ${p.id} · ${p.name}`,
       group: "aiuc1",
       href: tax("aiuc-1"),
+    });
+  }
+
+  for (const e of llmTop10Data) {
+    nodes.push({
+      id: nodeId("llm", e.id),
+      code: e.id,
+      label: `${e.id} ${e.name}`,
+      group: "llm",
+      href: tax("llm-top10", e.id),
     });
   }
 
@@ -247,6 +213,45 @@ function build() {
             target: nodeId("aiuc1", p.id),
             value: 1,
             label: "AIUC-1 requirements citing the AIVSS risk",
+          });
+        }
+      }
+    }
+  }
+
+  // OWASP LLM Top 10 (2026): ASI (official Appendix A), Cisco (Cisco's own mappings, per
+  // technique / sub-technique), T&M (editorial)
+  for (const e of llmTop10Data) {
+    for (const asi of e.relatedAsi)
+      add({
+        source: nodeId("llm", e.id),
+        target: nodeId("asi", asi),
+        value: 1,
+        label: `OWASP LLM Top 10 ${OWASP_LLM_TOP10_EDITION.version} Appendix A`,
+      });
+    for (const tid of e.relatedThreats) {
+      if (!threatsData[tid]) continue;
+      add({
+        source: nodeId("llm", e.id),
+        target: nodeId("tm", tid),
+        value: 1,
+        label: "editorial (this site's mapping)",
+      });
+    }
+  }
+  const llmRe = new RegExp(`^OWASP:\\s*(LLM\\d{2}):${OWASP_LLM_TOP10_EDITION.version}\\b`);
+  for (const og of ciscoTaxonomyData) {
+    for (const tech of og.ai_tech) {
+      for (const node of [tech, ...tech.ai_subtech]) {
+        const llms = new Set(
+          node.mappings.map((m) => m.match(llmRe)?.[1]).filter(Boolean) as string[],
+        );
+        for (const llm of llms) {
+          add({
+            source: nodeId("llm", llm),
+            target: nodeId("cisco", og.code),
+            value: 1,
+            label: "Cisco techniques mapped to the LLM entry",
           });
         }
       }

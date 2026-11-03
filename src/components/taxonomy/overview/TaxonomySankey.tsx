@@ -19,7 +19,18 @@ export interface TaxonomySankeyProps {
   id?: string;
 }
 
-const GROUPS = CROSSWALK_GROUPS.map((g) => ({ id: g.id, label: g.label, color: g.color }));
+/**
+ * Column order: the LLM Top 10 sits left of the Agentic Top 10 it feeds (its official Appendix A
+ * mappings are ASI entries), so its ribbons run left → right like every other framework.
+ */
+const COLUMN_ORDER: CrosswalkFramework[] = ["llm", "asi", "tm", "cisco", "aivss", "aiuc1"];
+const rank = (id: CrosswalkFramework) => {
+  const i = COLUMN_ORDER.indexOf(id);
+  return i < 0 ? COLUMN_ORDER.length : i;
+};
+const GROUPS = [...CROSSWALK_GROUPS]
+  .sort((a, b) => rank(a.id) - rank(b.id))
+  .map((g) => ({ id: g.id, label: g.label, short: g.short, color: g.color }));
 const NODES = CROSSWALK.nodes.map((n) => ({
   id: n.id,
   label: n.label,
@@ -29,9 +40,10 @@ const NODES = CROSSWALK.nodes.map((n) => ({
 const THREATS = CROSSWALK.nodes.filter((n) => n.group === "tm");
 
 /**
- * Cross-framework Sankey (§6.8, §9): OWASP Agentic → OWASP T&M → Cisco → AIVSS → AIUC-1, ribbon
- * width = number of mapping statements, legend toggles hide frameworks, "threat focus" pins one
- * threat, click/Enter pins any node; the chart scrolls horizontally on narrow screens.
+ * Cross-framework Sankey (§6.8, §9): OWASP LLM Top 10 → OWASP Agentic → OWASP T&M → Cisco →
+ * AIVSS → AIUC-1, ribbon width = number of mapping statements, legend toggles hide frameworks,
+ * "threat focus" pins one threat, click/Enter pins any node; the chart keeps ~140 px per column
+ * gap (labels stay legible) and scrolls horizontally on narrow screens.
  */
 export function TaxonomySankey({
   hiddenGroups,
@@ -60,8 +72,8 @@ export function TaxonomySankey({
     <div id={id} className="scroll-mt-24 space-y-3 rounded-lg">
       <Sankey
         title="Cross-framework flow"
-        description="Ribbon width is the number of mapping statements in the data. Hover, focus or tap a node to trace it; click or press Enter to pin. Use the legend to hide a framework."
-        ariaLabel="Sankey diagram of mappings between the OWASP Agentic Top 10, OWASP Agentic Threats and Mitigations, the Cisco AI taxonomy, OWASP AIVSS core risks and AIUC-1 principles"
+        description="Ribbon width is the number of mapping statements in the data; LLM Top 10 ↔ Threats & Mitigations links are this site's editorial mapping. Hover, focus or tap a node to trace it; click or press Enter to pin. Use the legend to hide a framework."
+        ariaLabel="Sankey diagram of mappings between the OWASP Top 10 for LLM Applications, the OWASP Agentic Top 10, OWASP Agentic Threats and Mitigations, the Cisco AI taxonomy, OWASP AIVSS core risks and AIUC-1 principles"
         groups={GROUPS}
         nodes={NODES}
         links={CROSSWALK.links}
@@ -70,7 +82,7 @@ export function TaxonomySankey({
         pinnedId={pinned}
         onPinChange={onPinChange}
         valueLabel="mappings"
-        minWidth={760}
+        minWidth={Math.max(760, 400 + (GROUPS.length - hiddenGroups.length - 1) * 140)}
         toolbar={
           <Select
             value={focusValue}
