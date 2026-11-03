@@ -30,6 +30,10 @@ const About = React.lazy(() => import("./pages/About"));
 const Taxonomy = React.lazy(() => import("./pages/Taxonomy"));
 const ThreatModeler = React.lazy(() => import("./pages/ThreatModeler"));
 const ThreatModelerGuide = React.lazy(() => import("./pages/ThreatModelerGuide"));
+const ThreatOfTheDay = React.lazy(() => import("./components/home/ThreatOfTheDayRedirect"));
+const Learn = React.lazy(() => import("./pages/Learn"));
+const ProgressDashboard = React.lazy(() => import("./pages/ProgressDashboard"));
+const Scenario = React.lazy(() => import("./pages/Scenario"));
 
 const AppRoutes = () => {
   useAnalytics();
@@ -54,6 +58,7 @@ const AppRoutes = () => {
           <Route path="/components" element={<Components />} />
           <Route path="/components/:componentId" element={<ComponentDetail />} />
           <Route path="/threats" element={<Threats />} />
+          <Route path="/threats/today" element={<ThreatOfTheDay />} />
           <Route path="/threats/:threatId" element={<ThreatDetail />} />
           <Route path="/controls" element={<Controls />} />
           <Route path="/controls/:controlId" element={<ControlDetail />} />
@@ -74,6 +79,10 @@ const AppRoutes = () => {
           <Route path="/implementation" element={<Implementation />} />
           <Route path="/about" element={<About />} />
           <Route path="/threat-modeler-guide" element={<ThreatModelerGuide />} />
+          <Route path="/learn" element={<Learn />} />
+          <Route path="/learn/:stepId" element={<Learn />} />
+          <Route path="/progress" element={<ProgressDashboard />} />
+          <Route path="/scenarios/:id" element={<Scenario />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Route>

@@ -4,17 +4,20 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Command } from "cmdk";
 import {
   ArrowRight,
+  BarChart3,
   Boxes,
   ClipboardCheck,
   Clock,
   FileText,
   GitBranch,
+  GraduationCap,
   Library,
   Network,
   Search,
   ShieldAlert,
   ShieldCheck,
   SunMoon,
+  Trophy,
   Waypoints,
   Workflow,
   type LucideIcon,
@@ -72,7 +75,47 @@ const GROUP_ICONS: Record<PaletteGroup, LucideIcon> = {
   nist: GitBranch,
 };
 
+/** Learning actions (P4-06): shortcuts into the learning path, quizzes and progress. */
+const LEARN_ACTIONS: { entry: PaletteEntry; icon: LucideIcon }[] = [
+  {
+    icon: GraduationCap,
+    id: "action:learning-path",
+    title: "Start the learning path",
+    subtitle: "Components → threats → controls → AISVS → NIST → model it",
+    path: "/learn",
+    keywords: "learn course tutorial steps beginner",
+  },
+  {
+    icon: Trophy,
+    id: "action:quiz",
+    title: "Start a quiz",
+    subtitle: "Take the Agentic Security Challenge",
+    path: "/learn#challenge",
+    keywords: "quiz challenge test questions",
+  },
+  {
+    icon: BarChart3,
+    id: "action:progress",
+    title: "Open my progress",
+    subtitle: "AISVS, controls, checklist, path and quiz scores; export or share",
+    path: "/progress",
+    keywords: "progress badge export import score dashboard",
+  },
+].map(({ icon, keywords, ...e }) => ({
+  icon,
+  entry: {
+    ...e,
+    group: "actions" as const,
+    aliases: [],
+    titleLower: e.title.toLowerCase(),
+    haystack: [e.title, e.subtitle, keywords].join(" ").toLowerCase(),
+  },
+}));
+const LEARN_ACTION_ICONS = new Map(LEARN_ACTIONS.map((a) => [a.entry.id, a.icon]));
+
 function iconFor(entry: PaletteEntry | RecentItem): LucideIcon {
+  const learnIcon = LEARN_ACTION_ICONS.get(entry.id);
+  if (learnIcon) return learnIcon;
   if (entry.id === "action:toggle-theme") return SunMoon;
   if (entry.id === "action:threat-modeler") return Workflow;
   return GROUP_ICONS[entry.group] ?? FileText;
@@ -96,7 +139,7 @@ export function CommandPalette({ open, onOpenChange, initialQuery = "" }: Comman
   const [nistEntries, setNistEntries] = useState<PaletteEntry[]>([]);
   const [loadError, setLoadError] = useState(false);
   const [recent, setRecent] = useState<RecentItem[]>(readRecent);
-  const statics = useMemo(() => staticEntries(), []);
+  const statics = useMemo(() => [...staticEntries(), ...LEARN_ACTIONS.map((a) => a.entry)], []);
 
   useEffect(() => {
     if (open) {
