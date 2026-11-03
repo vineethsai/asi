@@ -28,9 +28,10 @@ export const source = {
 };
 
 // Threat IDs to official names (OWASP Agentic AI Threats & Mitigations v1.1).
-// Component -> threat links for T1-T15 follow the Securing Agentic Applications Guide 1.0;
-// T16/T17 were introduced in T&M v1.1 (Dec 2025), after the guide, so their component links
-// (KC2 multi-agent collaboration and KC5 tool integration for T16; KC1 models and KC5 for T17)
+// Component -> threat links must agree with `componentIds` in securityData.ts threatsData (enforced by
+// `npm run check:data`); a threat linked to a KC applies to all of its sub-components. The links for
+// T1-T15 follow the Securing Agentic Applications Guide 1.0; T16/T17 were introduced in T&M v1.1
+// (Dec 2025), after the guide, so their component links (KC2 and KC5 for T16; KC1 and KC5 for T17)
 // are this site's editorial mapping.
 const threatIdToTitleMap: { [key: string]: string } = {
   t1: "Memory Poisoning",
@@ -105,14 +106,14 @@ const parsedComponentsData = [
         title: "Workflows",
         description:
           "Structured, pre-defined sequence of tasks or steps that agents follow to achieve a goal, defining the flow of information and actions. Can be linear, conditional, or iterative.",
-        threatIds: ["t6", "t8", "t9", "t10", "t12", "t13", "t14"],
+        threatIds: ["t6", "t8", "t9", "t10", "t12", "t13", "t14", "t16"],
       },
       {
         id: "kc2.2",
         title: "Hierarchical Planning",
         description:
           "Multiple agents collaborating via an orchestrator (router) that decomposes tasks, routes sub-tasks to specialized agents, and monitors performance.",
-        threatIds: ["t6", "t8", "t9", "t10", "t12", "t13", "t14"],
+        threatIds: ["t6", "t8", "t9", "t10", "t12", "t13", "t14", "t16"],
       },
       {
         id: "kc2.3",
@@ -173,31 +174,37 @@ const parsedComponentsData = [
         id: "kc4.1",
         title: "In-agent session memory",
         description: "Memory limited to a single agent and a single session.",
+        threatIds: ["t1", "t3", "t5", "t6", "t8", "t12"],
       },
       {
         id: "kc4.2",
         title: "Cross-agent session memory",
         description: "Memory shared across multiple agents but limited to a single session.",
+        threatIds: ["t1", "t3", "t5", "t6", "t8", "t12"],
       },
       {
         id: "kc4.3",
         title: "In-agent cross-session memory",
         description: "Memory limited to a single agent but shared across multiple sessions.",
+        threatIds: ["t1", "t3", "t5", "t6", "t8", "t12"],
       },
       {
         id: "kc4.4",
         title: "Cross-agent cross-session memory",
         description: "Memory shared across multiple agents and sessions.",
+        threatIds: ["t1", "t3", "t5", "t6", "t8", "t12"],
       },
       {
         id: "kc4.5",
         title: "In-agent cross-user memory",
         description: "Memory limited to a single agent but shared across multiple users.",
+        threatIds: ["t1", "t3", "t5", "t6", "t8", "t12"],
       },
       {
         id: "kc4.6",
         title: "Cross-agent cross-user memory",
         description: "Memory shared across multiple agents and users.",
+        threatIds: ["t1", "t3", "t5", "t6", "t8", "t12"],
       },
     ],
   },
@@ -206,7 +213,7 @@ const parsedComponentsData = [
     title: "Tool Integration Frameworks",
     description:
       "Allow agents to extend capabilities by using external tools (APIs, functions, data stores) to interact with the real world or other systems. Manages tool selection and use.",
-    threatIds: ["t2", "t3", "t6", "t8", "t11", "t16", "t17"],
+    threatIds: ["t2", "t3", "t6", "t7", "t8", "t11", "t16", "t17"],
     color: "border-pink-500/30 bg-pink-500/5 hover:bg-pink-500/10",
     subComponents: [
       {
@@ -214,21 +221,21 @@ const parsedComponentsData = [
         title: "Flexible Libraries / SDK Features",
         description:
           "Code-level building blocks (e.g., LangChain, CrewAI) or API capabilities (OpenAI Tool Use) offering high flexibility but requiring more coding effort.",
-        threatIds: ["t2", "t3", "t6", "t8", "t11", "t16", "t17"],
+        threatIds: ["t2", "t3", "t6", "t7", "t8", "t11", "t16", "t17"],
       },
       {
         id: "kc5.2",
         title: "Managed Platforms / Services",
         description:
           "Vendor-provided solutions (e.g., Amazon Bedrock Agents, Microsoft Copilot Platform) handling infrastructure and simplifying setup, often with easier ecosystem integration and low-code interfaces.",
-        threatIds: ["t2", "t3", "t6", "t8", "t11", "t16", "t17"],
+        threatIds: ["t2", "t3", "t6", "t7", "t8", "t11", "t16", "t17"],
       },
       {
         id: "kc5.3",
         title: "Managed APIs",
         description:
           "Vendor-hosted services (e.g., OpenAI Assistants API) providing higher-level abstractions, managing state and aspects of tool orchestration via API calls.",
-        threatIds: ["t2", "t3", "t6", "t8", "t11", "t16", "t17"],
+        threatIds: ["t2", "t3", "t6", "t7", "t8", "t11", "t16", "t17"],
       },
     ],
   },

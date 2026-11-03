@@ -128,8 +128,8 @@ export const threatsData: Record<string, Threat> = {
     tags: ["memory", "injection", "RAG", "persistence", "knowledge-base"],
     references: [
       {
-        title: "OWASP AI Security",
-        url: "https://owasp.org/www-project-top-10-for-large-language-models/",
+        title: "OWASP Top 10 for Large Language Model Applications",
+        url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/",
       },
       {
         title: "RAG Poisoning Attack Techniques",
@@ -1562,7 +1562,16 @@ export const mitigationsData: Record<string, Mitigation> = {
     designPhase: true,
     buildPhase: true,
     operationPhase: true,
-    tags: ["memory", "validation", "sanitization", "integrity", "aisvs-c8", "aisvs-c1", "aisvs-c2"],
+    tags: [
+      "memory",
+      "validation",
+      "sanitization",
+      "integrity",
+      "aisvs-c8",
+      "aisvs-c1",
+      "aisvs-c2",
+      "aisvs-c12",
+    ],
     references: [
       {
         title: "OWASP AISVS 1.01 C8: Memory, Embeddings & Vector Database Security",
@@ -1575,10 +1584,6 @@ export const mitigationsData: Record<string, Mitigation> = {
       {
         title: "NIST AI Risk Management Framework",
         url: "https://www.nist.gov/itl/ai-risk-management-framework",
-      },
-      {
-        title: "Vector Database Security Best Practices",
-        url: "https://weaviate.io/blog/security-best-practices",
       },
       { title: "AI Data Quality Framework", url: "https://www.iso.org/standard/35736.html" },
       {
@@ -1611,6 +1616,8 @@ export const mitigationsData: Record<string, Mitigation> = {
       "C1.1.3",
       "C1.1.4",
       "C1.3.1",
+      "C2.1.3",
+      "C2.1.4",
       "C12.5.4",
     ],
   },
@@ -2599,10 +2606,6 @@ export const mitigationsData: Record<string, Mitigation> = {
         title: "CISA Zero Trust Maturity Model",
         url: "https://www.cisa.gov/zero-trust-maturity-model",
       },
-      {
-        title: "Principle of Least Privilege",
-        url: "https://www.nist.gov/blogs/cybersecurity-insights/principle-least-privilege",
-      },
     ],
     riskScore: 9,
     status: "active",
@@ -2778,10 +2781,6 @@ export const mitigationsData: Record<string, Mitigation> = {
     tags: ["human-in-the-loop", "approval", "workflow", "fatigue", "aisvs-c9", "aisvs-c12"],
     references: [
       { title: "Human-AI Interaction Design", url: "https://hai.stanford.edu/research" },
-      {
-        title: "Approval Fatigue Research",
-        url: "https://www.microsoft.com/en-us/research/publication/approval-fatigue/",
-      },
       { title: "Human-Centered AI", url: "https://www.fhi.ox.ac.uk/publications/" },
     ],
     riskScore: 7,
@@ -3148,10 +3147,6 @@ export const mitigationsData: Record<string, Mitigation> = {
     ],
     references: [
       {
-        title: "Defense in Depth",
-        url: "https://www.nist.gov/itl/smallbusinesscyber/guidance-topic/defense-depth",
-      },
-      {
         title: "Zero Trust Architecture",
         url: "https://csrc.nist.gov/publications/detail/sp/800-207/final",
       },
@@ -3367,14 +3362,27 @@ export const mitigationsData: Record<string, Mitigation> = {
       "Comprehensive security practices for model training pipelines including data integrity verification, training environment hardening, model validation against adversarial inputs, and ensuring reproducibility of training processes.",
     threatIds: ["t1", "t5", "t7", "t13", "t2"],
     implementationDetail: {
-      design:
-        "Design secure training pipelines with isolated environments, data integrity checksums, and reproducible training configurations. Define model validation criteria including adversarial robustness benchmarks and bias detection thresholds. Establish secure model registries with versioning and provenance tracking.",
-      build:
-        "Implement training environment hardening with container isolation, restricted network access, and secure GPU allocation. Build automated validation suites that test model outputs against adversarial examples, distribution shifts, and boundary conditions. Integrate integrity verification at each pipeline stage.",
-      operations:
-        "Monitor training jobs for anomalous resource usage or unexpected convergence patterns. Maintain immutable audit logs of all training runs including hyperparameters, data snapshots, and resulting metrics. Implement automated model scanning for backdoors and trojans before deployment promotion.",
-      toolsAndFrameworks:
-        "MLflow, Kubeflow Pipelines, DVC (Data Version Control), Weights & Biases, TensorFlow Model Analysis, ART (Adversarial Robustness Toolbox), ModelScan, NVIDIA NeMo Guardrails",
+      design: `**Secure Training Pipeline Design:**
+- Design secure training pipelines with isolated environments, data integrity checksums, and reproducible training configurations
+- Define model validation criteria including adversarial robustness benchmarks and bias detection thresholds
+- Establish secure model registries with versioning and provenance tracking`,
+      build: `**Training Environment Hardening and Validation:**
+- Implement training environment hardening with container isolation, restricted network access, and secure GPU allocation
+- Build automated validation suites that test model outputs against adversarial examples, distribution shifts, and boundary conditions
+- Integrate integrity verification at each pipeline stage`,
+      operations: `**Training Monitoring and Pre-Deployment Scanning:**
+- Monitor training jobs for anomalous resource usage or unexpected convergence patterns
+- Maintain immutable audit logs of all training runs including hyperparameters, data snapshots, and resulting metrics
+- Implement automated model scanning for backdoors and trojans before deployment promotion`,
+      toolsAndFrameworks: `**Common Tooling:**
+- MLflow
+- Kubeflow Pipelines
+- DVC (Data Version Control)
+- Weights & Biases
+- TensorFlow Model Analysis
+- ART (Adversarial Robustness Toolbox)
+- ModelScan
+- NVIDIA NeMo Guardrails`,
     },
     designPhase: true,
     buildPhase: true,
@@ -3389,7 +3397,6 @@ export const mitigationsData: Record<string, Mitigation> = {
       "aisvs-c11",
     ],
     references: [
-      { title: "NIST AI RMF - Model Development", url: "https://airc.nist.gov/AI_RMF_Guidance" },
       {
         title: "OWASP ML Security Top 10",
         url: "https://owasp.org/www-project-machine-learning-security-top-10/",
@@ -3512,7 +3519,7 @@ export const mitigationsData: Record<string, Mitigation> = {
     sourceVersion:
       "Agentic Security Hub control (editorial), mapped to OWASP AISVS 1.01 and OWASP Agentic AI T&M v1.1",
     aisvsCategories: ["C3", "C4", "C6"],
-    aisvsRequirements: ["C3.1.1", "C3.3.1", "C3.4.1", "C3.4.2", "C6.1.4"],
+    aisvsRequirements: ["C3.1.1", "C3.3.1", "C3.4.1", "C3.4.2", "C4.1.1", "C6.1.4"],
   },
   m14: {
     id: "m14",
@@ -3624,10 +3631,6 @@ export const mitigationsData: Record<string, Mitigation> = {
         url: "https://github.com/firecracker-microvm/firecracker/blob/main/docs/design.md",
       },
       { title: "gVisor Security", url: "https://gvisor.dev/docs/architecture_guide/security/" },
-      {
-        title: "Container Runtime Security",
-        url: "https://kubernetes.io/docs/concepts/security/runtime-security/",
-      },
     ],
     riskScore: 8,
     status: "active",
@@ -4411,6 +4414,8 @@ export const mitigationsData: Record<string, Mitigation> = {
       "C10.4.8",
       "C9.3.7",
       "C9.5.5",
+      "C6.1.2",
+      "C6.1.3",
     ],
   },
   m20: {

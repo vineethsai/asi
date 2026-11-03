@@ -297,10 +297,6 @@ export const architecturesData: Record<string, Architecture> = {
       { title: "RAG Poisoning Attacks", url: "https://www.promptfoo.dev/blog/rag-poisoning/" },
       { title: "Securing RAG Systems", url: "https://arxiv.org/abs/2312.10997" },
       { title: "LangChain RAG Tutorial", url: "https://python.langchain.com/docs/tutorials/rag/" },
-      {
-        title: "Vector Database Security",
-        url: "https://weaviate.io/blog/security-best-practices",
-      },
     ],
     riskScore: 7,
     status: "active",

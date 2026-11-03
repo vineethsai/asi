@@ -96,7 +96,7 @@ export const agenticTop10Data: AgenticTop10Entry[] = [
       },
       {
         title: "ChatGPT Plugin Exploit Explained",
-        url: "https://embracethered.com/blog/posts/2023/chatgpt-plugin-exploit/",
+        url: "https://embracethered.com/blog/posts/2023/chatgpt-cross-plugin-request-forgery-and-prompt-injection%2E",
       },
       {
         title: "AgentFlayer: 0click Exploit Methods (Zenity Labs)",
@@ -295,8 +295,8 @@ export const agenticTop10Data: AgenticTop10Entry[] = [
     ],
     references: [
       {
-        title: "Amazon Q Prompt Infection Timeline",
-        url: "https://www.bleepingcomputer.com/news/security/amazon-ai-coding-agent-hacked/",
+        title: "Amazon AI coding agent hacked to inject data wiping commands (BleepingComputer)",
+        url: "https://www.bleepingcomputer.com/news/security/amazon-ai-coding-agent-hacked-to-inject-data-wiping-commands/",
       },
       {
         title: "MCP GitHub Vulnerability",

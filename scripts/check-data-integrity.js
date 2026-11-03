@@ -341,6 +341,68 @@ function collectComponentIds(nodes, ids = [], nodeThreatRefs = []) {
   return { ids, nodeThreatRefs };
 }
 
+/**
+ * Component <-> threat links must agree in both directions. `threatsData[t].componentIds` is the
+ * source of truth: a threat linked to a node applies to that node and to every sub-component under
+ * it (threats are mapped at KC level, e.g. T1 -> KC4 covers KC4.1-KC4.6), and a node also lists the
+ * threats linked to its sub-components. So for every node in frameworkData:
+ *
+ *   node.threatIds == { t | t.componentIds contains the node, an ancestor of it, or a descendant of it }
+ */
+function checkComponentThreatLinks(frameworkData, threatsData) {
+  const nodes = []; // { id, ancestors: string[], descendants: string[], threatIds: string[] }
+  const visit = (list, ancestors) => {
+    const ids = [];
+    for (const node of safeArray(list)) {
+      if (!node || typeof node !== "object") continue;
+      const id = String(node.id || "")
+        .trim()
+        .toLowerCase();
+      const entry = {
+        id,
+        ancestors,
+        descendants: [],
+        threatIds: safeArray(node.threatIds).map(String),
+      };
+      nodes.push(entry);
+      const below = visit(node.children, [...ancestors, id]);
+      entry.descendants = below;
+      ids.push(id, ...below);
+    }
+    return ids;
+  };
+  visit(frameworkData, []);
+
+  const threatComponents = Object.entries(threatsData).map(([threatId, threat]) => ({
+    threatId,
+    componentIds: new Set(safeArray(threat?.componentIds).map((id) => String(id).toLowerCase())),
+  }));
+
+  for (const node of nodes) {
+    if (!node.id) continue;
+    const related = [node.id, ...node.ancestors, ...node.descendants];
+    const expected = new Set(
+      threatComponents
+        .filter((t) => related.some((id) => t.componentIds.has(id)))
+        .map((t) => t.threatId),
+    );
+    const actual = new Set(node.threatIds);
+    for (const threatId of expected) {
+      ensure(
+        actual.has(threatId),
+        `Component ${node.id} is missing threatId ${threatId} (threat ${threatId} lists ${node.id} or a parent/child of it in componentIds)`,
+      );
+    }
+    for (const threatId of actual) {
+      if (!(threatId in threatsData)) continue; // reported as an unknown threatId elsewhere
+      ensure(
+        expected.has(threatId),
+        `Component ${node.id} lists threatId ${threatId} but threat ${threatId} componentIds does not include ${node.id} or a parent/child of it (add it to the threat's componentIds or drop it from the component)`,
+      );
+    }
+  }
+}
+
 function parseNistAisvsMappings(nistSource) {
   const results = [];
   const pattern = /aisvsMapping:\s*\[((?:.|\n)*?)\]/g;
@@ -1034,6 +1096,28 @@ async function run() {
         `${owner} has stale AISVS tag "${tag}"`,
       );
     }
+    // `aisvs-cN` tags must match aisvsCategories exactly, and every listed chapter needs at least one
+    // cited requirement (chapter-only mappings say nothing about what the control implements).
+    const aisvsTagChapters = safeArray(mitigation.tags)
+      .map((tag) => String(tag).match(/^aisvs-(c\d+)$/i))
+      .filter(Boolean)
+      .map((m) => m[1].toUpperCase());
+    for (const code of chapters) {
+      ensure(
+        aisvsTagChapters.includes(code),
+        `${owner} aisvsCategories lists ${code} but tags lack "aisvs-${code.toLowerCase()}"`,
+      );
+      ensure(
+        safeArray(mitigation.aisvsRequirements).some((id) => String(id).split(".")[0] === code),
+        `${owner} aisvsCategories lists ${code} but aisvsRequirements cites no ${code} requirement`,
+      );
+    }
+    for (const code of aisvsTagChapters) {
+      ensure(
+        chapters.includes(code),
+        `${owner} has tag "aisvs-${code.toLowerCase()}" but aisvsCategories lacks ${code}`,
+      );
+    }
 
     ensureIsoDate(owner, mitigation.lastUpdated);
     validateReferences(owner, mitigation.references);
@@ -1139,6 +1223,7 @@ async function run() {
       );
     }
   }
+  checkComponentThreatLinks(frameworkData, threatsData);
   checkNoMarkdownInDescriptions("frameworkData", frameworkData, "", FRAMEWORK_MODULE);
   checkNoMarkdownInDescriptions(
     "componentDataMap",
