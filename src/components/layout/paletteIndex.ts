@@ -323,6 +323,8 @@ async function buildDataIndex(): Promise<PaletteEntry[]> {
 
   for (const principle of aiuc1.aiuc1Principles) {
     for (const r of principle.requirements) {
+      // Retired ids stay in the data for old links but are not search results.
+      if (!aiuc1.isAiuc1RequirementActive(r)) continue;
       out.push(
         entry({
           id: `aiuc1:${r.id}`,
@@ -344,34 +346,26 @@ async function buildDataIndex(): Promise<PaletteEntry[]> {
 let nistIndex: Promise<PaletteEntry[]> | null = null;
 
 /**
- * NIST AI RMF subcategories. The data currently lives in the NIST page module, so this is a
- * separate, non-blocking load (it shares the route's chunk).
+ * NIST AI RMF subcategories (src/data/nist.ts). A separate, non-blocking load so the NIST data
+ * stays out of the main data index chunk.
  */
 export function loadNistIndex(): Promise<PaletteEntry[]> {
   if (!nistIndex) {
-    nistIndex = import("@/pages/NISTMapping")
-      .then((mod) => {
-        const out: PaletteEntry[] = [];
-        for (const fn of mod.nistAIRMF ?? []) {
-          for (const cat of fn.categories) {
-            for (const sub of cat.subcategories) {
-              out.push(
-                entry({
-                  id: `nist:${sub.code}`,
-                  group: "nist",
-                  code: sub.code,
-                  title: sub.name,
-                  subtitle: clip(sub.description, 140),
-                  path: `/nist-mapping?sub=${encodeURIComponent(sub.code)}`,
-                  aliases: [sub.code, sub.code.replace(/^([A-Z]+)\./, "$1")],
-                  keywords: clip(sub.description),
-                }),
-              );
-            }
-          }
-        }
-        return out;
-      })
+    nistIndex = import("@/data/nist")
+      .then((mod) =>
+        mod.NIST_SUBCATEGORIES.map((sub) =>
+          entry({
+            id: `nist:${sub.code}`,
+            group: "nist",
+            code: sub.code,
+            title: sub.name,
+            subtitle: clip(sub.description, 140),
+            path: `/nist-mapping?sub=${encodeURIComponent(sub.code)}`,
+            aliases: [sub.code, sub.code.replace(/^([A-Z]+)\./, "$1")],
+            keywords: clip(sub.description),
+          }),
+        ),
+      )
       .catch((err) => {
         nistIndex = null;
         throw err;
