@@ -15,7 +15,9 @@ export type ParsedComponentType =
   | "other";
 
 export interface ParsedComponent {
-  /** Unique name within the import (used for connection matching) */
+  /** Stable unique key from the source (instance id / bom-ref); connections resolve by it. */
+  key?: string;
+  /** Display name, unique within the import */
   name: string;
   /** Normalized component type */
   type: ParsedComponentType;
@@ -28,6 +30,9 @@ export interface ParsedConnection {
   source: string;
   /** Target component name */
   target: string;
+  /** Source/target component keys (preferred over names, P3-19). */
+  sourceKey?: string;
+  targetKey?: string;
   /** Relationship label (e.g. USES_TOOL, USES_LLM) */
   label: string;
 }

@@ -38,6 +38,8 @@ import type { Aiuc1ComplianceResult } from "./engine/aiuc1Compliance";
 import ReportDashboard from "./ReportDashboard";
 import AttackPathPanel from "./AttackPathPanel";
 import CompliancePanel from "./CompliancePanel";
+import { buildThreatsCsv } from "./export/exportCSV";
+import { downloadBlob } from "./export/download";
 
 interface ThreatResultsPanelProps {
   result: ThreatAnalysisResult | null;
@@ -335,26 +337,12 @@ export default function ThreatResultsPanel({
   const handleExportSelected = useCallback(() => {
     if (!result) return;
     const selected = result.threats.filter((t) => selectedThreats.has(t.id));
-    const csv = [
-      ["Name", "Severity", "Methodology", "Description", "Mitigations"].join(","),
-      ...selected.map((t) =>
-        [
-          t.name,
-          t.severity,
-          t.methodology,
-          `"${t.description.replace(/"/g, '""')}"`,
-          `"${t.mitigations.join("; ")}"`,
-        ].join(","),
-      ),
-    ].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "selected-threats.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [result, selectedThreats]);
+    downloadBlob(
+      buildThreatsCsv(selected, nodes ?? []),
+      "selected-threats.csv",
+      "text/csv;charset=utf-8",
+    );
+  }, [result, selectedThreats, nodes]);
 
   const [panelWidth, setPanelWidth] = useState(288);
   const isResizing = useRef(false);
@@ -445,9 +433,7 @@ export default function ThreatResultsPanel({
     ...(owaspAggregation.length > 0
       ? [{ key: "owasp" as TabKey, label: "OWASP", count: owaspAggregation.length, icon: Globe }]
       : []),
-    ...(aiuc1Result && (result.summary.mitigated ?? 0) > 0
-      ? [{ key: "aiuc1" as TabKey, label: "AIUC-1", icon: Shield }]
-      : []),
+    ...(aiuc1Result ? [{ key: "aiuc1" as TabKey, label: "AIUC-1", icon: Shield }] : []),
   ];
 
   const isThreatTab = activeTab === "all" || activeTab === "maestro" || activeTab === "other";

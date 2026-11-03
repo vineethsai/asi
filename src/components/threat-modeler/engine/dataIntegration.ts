@@ -1,32 +1,27 @@
-import { threatsData, mitigationsData } from "@/components/components/securityData";
+import { mitigationsData } from "@/components/components/securityData";
 import type { GeneratedThreat } from "../types";
-import { applyCiscoMapping } from "./ciscoMapping";
-import { applyOwaspMapping } from "./owaspMapping";
+import { getMitigation } from "./catalog/mitigations";
 
+/**
+ * Site control pages behind a threat's catalog mitigations, joined by id
+ * (catalog mitigation → `controlId` → securityData `mitigationsData`).
+ * Replaces the v1 name-substring join (§7.2.4).
+ */
+export function controlsForThreat(threat: GeneratedThreat): { id: string; name: string }[] {
+  const out = new Map<string, string>();
+  for (const id of threat.mitigationIds ?? []) {
+    const controlId = getMitigation(id)?.controlId;
+    if (!controlId || out.has(controlId)) continue;
+    const name = (mitigationsData as Record<string, { name?: string }>)[controlId]?.name;
+    out.set(controlId, name ?? controlId);
+  }
+  return [...out.entries()].map(([id, name]) => ({ id, name }));
+}
+
+/** Kept for old callers: the engine already attaches ids, names and taxonomy mappings. */
 export function enrichThreatsWithSecurityData(threats: GeneratedThreat[]): GeneratedThreat[] {
-  let enriched = threats.map((threat) => {
-    const result = { ...threat };
-    for (const [, threatData] of Object.entries(threatsData)) {
-      if (
-        threat.name.toLowerCase().includes(threatData.name.toLowerCase()) ||
-        threatData.name.toLowerCase().includes(threat.name.toLowerCase())
-      ) {
-        result.mitigationIds = threatData.mitigationIds;
-        const mitigationNames = (threatData.mitigationIds ?? [])
-          .map((mid) => mitigationsData[mid]?.name)
-          .filter(Boolean) as string[];
-        if (mitigationNames.length > 0) {
-          result.mitigations = [...new Set([...result.mitigations, ...mitigationNames])];
-        }
-        break;
-      }
-    }
-    return result;
-  });
-
-  // Apply taxonomy mappings
-  enriched = applyCiscoMapping(enriched);
-  enriched = applyOwaspMapping(enriched);
-
-  return enriched;
+  return threats.map((t) => ({
+    ...t,
+    controlIds: t.controlIds ?? controlsForThreat(t).map((c) => c.id),
+  }));
 }

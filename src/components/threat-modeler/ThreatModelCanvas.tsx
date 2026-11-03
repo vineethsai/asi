@@ -69,22 +69,29 @@ import AibomImportDialog from "./AibomImportDialog";
 import NodeEditorDialog from "./NodeEditorDialog";
 import KeyboardShortcutsPanel from "./KeyboardShortcutsPanel";
 
-import { runThreatAnalysis, buildNodeProfiles } from "./engine/threatEngine";
-import { enrichThreatsWithSecurityData } from "./engine/dataIntegration";
-import { calculateModelRisk, type ModelRiskSummary } from "./engine/riskScoring";
-import { findAttackPaths, type AttackPath } from "./engine/attackPaths";
+import {
+  analyzeThreatModel,
+  rescoreAnalysis,
+  summariseForNextRun,
+  type AnalysisResult,
+} from "./engine/analyze";
+import { runAnalysis } from "./engine/runAnalysis";
+import { isValidConnection as isValidFlow, modelFingerprint, nextEdgeId } from "./engine/graph";
+import type { ModelRiskSummary } from "./engine/riskScoring";
+import type { AttackPath } from "./engine/attackPaths";
 import { filterMitigatedThreats } from "./engine/mitigationCatalog";
-import { runAISVSMapping, type AISVSCoverageResult } from "./engine/aisvsMapping";
-import { runDataFlowComplianceCheck, type ComplianceViolation } from "./engine/dataFlowCompliance";
-import { runComplianceGapAnalysis, type ComplianceGapReport } from "./engine/complianceGap";
-import { calculateAttackSurface, type AttackSurfaceScore } from "./engine/attackSurface";
-import { runAiuc1Compliance, type Aiuc1ComplianceResult } from "./engine/aiuc1Compliance";
+import type { AISVSCoverageResult } from "./engine/aisvsMapping";
+import type { ComplianceViolation } from "./engine/dataFlowCompliance";
+import type { ComplianceGapReport } from "./engine/complianceGap";
+import type { AttackSurfaceScore } from "./engine/attackSurface";
+import type { Aiuc1ComplianceResult } from "./engine/aiuc1Compliance";
 import { exportCanvasPNG, exportCanvasSVG } from "./export/exportPNG";
 import { exportThreatsCSV } from "./export/exportCSV";
 import { exportSARIF } from "./export/exportSARIF";
 import { downloadMarkdownReport } from "./export/exportMarkdown";
 import { exportPDFReport } from "./export/exportPDF";
-import { ARCHITECTURE_TEMPLATES } from "./templates";
+import { buildReportModel } from "./export/reportModel";
+import { ARCHITECTURE_TEMPLATES, instantiateTemplate, resolveTemplateId } from "./templates";
 
 const nodeTypes: NodeTypes = {
   agentComponent: AgentComponentNode,
@@ -297,21 +304,13 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
   // Load template from URL parameter on mount
   useEffect(() => {
     if (!initialTemplate) return;
-    const template = ARCHITECTURE_TEMPLATES.find((t) => t.id === initialTemplate);
-    if (!template) return;
-    const newNodes: CanvasNode[] = template.nodes.map((n, i) => ({
-      ...n,
-      id: `template-${initialTemplate}-${i}`,
-    })) as CanvasNode[];
-    const newEdges: CanvasEdge[] = template.edges.map((e, i) => {
-      const edge = e as { source: string; target: string };
-      return {
-        ...e,
-        id: `template-edge-${initialTemplate}-${i}`,
-        source: `template-${initialTemplate}-${edge.source}`,
-        target: `template-${initialTemplate}-${edge.target}`,
-      } as CanvasEdge;
-    });
+    const templateId = resolveTemplateId(initialTemplate);
+    const template = ARCHITECTURE_TEMPLATES.find((t) => t.id === templateId);
+    if (!template) {
+      toast.error(`Unknown template "${initialTemplate}"`);
+      return;
+    }
+    const { nodes: newNodes, edges: newEdges } = instantiateTemplate(template);
     setNodes(newNodes);
     setEdges(newEdges);
     pushHistory(newNodes, newEdges);
@@ -371,7 +370,7 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
     (connection: Connection) => {
       const newEdge: CanvasEdge = {
         ...connection,
-        id: `edge-${Date.now()}`,
+        id: nextEdgeId(edges),
         type: "dataFlow",
         data: { ...DEFAULT_EDGE_METADATA, threats: [] } as CanvasEdgeData,
       } as CanvasEdge;
@@ -383,112 +382,32 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
     [setEdges, nodes, edges, pushHistory],
   );
 
+  const lastRunRef = useRef<AnalysisResult | null>(null);
+  const analysisSeqRef = useRef(0);
   const doAnalysis = useCallback(() => {
     setIsAnalyzing(true);
-    requestAnimationFrame(() => {
+    const seqNo = ++analysisSeqRef.current;
+    requestAnimationFrame(async () => {
       try {
-        const customThreats: GeneratedThreat[] = [];
-        for (const node of nodes) {
-          if (node.data?.isCustom && node.data.customThreatIds) {
-            for (const cc of customComponents) {
-              for (const ct of cc.customThreats ?? []) {
-                if (node.data.customThreatIds.includes(ct.id)) {
-                  customThreats.push({
-                    id: `custom-${ct.id}-${node.id}`,
-                    threatId: ct.id,
-                    name: ct.name,
-                    description: ct.description,
-                    severity:
-                      ct.severity === "high" ? "high" : ct.severity === "low" ? "low" : "medium",
-                    methodology: "custom",
-                    maestroLayer: ct.maestroLayer,
-                    affectedNodeIds: [node.id],
-                    affectedEdgeIds: [],
-                    inherited: false,
-                    mitigations: ct.mitigations ?? [],
-                  });
-                }
-              }
-            }
-          }
-        }
-
-        let result = runThreatAnalysis(
-          nodes as CanvasNode[],
-          edges as CanvasEdge[],
-          methodology,
-          customThreats.length > 0 ? customThreats : undefined,
-        );
-        const profiles = buildNodeProfiles(nodes as CanvasNode[]);
-
-        result = {
-          ...result,
-          threats: enrichThreatsWithSecurityData(result.threats),
-          summary: { ...result.summary, mitigated: 0 },
-        };
-        if (threatStatuses.size > 0) {
-          result = {
-            ...result,
-            threats: result.threats.map((t) => {
-              const saved = threatStatuses.get(t.id);
-              return saved
-                ? { ...t, status: saved.status, statusJustification: saved.justification }
-                : t;
-            }),
-          };
-        }
+        const result = await runAnalysis({
+          nodes: nodes as CanvasNode[],
+          edges: edges as CanvasEdge[],
+          customComponents,
+          threatStatuses: Object.fromEntries(threatStatuses),
+          previous: lastRunRef.current ? summariseForNextRun(lastRunRef.current) : null,
+        });
+        if (seqNo !== analysisSeqRef.current) return; // a newer run superseded this one
+        lastRunRef.current = result;
         setFullAnalysisResult(result);
         setAnalysisResult(result);
-
-        const risk = calculateModelRisk(
-          nodes as CanvasNode[],
-          edges as CanvasEdge[],
-          result,
-          profiles,
-        );
-        setRiskSummary(risk);
-
-        const paths = findAttackPaths(
-          nodes as CanvasNode[],
-          edges as CanvasEdge[],
-          result.threats,
-          profiles,
-        );
-        setAttackPaths(paths);
-
-        const aisvsCoverage = runAISVSMapping(result.threats);
-        setAisvsResult(aisvsCoverage);
-
-        const dfcViolations = runDataFlowComplianceCheck(
-          nodes as CanvasNode[],
-          edges as CanvasEdge[],
-          profiles,
-        );
+        setRiskSummary(result.riskSummary);
+        setAttackPaths(result.attackPaths);
+        setAisvsResult(result.aisvsResult);
+        const dfcViolations = result.complianceViolations;
         setComplianceViolations(dfcViolations);
-
-        const gapReport = runComplianceGapAnalysis(
-          nodes as CanvasNode[],
-          edges as CanvasEdge[],
-          result.threats,
-          profiles,
-        );
-        setComplianceGapReport(gapReport);
-
-        const surfaceScores = calculateAttackSurface(
-          nodes as CanvasNode[],
-          edges as CanvasEdge[],
-          profiles,
-        );
-        setAttackSurfaceScores(surfaceScores);
-
-        const aiuc1ComplianceResult = runAiuc1Compliance(
-          result.threats,
-          aisvsCoverage,
-          nodes as CanvasNode[],
-          edges as CanvasEdge[],
-          profiles,
-        );
-        setAiuc1Result(aiuc1ComplianceResult);
+        setComplianceGapReport(result.complianceGapReport);
+        setAttackSurfaceScores(result.attackSurfaceScores);
+        setAiuc1Result(result.aiuc1Result);
 
         const threatsByNode = new Map<string, ThreatBadge[]>();
         const threatsByEdge = new Map<string, ThreatBadge[]>();
@@ -539,7 +458,7 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
         console.error("Threat analysis error:", err);
       }
     });
-  }, [nodes, edges, methodology, customComponents, setNodes, setEdges, threatStatuses]);
+  }, [nodes, edges, customComponents, setNodes, setEdges, threatStatuses]);
 
   const analysisModeRef = useRef(analysisMode);
   analysisModeRef.current = analysisMode;
@@ -549,31 +468,20 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
 
   // Structural fingerprint: only changes when model topology/metadata changes,
   // NOT when threat badges, mitigations, or positions update.
-  const modelStructureKey = useMemo(() => {
-    const nodeKey = nodes
-      .map(
-        (n) =>
-          `${n.id}:${n.type}:${n.data?.label}:${n.data?.category}:${n.data?.trustLevel}:${(n.data?.maestroLayers ?? []).join("+")}`,
-      )
-      .sort()
-      .join("|");
-    const edgeKey = edges
-      .map((e) => {
-        const d = e.data;
-        return `${e.id}:${e.source}:${e.target}:${d?.protocol}:${d?.encrypted}:${d?.authentication}:${d?.dataClassification}`;
-      })
-      .sort()
-      .join("|");
-    return `${nodeKey}::${edgeKey}::${methodology}`;
-  }, [nodes, edges, methodology]);
+  const modelStructureKey = useMemo(
+    () =>
+      nodes.length === 0
+        ? ""
+        : `${modelFingerprint(nodes as CanvasNode[], edges as CanvasEdge[])}::${methodology}`,
+    [nodes, edges, methodology],
+  );
 
   useEffect(() => {
     if (analysisMode !== "live") return;
     // Guard: don't run on empty canvas
-    if (modelStructureKey === `::::${methodology}`) return;
+    if (modelStructureKey === "") return;
     const timeout = setTimeout(() => doAnalysisRef.current(), 800);
     return () => clearTimeout(timeout);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [analysisMode, modelStructureKey]);
 
   const deleteSelected = useCallback(() => {
@@ -957,45 +865,15 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
         const beforeRiskScore = riskSummary?.overallScore ?? 0;
         const beforePathCount = attackPaths.length;
 
-        const simCustomThreats: GeneratedThreat[] = [];
-        for (const n of filteredNodes) {
-          if (n.data?.isCustom && n.data.customThreatIds) {
-            for (const cc of customComponents) {
-              for (const ct of cc.customThreats ?? []) {
-                if (n.data.customThreatIds.includes(ct.id)) {
-                  simCustomThreats.push({
-                    id: `custom-${ct.id}-${n.id}`,
-                    threatId: ct.id,
-                    name: ct.name,
-                    description: ct.description,
-                    severity:
-                      ct.severity === "high" ? "high" : ct.severity === "low" ? "low" : "medium",
-                    methodology: "custom",
-                    maestroLayer: ct.maestroLayer,
-                    affectedNodeIds: [n.id],
-                    affectedEdgeIds: [],
-                    inherited: false,
-                    mitigations: ct.mitigations ?? [],
-                  });
-                }
-              }
-            }
-          }
-        }
-        const simProfiles = buildNodeProfiles(filteredNodes);
-        const simResult = runThreatAnalysis(
-          filteredNodes,
-          filteredEdges,
-          methodology,
-          simCustomThreats.length > 0 ? simCustomThreats : undefined,
-        );
-        const simRisk = calculateModelRisk(filteredNodes, filteredEdges, simResult, simProfiles);
-        const simPaths = findAttackPaths(
-          filteredNodes,
-          filteredEdges,
-          simResult.threats,
-          simProfiles,
-        );
+        const sim = analyzeThreatModel({
+          nodes: filteredNodes,
+          edges: filteredEdges,
+          customComponents,
+          threatStatuses: Object.fromEntries(threatStatuses),
+        });
+        const simResult = sim;
+        const simRisk = sim.riskSummary;
+        const simPaths = sim.attackPaths;
 
         setWhatIfResult({
           removedNodeLabel: nodeLabel,
@@ -1014,11 +892,11 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
       whatIfActive,
       nodes,
       edges,
-      methodology,
       analysisResult,
       riskSummary,
       attackPaths,
       customComponents,
+      threatStatuses,
     ],
   );
 
@@ -1188,19 +1066,7 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
 
       const template = ARCHITECTURE_TEMPLATES.find((t) => t.id === templateId);
       if (!template) return;
-      const newNodes: CanvasNode[] = template.nodes.map((n, i) => ({
-        ...n,
-        id: `template-${templateId}-${i}`,
-      })) as CanvasNode[];
-      const newEdges: CanvasEdge[] = template.edges.map((e, i) => {
-        const edge = e as { source: string; target: string };
-        return {
-          ...e,
-          id: `template-edge-${templateId}-${i}`,
-          source: `template-${templateId}-${edge.source}`,
-          target: `template-${templateId}-${edge.target}`,
-        } as CanvasEdge;
-      });
+      const { nodes: newNodes, edges: newEdges } = instantiateTemplate(template);
       setNodes(newNodes);
       setEdges(newEdges);
       pushHistory(newNodes, newEdges);
@@ -1353,70 +1219,73 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
     }
   }, []);
 
+  // Exports always use the full engine result (rescored with the current
+  // statuses/mitigations when available).
+  const exportAnalysisRef = useRef<AnalysisResult | null>(null);
+  const getExportAnalysis = useCallback((): AnalysisResult | null => {
+    if (!analysisResult) return null;
+    return (
+      exportAnalysisRef.current ??
+      analyzeThreatModel({
+        nodes: nodes as CanvasNode[],
+        edges: edges as CanvasEdge[],
+        customComponents,
+        threatStatuses: Object.fromEntries(threatStatuses),
+      })
+    );
+  }, [analysisResult, nodes, edges, customComponents, threatStatuses]);
+  const exportDoc = useMemo(
+    () => ({ name: "Threat model", nodes: nodes as CanvasNode[], edges: edges as CanvasEdge[] }),
+    [nodes, edges],
+  );
+
   const handleExportCSV = useCallback(() => {
-    if (!analysisResult) {
+    const result = getExportAnalysis();
+    if (!result) {
       toast.error("Run analysis first");
       return;
     }
-    exportThreatsCSV(analysisResult);
+    exportThreatsCSV(result, exportDoc);
     toast.success("CSV exported");
-  }, [analysisResult]);
+  }, [getExportAnalysis, exportDoc]);
 
   const handleExportSARIF = useCallback(() => {
-    if (!analysisResult) {
+    const result = getExportAnalysis();
+    if (!result) {
       toast.error("Run analysis first");
       return;
     }
-    exportSARIF(analysisResult);
+    exportSARIF(result, exportDoc);
     toast.success("SARIF exported");
-  }, [analysisResult]);
+  }, [getExportAnalysis, exportDoc]);
 
   const handleExportMarkdown = useCallback(() => {
-    if (!analysisResult) {
+    const result = getExportAnalysis();
+    if (!result) {
       toast.error("Run analysis first");
       return;
     }
-    downloadMarkdownReport(nodes as CanvasNode[], edges as CanvasEdge[], analysisResult, {
-      riskSummary,
-      attackPaths,
-      aisvsResult,
-    });
+    downloadMarkdownReport(buildReportModel(exportDoc, result));
     toast.success("Markdown report exported");
-  }, [analysisResult, nodes, edges, riskSummary, attackPaths, aisvsResult]);
+  }, [getExportAnalysis, exportDoc]);
 
   const handleExportPDF = useCallback(async () => {
-    if (!analysisResult) {
+    const result = getExportAnalysis();
+    if (!result) {
       toast.error("Run analysis first");
       return;
     }
     toast.info("Generating PDF report...");
     try {
-      await exportPDFReport(nodes as CanvasNode[], edges as CanvasEdge[], analysisResult, {
-        riskSummary,
-        attackPaths,
-        aisvsResult,
-        complianceViolations,
-        complianceGapReport,
-        attackSurfaceScores,
+      await exportPDFReport(buildReportModel(exportDoc, result), {
         canvasElement: reactFlowWrapper.current?.querySelector(".react-flow") as HTMLElement | null,
-        threatStatuses,
+        nodes: exportDoc.nodes,
       });
       toast.success("PDF report exported");
     } catch {
       toast.error("PDF export failed");
     }
-  }, [
-    analysisResult,
-    nodes,
-    edges,
-    riskSummary,
-    attackPaths,
-    aisvsResult,
-    complianceViolations,
-    complianceGapReport,
-    attackSurfaceScores,
-    threatStatuses,
-  ]);
+  }, [getExportAnalysis, exportDoc]);
 
   const handleSaveModel = useCallback((name: string, description: string) => {
     toast.success(`Model "${name}" saved${description ? ` - ${description}` : ""}`);
@@ -1532,13 +1401,13 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
       pushHistory(laid, importedEdges);
       setTimeout(() => {
         fitView({ duration: 300 });
-        doAnalysis();
+        doAnalysisRef.current(); // latest closure: analyses the imported nodes (P3-25)
       }, 150);
       toast.success(
         `Imported ${importedNodes.length} components and ${importedEdges.length} connections from AIBOM`,
       );
     },
-    [setNodes, setEdges, pushHistory, fitView, doAnalysis],
+    [setNodes, setEdges, pushHistory, fitView],
   );
 
   const handleToggleMitigation = useCallback(
@@ -1582,15 +1451,14 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
             if (status === "not-started") {
               delete statuses[mitigationId];
             } else {
-              statuses[mitigationId] = { status, justification };
+              statuses[mitigationId] = {
+                status,
+                justification,
+                updatedAt: new Date().toISOString(),
+              };
             }
             const appliedIds = Object.entries(statuses)
-              .filter(
-                ([, s]) =>
-                  s.status === "implemented" ||
-                  s.status === "in-progress" ||
-                  s.status === "accepted-risk",
-              )
+              .filter(([, s]) => s.status === "implemented")
               .map(([id]) => id);
             return {
               ...n,
@@ -1602,76 +1470,50 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
     [setNodes],
   );
 
-  // Recompute risk score reactively based on actual mitigation progress
-  const effectiveRiskSummary = useMemo(() => {
-    if (!riskSummary || !fullAnalysisResult) return riskSummary;
-    const appliedByNode = new Map<string, Set<string>>();
-    for (const node of nodes) {
-      if (node.data?.appliedMitigations?.length) {
-        appliedByNode.set(
-          node.id,
-          new Set(node.data.appliedMitigations.map((m: string) => m.toLowerCase().trim())),
-        );
-      }
-    }
-    if (appliedByNode.size === 0) return riskSummary;
-    const { mitigated } = filterMitigatedThreats(fullAnalysisResult.threats, appliedByNode);
-    const mitigationRatio = mitigated.length / Math.max(fullAnalysisResult.threats.length, 1);
-    // Reduce risk proportional to mitigation coverage (up to 70% reduction at full coverage)
-    const adjustedScore = Math.round(riskSummary.overallScore * (1 - mitigationRatio * 0.7));
-    const severityLabel =
-      adjustedScore >= 80
-        ? "Critical"
-        : adjustedScore >= 60
-          ? "High"
-          : adjustedScore >= 40
-            ? "Medium"
-            : adjustedScore >= 20
-              ? "Low"
-              : "Minimal";
-    return { ...riskSummary, overallScore: adjustedScore, severityLabel };
-  }, [riskSummary, fullAnalysisResult, nodes]);
+  // Re-apply implemented mitigations and threat statuses without re-running the rules
+  // (residual = score × (1 − Σ effectiveness of implemented mitigations), §7.2.2).
+  const rescoredResult = useMemo(() => {
+    if (!fullAnalysisResult || !("modelScore" in fullAnalysisResult)) return null;
+    return rescoreAnalysis(fullAnalysisResult as AnalysisResult, {
+      nodes: nodes as CanvasNode[],
+      edges: edges as CanvasEdge[],
+      customComponents,
+      threatStatuses: Object.fromEntries(threatStatuses),
+    });
+  }, [fullAnalysisResult, nodes, edges, customComponents, threatStatuses]);
+
+  useEffect(() => {
+    exportAnalysisRef.current = rescoredResult;
+  }, [rescoredResult]);
+  const effectiveRiskSummary = rescoredResult?.riskSummary ?? riskSummary;
 
   const filteredAnalysisResult = useMemo(() => {
-    if (!fullAnalysisResult) return null;
-    const appliedByNode = new Map<string, Set<string>>();
-    for (const node of nodes) {
-      if (node.data?.appliedMitigations?.length) {
-        appliedByNode.set(
-          node.id,
-          new Set(node.data.appliedMitigations.map((m) => m.toLowerCase().trim())),
-        );
-      }
-    }
-    if (appliedByNode.size === 0) {
-      return { ...fullAnalysisResult, summary: { ...fullAnalysisResult.summary, mitigated: 0 } };
-    }
-    const { active, mitigated } = filterMitigatedThreats(fullAnalysisResult.threats, appliedByNode);
-    const displayThreats = showMitigated ? fullAnalysisResult.threats : active;
-
+    if (!rescoredResult) return null;
+    if (showMitigated) return rescoredResult;
+    const { active } = filterMitigatedThreats(rescoredResult.threats);
     const byMethodology: Record<string, number> = {};
     const byLayer: Partial<Record<MaestroLayer, number>> = {};
-    for (const t of displayThreats) {
+    for (const t of active) {
       byMethodology[t.methodology] = (byMethodology[t.methodology] ?? 0) + 1;
       if (t.maestroLayer !== undefined)
         byLayer[t.maestroLayer] = (byLayer[t.maestroLayer] ?? 0) + 1;
     }
-
     return {
-      threats: displayThreats,
+      ...rescoredResult,
+      threats: active,
       summary: {
-        total: displayThreats.length,
-        critical: displayThreats.filter((t) => t.severity === "critical").length,
-        high: displayThreats.filter((t) => t.severity === "high").length,
-        medium: displayThreats.filter((t) => t.severity === "medium").length,
-        low: displayThreats.filter((t) => t.severity === "low").length,
-        inherited: displayThreats.filter((t) => t.inherited).length,
-        mitigated: mitigated.length,
+        ...rescoredResult.summary,
+        total: active.length,
+        critical: active.filter((t) => t.severity === "critical").length,
+        high: active.filter((t) => t.severity === "high").length,
+        medium: active.filter((t) => t.severity === "medium").length,
+        low: active.filter((t) => t.severity === "low").length,
+        inherited: active.filter((t) => t.inherited).length,
         byMethodology,
         byLayer,
       },
     };
-  }, [fullAnalysisResult, nodes, showMitigated]);
+  }, [rescoredResult, showMitigated]);
 
   return (
     <div className="flex h-full w-full relative">
@@ -1762,6 +1604,9 @@ function ThreatModelCanvasInner({ initialTemplate }: { initialTemplate?: string 
                 onNodesChange={onNodesChangeWrapped}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
+                isValidConnection={(c) =>
+                  isValidFlow(c, nodes as CanvasNode[], edges as CanvasEdge[])
+                }
                 onInit={setReactFlowInstance}
                 onDrop={onDrop}
                 onDragOver={onDragOver}

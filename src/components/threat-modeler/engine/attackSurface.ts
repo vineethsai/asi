@@ -1,11 +1,5 @@
-import type { CanvasNode, CanvasEdge } from "../types";
-import type { NodeRiskProfile } from "./nodeProfile";
-
-function getNodeBoundaryId(node: CanvasNode, nodes: CanvasNode[]): string | undefined {
-  if (!node.parentId) return undefined;
-  const parent = nodes.find((n) => n.id === node.parentId);
-  return parent?.type === "trustBoundary" ? parent.id : undefined;
-}
+import type { CanvasEdge, CanvasNode } from "../types";
+import { buildGraph, type ModelGraph } from "./graph";
 
 export interface AttackSurfaceScore {
   nodeId: string;
@@ -41,52 +35,26 @@ const SENSITIVITY_SURFACE: Record<string, number> = {
   none: 0,
 };
 
-export function calculateAttackSurface(
-  nodes: CanvasNode[],
-  edges: CanvasEdge[],
-  profiles?: Map<string, NodeRiskProfile>,
-): AttackSurfaceScore[] {
+/** Per-component attack surface (graph-based; boundary crossing via graph.crossesBoundary). */
+export function attackSurfaceFromGraph(graph: ModelGraph): AttackSurfaceScore[] {
   const scores: AttackSurfaceScore[] = [];
-  const nodeMap = new Map(nodes.map((n) => [n.id, n]));
-
-  for (const node of nodes) {
-    if (!node.data || node.type === "trustBoundary") continue;
-
-    const profile = profiles?.get(node.id);
-    const connectedEdges = edges.filter((e) => e.source === node.id || e.target === node.id);
-    const connections = connectedEdges.length;
+  for (const n of graph.nodes) {
+    const touching = [...(graph.in.get(n.id) ?? []), ...(graph.out.get(n.id) ?? [])];
+    const connections = touching.length;
     const trustLevel =
-      node.data.trustLevel === "untrusted" ? 30 : node.data.trustLevel === "semi-trusted" ? 15 : 5;
-
-    const externalConnections = connectedEdges.filter((e) => {
-      const other = e.source === node.id ? nodeMap.get(e.target) : nodeMap.get(e.source);
-      return other?.data?.category === "external" || other?.data?.category === "actor";
-    });
-    const externalExposure = externalConnections.length * 15;
-
-    const unencryptedFlows = connectedEdges.filter((e) => e.data && !e.data.encrypted).length * 20;
-    const unauthenticatedFlows =
-      connectedEdges.filter((e) => e.data?.authentication === "None").length * 15;
-    const piiExposure = connectedEdges.filter((e) => e.data?.containsPII).length * 10;
-
-    const riskTierFactor = profile?.toolRiskTier
-      ? (RISK_TIER_SURFACE[profile.toolRiskTier] ?? 0)
-      : 0;
-    const sensitivityFactor = profile?.dataSensitivity
-      ? (SENSITIVITY_SURFACE[profile.dataSensitivity] ?? 0)
-      : 0;
-    const executionFactor = profile?.isExecutionCapable ? 15 : 0;
-
-    const nodeBoundary = getNodeBoundaryId(node, nodes);
-    const crossBoundaryFlows =
-      connectedEdges.filter((e) => {
-        const otherId = e.source === node.id ? e.target : e.source;
-        const other = nodeMap.get(otherId);
-        if (!other) return false;
-        const otherBoundary = getNodeBoundaryId(other, nodes);
-        return nodeBoundary !== otherBoundary;
-      }).length * 12;
-
+      n.data.trustLevel === "untrusted" ? 30 : n.data.trustLevel === "semi-trusted" ? 15 : 5;
+    const externalExposure =
+      touching.filter((e) => {
+        const other = graph.nodeById.get(e.source === n.id ? e.target : e.source);
+        return !!other && (other.isActor || other.isExternal);
+      }).length * 15;
+    const unencryptedFlows = touching.filter((e) => !e.encrypted).length * 20;
+    const unauthenticatedFlows = touching.filter((e) => !e.authenticated).length * 15;
+    const piiExposure = touching.filter((e) => e.data.containsPII).length * 10;
+    const riskTierFactor = RISK_TIER_SURFACE[n.data.toolRiskTier ?? ""] ?? 0;
+    const sensitivityFactor = SENSITIVITY_SURFACE[n.data.dataSensitivity ?? "none"] ?? 0;
+    const executionFactor = n.isExecution ? 15 : 0;
+    const crossBoundaryFlows = touching.filter((e) => e.crossesBoundary).length * 12;
     const score =
       connections * 5 +
       trustLevel +
@@ -98,12 +66,9 @@ export function calculateAttackSurface(
       sensitivityFactor +
       executionFactor +
       crossBoundaryFlows;
-    const riskLevel: AttackSurfaceScore["riskLevel"] =
-      score >= 100 ? "critical" : score >= 60 ? "high" : score >= 30 ? "medium" : "low";
-
     scores.push({
-      nodeId: node.id,
-      label: node.data.label,
+      nodeId: n.id,
+      label: n.label,
       score,
       factors: {
         connections,
@@ -117,9 +82,15 @@ export function calculateAttackSurface(
         executionFactor,
         crossBoundaryFlows,
       },
-      riskLevel,
+      riskLevel: score >= 100 ? "critical" : score >= 60 ? "high" : score >= 30 ? "medium" : "low",
     });
   }
+  return scores.sort((a, b) => b.score - a.score || (a.nodeId < b.nodeId ? -1 : 1));
+}
 
-  return scores.sort((a, b) => b.score - a.score);
+export function calculateAttackSurface(
+  nodes: CanvasNode[],
+  edges: CanvasEdge[],
+): AttackSurfaceScore[] {
+  return attackSurfaceFromGraph(buildGraph(nodes, edges));
 }

@@ -91,10 +91,7 @@ export default function CompliancePanel({ result }: CompliancePanelProps) {
           {categoriesSorted.map(([catName, stats]) => {
             const isOpen = expandedCategories.has(catName);
             const reqs = reqsByCategory.get(catName) ?? [];
-            const catPct =
-              stats.total > 0
-                ? Math.round(((stats.identified + stats.addressed) / stats.total) * 100)
-                : 0;
+            const catPct = stats.total > 0 ? Math.round((stats.addressed / stats.total) * 100) : 0;
             return (
               <div key={catName} className="border rounded-md overflow-hidden">
                 <button
@@ -114,7 +111,7 @@ export default function CompliancePanel({ result }: CompliancePanelProps) {
                     </div>
                   </div>
                   <span className="text-[9px] text-muted-foreground shrink-0">
-                    {stats.identified + stats.addressed}/{stats.total}
+                    {stats.addressed}/{stats.total}
                   </span>
                 </button>
                 {isOpen && reqs.length > 0 && (
